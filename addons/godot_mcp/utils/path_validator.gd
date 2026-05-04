@@ -32,6 +32,13 @@ const DANGEROUS_PATTERNS := [
 var _strict_mode: bool = true  # true=严格模式，false=宽松模式
 var _allowed_extensions: Array[String] = []  # 允许的文件扩展名（空=不限制）
 
+# 日志回调
+var _log_callback: Callable = Callable()
+
+## 设置日志回调函数
+func set_log_callback(callback: Callable) -> void:
+	_log_callback = callback
+
 # ===========================================
 # 路径验证主函数
 # ===========================================
@@ -197,26 +204,31 @@ func validate_path_with_signal(path: String) -> bool:
 ## 设置严格模式
 func set_strict_mode(strict: bool) -> void:
 	_strict_mode = strict
-	print("[PathValidator] Strict mode: " + str(strict))
+	if _log_callback.is_valid():
+		_log_callback.call("INFO", "Strict mode: " + str(strict))
 
 ## 添加允许的扩展名
 func add_allowed_extension(extension: String) -> void:
 	if not _allowed_extensions.has(extension):
 		_allowed_extensions.append(extension)
-		print("[PathValidator] Added allowed extension: " + extension)
+		if _log_callback.is_valid():
+			_log_callback.call("INFO", "Added allowed extension: " + extension)
 
 ## 清除允许的扩展名（不限制）
 func clear_allowed_extensions() -> void:
 	_allowed_extensions.clear()
-	print("[PathValidator] Cleared allowed extensions (no restriction)")
+	if _log_callback.is_valid():
+		_log_callback.call("INFO", "Cleared allowed extensions (no restriction)")
 
 # ===========================================
 # 调试功能
 # ===========================================
 
 ## 测试路径验证（调试用）
-static func test_validation() -> void:
-	print("[PathValidator] Testing path validation...")
+## 返回: Array[String] 验证结果文本
+static func test_validation() -> Array[String]:
+	var output: Array[String] = []
+	output.append("Testing path validation...")
 	
 	var test_paths: Array[String] = [
 		"res://test.tscn",
@@ -229,10 +241,12 @@ static func test_validation() -> void:
 	
 	for path in test_paths:
 		var result: Dictionary = validate_path(path)
-		print("  Path: " + path)
-		print("    Valid: " + str(result["valid"]))
+		output.append("  Path: " + path)
+		output.append("    Valid: " + str(result["valid"]))
 		if not result["valid"]:
-			print("    Error: " + result["error"])
+			output.append("    Error: " + result["error"])
 		else:
-			print("    Sanitized: " + result["sanitized"])
-		print("")
+			output.append("    Sanitized: " + result["sanitized"])
+		output.append("")
+	
+	return output

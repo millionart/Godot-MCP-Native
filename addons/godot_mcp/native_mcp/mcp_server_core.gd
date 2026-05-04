@@ -119,6 +119,8 @@ func _init_transport() -> bool:
 	match _transport_type:
 		TransportType.TRANSPORT_STDIO:
 			_transport = McpStdioServer.new()
+			if _transport.has_method("set_log_callback"):
+				_transport.set_log_callback(_log_transport_message)
 			_log_info("Initialized stdio transport")
 		
 		TransportType.TRANSPORT_HTTP:
@@ -126,6 +128,8 @@ func _init_transport() -> bool:
 			_transport.set_port(_http_port)
 			if _auth_manager:
 				_transport.set_auth_manager(_auth_manager)
+			if _transport.has_method("set_log_callback"):
+				_transport.set_log_callback(_log_transport_message)
 			_log_info("Initialized HTTP transport on port " + str(_http_port))
 		
 		_:
@@ -776,22 +780,18 @@ func set_rate_limit(limit: int) -> void:
 
 func _log_error(message: String) -> void:
 	if _log_level >= MCPTypes.LogLevel.ERROR:
-		printerr("[MCP][ERROR] " + message)
 		call_deferred("emit_signal", "log_message", "ERROR", message)
 
 func _log_warn(message: String) -> void:
 	if _log_level >= MCPTypes.LogLevel.WARN:
-		printerr("[MCP][WARN] " + message)
 		call_deferred("emit_signal", "log_message", "WARN", message)
 
 func _log_info(message: String) -> void:
 	if _log_level >= MCPTypes.LogLevel.INFO:
-		printerr("[MCP][INFO] " + message)
 		call_deferred("emit_signal", "log_message", "INFO", message)
 
 func _log_debug(message: String) -> void:
 	if _log_level >= MCPTypes.LogLevel.DEBUG:
-		printerr("[MCP][DEBUG] " + message)
 		call_deferred("emit_signal", "log_message", "DEBUG", message)
 
 # ============================================================================
@@ -812,6 +812,27 @@ func clear_tool_log() -> void:
 	if file:
 		file.store_string("[]")
 		file.close()
+
+
+# ============================================================================
+# 传输层日志转发
+# ============================================================================
+
+## 传输层日志回调，将 printerr 替换为通过核心日志系统输出
+## @param level: String - 日志级别（ERROR/WARN/INFO/DEBUG）
+## @param message: String - 日志消息
+func _log_transport_message(level: String, message: String) -> void:
+	match level:
+		"ERROR":
+			_log_error(message)
+		"WARN":
+			_log_warn(message)
+		"INFO":
+			_log_info(message)
+		"DEBUG":
+			_log_debug(message)
+		_:
+			_log_info(message)
 
 func _append_tool_log(tool_name: String, result: Variant, error: String) -> void:
 	var log_entry: Dictionary = {

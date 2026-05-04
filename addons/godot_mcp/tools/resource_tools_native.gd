@@ -10,11 +10,16 @@ extends RefCounted
 
 var _editor_interface: EditorInterface = null
 var _base_control: Control = null
+var _log_callback: Callable = Callable()
+
+func set_log_callback(callback: Callable) -> void:
+	_log_callback = callback
 
 func initialize(editor_interface: EditorInterface, base_control: Control) -> void:
 	_editor_interface = editor_interface
 	_base_control = base_control
-	print("[ResourceToolsNative] 初始化完成")
+	if _log_callback.is_valid():
+		_log_callback.call("INFO", "初始化完成")
 
 # ===========================================
 # 资源读取功能
@@ -269,7 +274,8 @@ static func _get_godot_version() -> Dictionary:
 ## 注册所有资源到MCPServerCore
 func register_resources(server_core: RefCounted) -> void:
 	if not server_core:
-		print("[ResourceToolsNative] 错误: server_core 为空")
+		if _log_callback.is_valid():
+			_log_callback.call("ERROR", "server_core 为空")
 		return
 
 	server_core.register_resource(
@@ -328,4 +334,5 @@ func register_resources(server_core: RefCounted) -> void:
 		"Get current editor state"
 	)
 
-	print("[ResourceToolsNative] 已注册 7 个资源")
+	if _log_callback.is_valid():
+		_log_callback.call("INFO", "已注册 7 个资源")

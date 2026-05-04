@@ -17,6 +17,13 @@ const JSONRPC_VERSION := "2.0"
 # 资源注册表: uri -> {name, mimeType, load_callable}
 var _resources: Dictionary = {}
 
+# 日志回调
+var _log_callback: Callable = Callable()
+
+## 设置日志回调函数
+func set_log_callback(callback: Callable) -> void:
+	_log_callback = callback
+
 # ===========================================
 # 资源注册
 # ===========================================
@@ -24,7 +31,8 @@ var _resources: Dictionary = {}
 ## 注册资源
 func register_resource(uri: String, name: String, mime_type: String, load_callable: Callable) -> void:
 	if _resources.has(uri):
-		print("[MCPResourceManager] 警告: 资源已存在，将覆盖: " + uri)
+		if _log_callback.is_valid():
+			_log_callback.call("WARN", "资源已存在，将覆盖: " + uri)
 
 	_resources[uri] = {
 		"name": name,
@@ -33,13 +41,15 @@ func register_resource(uri: String, name: String, mime_type: String, load_callab
 	}
 
 	resource_registered.emit(uri, name)
-	print("[MCPResourceManager] 注册资源: " + uri + " (" + name + ")")
+	if _log_callback.is_valid():
+		_log_callback.call("INFO", "注册资源: " + uri + " (" + name + ")")
 
 ## 注销资源
 func unregister_resource(uri: String) -> bool:
 	if _resources.has(uri):
 		_resources.erase(uri)
-		print("[MCPResourceManager] 注销资源: " + uri)
+		if _log_callback.is_valid():
+			_log_callback.call("INFO", "注销资源: " + uri)
 		return true
 	return false
 
@@ -112,8 +122,10 @@ func get_resource_count() -> int:
 
 ## 打印所有注册的资源
 func print_resources() -> void:
-	print("[MCPResourceManager] 已注册的资源:")
+	if not _log_callback.is_valid():
+		return
+	_log_callback.call("INFO", "已注册的资源:")
 	for uri in _resources.keys():
 		var info: Dictionary = _resources[uri]
-		print("  - " + uri + " (" + info["name"] + ")")
-	print("  总计: " + str(_resources.size()) + " 个资源")
+		_log_callback.call("INFO", "  - " + uri + " (" + info["name"] + ")")
+	_log_callback.call("INFO", "  总计: " + str(_resources.size()) + " 个资源")

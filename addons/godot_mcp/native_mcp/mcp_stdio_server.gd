@@ -24,6 +24,13 @@ var _message_queue: Array[Dictionary] = []
 ## 响应队列（存储待发送的响应）
 var _response_queue: Array[Dictionary] = []
 
+## 日志回调
+var _log_callback: Callable = Callable()
+
+## 设置日志回调函数
+func set_log_callback(callback: Callable) -> void:
+	_log_callback = callback
+
 
 # ==============================================================================
 # McpTransportBase 接口实现
@@ -41,7 +48,8 @@ func start() -> bool:
 	_thread.start(_stdin_listen_loop)
 	
 	server_started.emit()
-	printerr("[MCP Stdio] Server started")
+	if _log_callback.is_valid():
+		_log_callback.call("INFO", "Server started")
 	
 	return true
 
@@ -64,7 +72,8 @@ func stop() -> void:
 	_mutex.unlock()
 	
 	server_stopped.emit()
-	printerr("[MCP Stdio] Server stopped")
+	if _log_callback.is_valid():
+		_log_callback.call("INFO", "Server stopped")
 
 ## 检查传输层是否正在运行
 ## @returns: bool - 运行中返回 true，否则返回 false
@@ -78,7 +87,8 @@ func is_running() -> bool:
 
 ## stdin 监听循环（在独立线程中运行）
 func _stdin_listen_loop() -> void:
-	printerr("[MCP Stdio] Listen loop started")
+	if _log_callback.is_valid():
+		_log_callback.call("DEBUG", "Listen loop started")
 	
 	while _active:
 		# 从 stdin 读取数据
@@ -91,7 +101,8 @@ func _stdin_listen_loop() -> void:
 		# 避免 CPU 占用过高
 		OS.delay_msec(10)
 	
-	printerr("[MCP Stdio] Listen loop stopped")
+	if _log_callback.is_valid():
+		_log_callback.call("DEBUG", "Listen loop stopped")
 
 ## 解析并队列消息
 ## @param raw_input: String - 从 stdin 读取的原始字符串
@@ -106,7 +117,8 @@ func _parse_and_queue_message(raw_input: String) -> void:
 		var parse_result: Error = json.parse(line)
 		
 		if parse_result != OK:
-			printerr("[MCP Stdio] JSON parse error: " + json.get_error_message())
+			if _log_callback.is_valid():
+				_log_callback.call("ERROR", "JSON parse error: " + json.get_error_message())
 			call_deferred("_emit_error", null, MCPTypes.ERROR_PARSE_ERROR, "Failed to parse JSON input", line)
 			continue
 		
@@ -158,7 +170,8 @@ func _process_response_queue() -> void:
 func _send_response(response: Dictionary) -> void:
 	var json_string: String = JSON.stringify(response)
 	
-	printerr("[MCP Stdio] Sending response: " + json_string)
+	if _log_callback.is_valid():
+		_log_callback.call("DEBUG", "Sending response: " + json_string)
 	
 	# 输出到 stdout
 	print(json_string)

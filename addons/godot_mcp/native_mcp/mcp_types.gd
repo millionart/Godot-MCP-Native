@@ -256,19 +256,27 @@ static func generate_id() -> String:
 class MCPLogger:
 	var level: int = LogLevel.INFO
 	var prefix: String = "[MCP]"
+	var _log_callback: Callable = Callable()
+	
+	func set_log_callback(callback: Callable) -> void:
+		_log_callback = callback
 	
 	func error(message: String) -> void:
 		if level >= LogLevel.ERROR:
-			printerr(prefix + "[ERROR] " + message)
+			if _log_callback.is_valid():
+				_log_callback.call("ERROR", prefix + "[ERROR] " + message)
 	
 	func warn(message: String) -> void:
 		if level >= LogLevel.WARN:
-			printerr(prefix + "[WARN] " + message)
+			if _log_callback.is_valid():
+				_log_callback.call("WARN", prefix + "[WARN] " + message)
 	
 	func info(message: String) -> void:
 		if level >= LogLevel.INFO:
-			printerr(prefix + "[INFO] " + message)
+			if _log_callback.is_valid():
+				_log_callback.call("INFO", prefix + "[INFO] " + message)
 	
 	func debug(message: String) -> void:
 		if level >= LogLevel.DEBUG:
-			printerr(prefix + "[DEBUG] " + message)
+			if _log_callback.is_valid():
+				_log_callback.call("DEBUG", prefix + "[DEBUG] " + message)

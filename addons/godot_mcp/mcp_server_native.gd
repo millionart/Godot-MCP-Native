@@ -98,8 +98,6 @@ var _tool_instances: Dictionary = {}
 # ============================================================================
 
 func _enter_tree() -> void:
-	printerr("[MCP Plugin] GODOT-NATIVE-MCP PLUGIN LOADING...")
-	
 	_log_info("Godot Native MCP Plugin entering tree...")
 	
 	Engine.set_meta("GodotMCPPlugin", self)
@@ -107,19 +105,13 @@ func _enter_tree() -> void:
 	_editor_interface = get_editor_interface()
 	if not _editor_interface:
 		_log_error("Failed to get EditorInterface")
-		printerr("[MCP Plugin] ERROR: Failed to get EditorInterface")
 		return
-	
-	printerr("[MCP Plugin] EditorInterface obtained")
 	
 	_native_server = load("res://addons/godot_mcp/native_mcp/mcp_server_core.gd").new()
 	
 	if not _native_server:
 		_log_error("Failed to create MCP Server Core instance")
-		printerr("[MCP Plugin] ERROR: Failed to create server core")
 		return
-		
-	printerr("[MCP Plugin] Server core created successfully")
 	
 	# 设置传输方式
 	var type: int = MCPServerCore.TransportType.TRANSPORT_STDIO if transport_mode == "stdio" \
@@ -402,50 +394,32 @@ func _get_resources_count() -> int:
 
 func _register_all_tools() -> void:
 	_log_info("Registering all MCP tools...")
-	printerr("[MCP Plugin][DIAG] _register_all_tools() started")
 	
 	if not _native_server:
 		_log_error("MCP Server instance not available")
-		printerr("[MCP Plugin][DIAG] ABORT: _native_server is null")
 		return
 	
-	printerr("[MCP Plugin][DIAG] Creating NodeToolsNative...")
 	_register_tool_module("NodeToolsNative", NodeToolsNative.new())
-	printerr("[MCP Plugin][DIAG] Creating ScriptToolsNative...")
 	_register_tool_module("ScriptToolsNative", ScriptToolsNative.new())
-	printerr("[MCP Plugin][DIAG] Creating SceneToolsNative...")
 	_register_tool_module("SceneToolsNative", SceneToolsNative.new())
-	printerr("[MCP Plugin][DIAG] Creating EditorToolsNative...")
 	_register_tool_module("EditorToolsNative", EditorToolsNative.new())
-	printerr("[MCP Plugin][DIAG] Creating DebugToolsNative...")
 	_register_tool_module("DebugToolsNative", DebugToolsNative.new())
-	printerr("[MCP Plugin][DIAG] Creating ProjectToolsNative...")
 	_register_tool_module("ProjectToolsNative", ProjectToolsNative.new())
 	
 	var total_tools: int = _native_server.get_tools_count()
-	printerr("[MCP Plugin][DIAG] _register_all_tools() complete. Total tools: %d" % total_tools)
 	_log_info("All MCP tools registered successfully. Total: " + str(total_tools))
 
 func _register_tool_module(module_name: String, instance: RefCounted) -> void:
 	if not instance:
-		printerr("[MCP Plugin][DIAG] FAILED to create instance: " + module_name)
 		return
 	
-	printerr("[MCP Plugin][DIAG] Instance created: " + module_name + " OK")
 	_tool_instances[module_name] = instance
 	
-	printerr("[MCP Plugin][DIAG] Initializing: " + module_name)
 	if instance.has_method("initialize"):
 		instance.initialize(_editor_interface)
-	printerr("[MCP Plugin][DIAG] Initialized: " + module_name + " OK")
 	
-	printerr("[MCP Plugin][DIAG] Registering tools: " + module_name)
-	var tools_before: int = _native_server.get_tools_count()
 	if instance.has_method("register_tools"):
 		instance.register_tools(_native_server)
-	var tools_after: int = _native_server.get_tools_count()
-	var tools_added: int = tools_after - tools_before
-	printerr("[MCP Plugin][DIAG] Registered: %s (added %d tools, total now %d)" % [module_name, tools_added, tools_after])
 
 # ============================================================================
 # 私有方法 - 资源注册（根据mcp-builder优化）
@@ -814,32 +788,26 @@ func _on_tool_failed(tool_name: String, error: String) -> void:
 func _on_log_message(level: String, message: String) -> void:
 	if _main_panel and _main_panel.has_method("update_log"):
 		_main_panel.update_log("[" + level + "] " + message)
-	
-	match level:
-		"ERROR":
-			printerr("[MCP Server] " + message)
-		"WARN", "INFO", "DEBUG":
-			printerr("[MCP Server][" + level + "] " + message)
 
 # ============================================================================
 # 日志方法（根据godot-dev-guide优化）
 # ============================================================================
 
 func _log_error(message: String) -> void:
-	if log_level >= 0:
-		printerr("[MCP Plugin][ERROR] " + message)
+	if log_level >= 0 and _native_server:
+		_native_server._log_error(message)
 
 func _log_warn(message: String) -> void:
-	if log_level >= 1:
-		printerr("[MCP Plugin][WARN] " + message)
+	if log_level >= 1 and _native_server:
+		_native_server._log_warn(message)
 
 func _log_info(message: String) -> void:
-	if log_level >= 2:
-		printerr("[MCP Plugin][INFO] " + message)
+	if log_level >= 2 and _native_server:
+		_native_server._log_info(message)
 
 func _log_debug(message: String) -> void:
-	if log_level >= 3:
-		printerr("[MCP Plugin][DEBUG] " + message)
+	if log_level >= 3 and _native_server:
+		_native_server._log_debug(message)
 
 # ============================================================================
 # 清理

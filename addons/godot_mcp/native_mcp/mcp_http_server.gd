@@ -64,6 +64,10 @@ var _allow_remote: bool = false
 var _cors_origin: String = "*"
 
 
+## 日志回调函数（由 McpServerCore 设置，用于替代 printerr）
+var _log_callback: Callable = Callable()
+
+
 # ==============================================================================
 # McpTransportBase 接口实现
 # ==============================================================================
@@ -75,6 +79,11 @@ func set_port(port: int) -> void:
 		push_error("Cannot change port while server is running")
 		return
 	_port = port
+
+## 设置日志回调
+## @param callback: Callable - 日志回调函数，接受 level (String) 和 message (String) 参数
+func set_log_callback(callback: Callable) -> void:
+	_log_callback = callback
 
 ## 设置认证管理器
 ## @param manager: RefCounted - 认证管理器实例（与父类签名一致）
@@ -90,7 +99,8 @@ func start() -> bool:
 	if error != OK:
 		var error_msg: String = "Failed to listen on port " + str(_port) + ": " + str(error)
 		server_error.emit(error_msg)
-		printerr("[MCP HTTP] " + error_msg)
+		if _log_callback.is_valid():
+			_log_callback.call("ERROR", error_msg)
 		return false
 	
 	_active = true
@@ -98,7 +108,8 @@ func start() -> bool:
 	_thread.start(_http_server_loop)
 	
 	server_started.emit()
-	printerr("[MCP HTTP] Server started on port " + str(_port))
+	if _log_callback.is_valid():
+		_log_callback.call("INFO", "Server started on port " + str(_port))
 	
 	return true
 
@@ -106,25 +117,26 @@ func start() -> bool:
 func stop() -> void:
 	_active = false
 	
-	# 关闭所有活跃连接
+	# 停止 TCP 服务器（不再接受新连接）
+	if _tcp_server:
+		_tcp_server.stop()
+		_tcp_server = null
+	
+	# 等待线程结束（必须在线程退出后再修改共享数据）
+	if _thread and _thread.is_alive():
+		_thread.wait_to_finish()
+	_thread = null
+	
+	# 线程已退出，安全清理连接
 	for peer in _connections:
 		if peer and peer.get_status() == StreamPeerTCP.STATUS_CONNECTED:
 			peer.disconnect_from_host()
 	
 	_connections.clear()
 	
-	# 等待线程结束
-	if _thread and _thread.is_alive():
-		_thread.wait_to_finish()
-		_thread = null
-	
-	# 停止 TCP 服务器
-	if _tcp_server:
-		_tcp_server.stop()
-		_tcp_server = null
-	
 	server_stopped.emit()
-	printerr("[MCP HTTP] Server stopped")
+	if _log_callback.is_valid():
+		_log_callback.call("INFO", "Server stopped")
 
 ## 检查传输层是否正在运行
 ## @returns: bool - 运行中返回 true，否则返回 false
@@ -138,26 +150,33 @@ func is_running() -> bool:
 
 ## HTTP 服务器主循环（在独立线程中运行）
 func _http_server_loop() -> void:
-	printerr("[MCP HTTP] Server loop started")
+	if _log_callback.is_valid():
+		_log_callback.call("INFO", "Server loop started")
 	
 	var last_keepalive: int = Time.get_ticks_msec()
 	
 	while _active:
+		if not _tcp_server:
+			break
+		
 		# 检查新连接
 		var peer: StreamPeerTCP = null
 		if _tcp_server.is_connection_available():
 			peer = _tcp_server.take_connection()
 		if peer:
 			_connections.append(peer)
-			printerr("[MCP HTTP] New connection: " + str(peer.get_status()))
+			if _log_callback.is_valid():
+				_log_callback.call("INFO", "New connection: " + str(peer.get_status()))
 		
-		# 处理所有活跃连接
+		# 处理所有活跃连接（复制一份避免并发修改）
 		var disconnected: Array[StreamPeerTCP] = []
+		var current_connections: Array[StreamPeerTCP] = _connections.duplicate()
 		
-		for p in _connections:
+		for p in current_connections:
+			if not _active:
+				break
 			if p.get_status() != StreamPeerTCP.STATUS_CONNECTED:
 				disconnected.append(p)
-				# 如果是 SSE 连接，清理会话
 				if _sse_connections.has(p):
 					_close_sse_connection(p)
 				continue
@@ -171,7 +190,7 @@ func _http_server_loop() -> void:
 		
 		# 处理 SSE 连接的心跳
 		var current_time: int = Time.get_ticks_msec()
-		if current_time - last_keepalive > 30000:  # 每 30 秒发送一次心跳
+		if current_time - last_keepalive > 30000:
 			_send_sse_keepalive()
 			last_keepalive = current_time
 		
@@ -181,7 +200,8 @@ func _http_server_loop() -> void:
 	# 清理所有 SSE 连接
 	_cleanup_all_sse_connections()
 	
-	printerr("[MCP HTTP] Server loop stopped")
+	if _log_callback.is_valid():
+		_log_callback.call("INFO", "Server loop stopped")
 
 ## 发送 SSE 心跳
 func _send_sse_keepalive() -> void:
@@ -192,7 +212,8 @@ func _send_sse_keepalive() -> void:
 		var error: Error = peer.put_data(message.to_utf8_buffer())
 		
 		if error != OK:
-			printerr("[MCP HTTP] Failed to send keepalive, closing connection")
+			if _log_callback.is_valid():
+				_log_callback.call("WARN", "Failed to send keepalive, closing connection")
 			disconnected_peers.append(peer)
 	
 	# 清理断开的连接
@@ -208,7 +229,8 @@ func _cleanup_all_sse_connections() -> void:
 	_sse_connections.clear()
 	_sessions.clear()
 	
-	printerr("[MCP HTTP] All SSE connections cleaned up")
+	if _log_callback.is_valid():
+		_log_callback.call("INFO", "All SSE connections cleaned up")
 
 ## 处理 HTTP 请求
 ## @param peer: StreamPeerTCP - 客户端连接
@@ -251,7 +273,8 @@ func _handle_http_request(peer: StreamPeerTCP) -> void:
 		
 		if headers_complete:
 			var header_end: int = request.find("\r\n\r\n")
-			var body_received: int = request.length() - header_end - 4
+			var body: String = request.substr(header_end + 4)
+			var body_received: int = body.to_utf8_buffer().size()
 			
 			if content_length >= 0:
 				if body_received >= content_length:
@@ -431,7 +454,8 @@ func _handle_sse_request(peer: StreamPeerTCP, parsed: Dictionary) -> void:
 		"created_at": Time.get_time_dict_from_system()
 	}
 	
-	printerr("[MCP HTTP] SSE connection established: " + session_id)
+	if _log_callback.is_valid():
+		_log_callback.call("INFO", "SSE connection established: " + session_id)
 
 ## 发送 SSE 事件
 ## @param peer: StreamPeerTCP - 客户端连接
@@ -444,7 +468,8 @@ func _send_sse_event(peer: StreamPeerTCP, event: String, data: Dictionary) -> vo
 	
 	var error: Error = peer.put_data(message.to_utf8_buffer())
 	if error != OK:
-		printerr("[MCP HTTP] Failed to send SSE event: " + str(error))
+		if _log_callback.is_valid():
+			_log_callback.call("ERROR", "Failed to send SSE event: " + str(error))
 		_close_sse_connection(peer)
 
 ## 关闭 SSE 连接
@@ -454,7 +479,8 @@ func _close_sse_connection(peer: StreamPeerTCP) -> void:
 		var session_id: String = _sse_connections[peer]
 		_sse_connections.erase(peer)
 		_sessions.erase(session_id)
-		printerr("[MCP HTTP] SSE connection closed: " + session_id)
+		if _log_callback.is_valid():
+			_log_callback.call("INFO", "SSE connection closed: " + session_id)
 	
 	peer.disconnect_from_host()
 
@@ -480,7 +506,8 @@ func set_remote_config(allow_remote: bool, cors_origin: String = "*") -> void:
 	_allow_remote = allow_remote
 	_cors_origin = cors_origin
 	
-	printerr("[MCP HTTP] Remote access config: allow_remote=" + str(allow_remote) + ", cors=" + cors_origin)
+	if _log_callback.is_valid():
+		_log_callback.call("INFO", "Remote access config: allow_remote=" + str(allow_remote) + ", cors=" + cors_origin)
 
 
 # ==============================================================================
@@ -504,7 +531,8 @@ func _emit_message_received(message: Dictionary, peer: StreamPeerTCP) -> void:
 func send_response(response: Dictionary, context: Variant) -> void:
 	var peer: StreamPeerTCP = context as StreamPeerTCP
 	if not peer:
-		printerr("[MCP HTTP] Cannot send response: invalid peer context")
+		if _log_callback.is_valid():
+			_log_callback.call("ERROR", "Cannot send response: invalid peer context")
 		return
 	_send_http_response(peer, response)
 
@@ -527,7 +555,8 @@ func _send_http_response(peer: StreamPeerTCP, data: Dictionary) -> void:
 	var error: Error = peer.put_data(full_response)
 	if error != OK:
 		server_error.emit("Failed to send HTTP response: " + str(error))
-		printerr("[MCP HTTP] Failed to send response: " + str(error))
+		if _log_callback.is_valid():
+			_log_callback.call("ERROR", "Failed to send response: " + str(error))
 	
 	peer.disconnect_from_host()
 
@@ -566,4 +595,5 @@ func _send_http_error(peer: StreamPeerTCP, status_code: int, message: String) ->
 	peer.put_data(response_header.to_utf8_buffer() + message.to_utf8_buffer())
 	peer.disconnect_from_host()
 	
-	printerr("[MCP HTTP] Error response sent: " + str(status_code) + " " + message)
+	if _log_callback.is_valid():
+		_log_callback.call("WARN", "Error response sent: " + str(status_code) + " " + message)
