@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dlwtgii3pf6wd"]
+
+[ext_resource type="Script" uid="uid://cjveyo87qjyax" path="res://addons/godot_mcp/ui/mcp_panel_native.gd" id="1"]
+
+[node name="MCPPanelNative" type="VBoxContainer" unique_id=180844499]
+script = ExtResource("1")
