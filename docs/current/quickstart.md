@@ -16,8 +16,8 @@
 ## 步骤 1: 克隆项目
 
 ```bash
-git clone https://github.com/your-username/Godot-MCP.git
-cd Godot-MCP
+git clone https://github.com/yurineko73/Godot-MCP-Native.git
+cd Godot-MCP-Native
 ```
 
 ## 步骤 2: 配置 Godot 插件
@@ -178,4 +178,4 @@ lsof -i :9080                   # macOS/Linux
 
 ---
 
-**恭喜！你已成功配置 Godot-MCP 项目。** 🎉
+**恭喜！你已成功配置 Godot MCP Native 项目。** 🎉

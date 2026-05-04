@@ -81,7 +81,7 @@ func validate_request(headers: Dictionary) -> bool:
 ## 返回 WWW-Authenticate 头（用于 401 响应）
 ## @returns: String - WWW-Authenticate 头值
 func get_www_authenticate_header() -> String:
-	return SCHEME + ' realm="Godot-MCP", error="invalid_token"'
+	return SCHEME + ' realm="Godot MCP Native", error="invalid_token"'
 
 ## 生成随机 token
 ## @param length: int - token 长度（默认 32）

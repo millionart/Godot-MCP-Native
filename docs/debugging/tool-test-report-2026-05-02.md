@@ -698,10 +698,10 @@ curl.exe -s -X POST http://localhost:9080/mcp \
 
 | # | 工具名 | 状态 | 测试参数 | 实际返回结果 |
 |---|--------|------|----------|-------------|
-| 31 | get_project_info | ✅ | (无参数) | `{"project_name":"Godot MCP","main_scene":"res://TestScene.tscn","project_path":"F:/gitProjects/Godot-MCP/"}` |
+| 31 | get_project_info | ✅ | (无参数) | `{"project_name":"Godot MCP Native","main_scene":"res://TestScene.tscn","project_path":"F:/gitProjects/Godot-MCP-Native/"}` |
 | 32 | get_project_settings | ✅ | filter="application/" | `{"count":36,"settings":{...}}` |
-| 33 | list_project_resources | ✅ | search_path="res://addons/godot_mcp/", resource_types=[".gd",".tscn"] | `{"count":35,"resources":[...]}` |
-| 34 | create_resource | ✅ | resource_path="res://test_r3_curve.tres", resource_type="Curve", properties={"min_value":0,"max_value":100} | `{"resource_path":"res://test_r3_curve.tres","resource_type":"Curve","status":"success"}` |
+| 33 | list_project_resources | ✅ | search_path="res://addons/godot_mcp/", resource_types=[".gd",".tscn"] | `count=35,"resources":[...]}` |
+| 34 | create_resource | ✅ | resource_path="res://test_r3_curve.tres", resource_type="Curve", properties={"min_value":0,"max_value":100} | `resource_path":"res://test_r3_curve.tres","resource_type":"Curve","status":"success"}` |
 | 35 | get_project_structure | ⚠️ | max_depth=2 | `{"total_files":258,"total_directories":22,...}` — file_counts 包含 .import(3) 和 .uid(81) 内部文件 |
 
 **发现的问题**:

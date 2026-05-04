@@ -119,7 +119,7 @@
 
 | # | 工具名 | 状态 | 测试要点 | 结果验证 |
 |---|--------|------|----------|----------|
-| 30 | get_project_info | ✅ | 获取项目信息 | `godot_version="4.6.stable"` ✅, `project_name="Godot MCP"` |
+| 30 | get_project_info | ✅ | 获取项目信息 | `godot_version="4.6.stable"` ✅, `project_name="Godot MCP Native"` |
 | 31 | get_project_settings | ✅ | filter="application/config/" | `count=16`, 返回配置设置 |
 | 32 | list_project_resources | ✅ | search_path + resource_types 过滤 | `count=8`, 仅返回 .gd 文件 |
 | 33 | create_resource | ✅ | 创建 Gradient 资源 | `resource_type="Gradient"`, `status="success"` |

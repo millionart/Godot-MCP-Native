@@ -2,8 +2,8 @@ extends "res://addons/gut/test.gd"
 
 func test_project_info_format():
 	var result: Dictionary = {
-		"project_name": "Godot MCP",
-		"project_path": "F:/gitProjects/Godot-MCP/",
+		"project_name": "Godot MCP Native",
+		"project_path": "F:/gitProjects/Godot-MCP-Native/",
 		"project_version": "",
 		"project_description": "",
 		"main_scene": "res://TestScene.tscn"
@@ -14,7 +14,7 @@ func test_project_info_format():
 
 func test_project_settings_filter():
 	var settings: Dictionary = {
-		"application/config/name": "Godot MCP",
+		"application/config/name": "Godot MCP Native",
 		"application/run/main_scene": "res://TestScene.tscn",
 		"debug/gdscript/warnings/unused_variable": true
 	}
@@ -27,7 +27,7 @@ func test_project_settings_filter():
 
 func test_project_settings_no_filter():
 	var settings: Dictionary = {
-		"application/config/name": "Godot MCP",
+		"application/config/name": "Godot MCP Native",
 		"debug/gdscript/warnings/unused_variable": true
 	}
 	assert_eq(settings.size(), 2, "Without filter should return all settings")

@@ -1,6 +1,6 @@
 # 架构设计文档
 
-本文档详细说明 Godot-MCP 项目的系统架构、设计决策和技术实现。
+本文档详细说明 Godot MCP Native 项目的系统架构、设计决策和技术实现。
 
 ## 目录
 
@@ -17,7 +17,7 @@
 
 ## 系统架构概述
 
-Godot-MCP 采用 **三层架构**，将 AI Client、MCP 服务器和 Godot 编辑器无缝集成：
+Godot MCP Native 采用 **三层架构**，将 AI Client、MCP 服务器和 Godot 编辑器无缝集成：
 
 ```
 ┌─────────────────┐
@@ -488,7 +488,7 @@ func _send_response(response: Dictionary, context: Variant) -> void:
 
 ### 线程安全策略
 
-Godot-MCP 使用以下策略确保线程安全：
+Godot MCP Native 使用以下策略确保线程安全：
 
 1. **call_deferred()**：
    - 在子线程中调用，确保在主线程执行
@@ -534,7 +534,7 @@ func _process_message_queue() -> void:
 
 ### 认证机制
 
-Godot-MCP 支持 **Token-based 认证**（仅 HTTP 模式）：
+Godot MCP Native 支持 **Token-based 认证**（仅 HTTP 模式）：
 
 ```gdscript
 class_name McpAuthManager
@@ -682,6 +682,6 @@ func _register_all_tools() -> void:
 
 ## 总结
 
-Godot-MCP 采用模块化、可扩展的架构设计，支持多种传输方式和工具。通过合理的线程模型和信号处理，确保系统的稳定性和性能。安全设计和性能优化措施进一步提升了系统的可靠性和用户体验。
+Godot MCP Native 采用模块化、可扩展的架构设计，支持多种传输方式和工具。通过合理的线程模型和信号处理，确保系统的稳定性和性能。安全设计和性能优化措施进一步提升了系统的可靠性和用户体验。
 
 如有任何问题或建议，欢迎在 GitHub Issues 中提出。

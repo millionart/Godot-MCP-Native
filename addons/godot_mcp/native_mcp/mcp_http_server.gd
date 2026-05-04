@@ -373,8 +373,8 @@ func _handle_get_request(peer: StreamPeerTCP, parsed: Dictionary) -> void:
 	
 	# 普通 GET 请求，返回服务器信息
 	var info: Dictionary = {
-		"name": "Godot-MCP",
-		"version": "2.0.0",
+		"name": "Godot MCP Native",
+		"version": "1.0.0",
 		"transport": "http",
 		"protocol": "MCP 2025-03-26",
 		"endpoints": {
