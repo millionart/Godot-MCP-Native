@@ -1,6 +1,8 @@
-# Godot MCP (Model Context Protocol)
+# Godot MCP Native (Model Context Protocol)
 
-![Godot Version](https://img.shields.io/badge/Godot-4.6-blue?logo=godot-engine)
+[中文版本](README.zh.md)
+
+![Godot Version](https://img.shields.io/badge/Godot-4.x-blue?logo=godot-engine)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Version](https://img.shields.io/badge/Version-1.0.0-orange)
 
@@ -8,22 +10,23 @@ A powerful Godot Engine plugin that integrates AI assistants (Claude, etc.) via 
 
 ## 🚀 Features
 
-- **Full Project Access**: AI assistants can read and modify scripts, scenes, nodes, and project resources
+- **Full Project Access**: AI assistants can read and modify scripts, scenes, nodes, and resources
 - **Native Implementation**: No Node.js dependency required - runs entirely within Godot
 - **Real-time Editing**: Apply AI suggestions directly in the editor
-- **Comprehensive Tool Set**:
-  - **Node Tools**: Create, modify, and manage scene nodes
-  - **Script Tools**: Edit, analyze, and create GDScript files
-  - **Scene Tools**: Manipulate scene structure and save scenes
-  - **Project Tools**: Access project settings and list resources
-  - **Editor Tools**: Control editor functionality and debug
+- **Comprehensive Tool Set** (33+ tools):
+  - **Node Tools** (6): Create, modify, and manage scene nodes
+  - **Script Tools** (6): Edit, analyze, and create GDScript files
+  - **Scene Tools** (6): Manipulate scene structure and save scenes
+  - **Editor Tools** (5): Control editor functionality and debug
+  - **Debug Tools** (5): Debugging and logging
+  - **Project Tools** (5): Access project settings and list resources
 
 ## 📦 Installation
 
 ### Method 1: Asset Library (Recommended)
 1. Open your Godot project
 2. Go to **AssetLib** tab in the editor
-3. Search for "Godot MCP"
+3. Search for "Godot MCP Native"
 4. Click **Download** and then **Install**
 
 ### Method 2: Manual Installation
@@ -31,21 +34,17 @@ A powerful Godot Engine plugin that integrates AI assistants (Claude, etc.) via 
 2. Copy the `addons/godot_mcp` folder to your project's `addons/` directory
 3. Open your project in Godot
 4. Go to **Project > Project Settings > Plugins**
-5. Enable "Godot MCP" plugin
+5. Enable "Godot MCP Native" plugin
 
 ## 🔧 Usage
 
 ### Enabling the Plugin
 1. Open **Project > Project Settings > Plugins**
-2. Locate "Godot MCP" in the list
+2. Locate "Godot MCP Native" in the list
 3. Set the status to **Enable**
 
 ### Configuring MCP Server
 The plugin provides two transport modes:
-
-#### stdio Mode (Default - for local AI assistants)
-- Best for: Local development with Claude Desktop
-- Configuration: Set `transport_mode = "stdio"` in plugin settings
 
 #### HTTP Mode (for remote access)
 - Best for: Network-based AI integration
@@ -53,20 +52,6 @@ The plugin provides two transport modes:
 - Optional: Enable `auth_enabled` and set `auth_token` for security
 
 ### Connecting with Claude Desktop
-
-#### stdio Mode Configuration
-Edit Claude Desktop config file (`claude_desktop_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "godot-mcp": {
-      "command": "path/to/godot.exe",
-      "args": ["--headless", "--script", "res://addons/godot_mcp/mcp_server_native.gd"]
-    }
-  }
-}
-```
 
 #### HTTP Mode Configuration
 ```json
@@ -119,34 +104,50 @@ Implement a day/night cycle system with dynamic lighting
 
 ## 📚 Available Commands
 
-### Node Commands
+### Node Tools (6)
 - `get-scene-tree` - Get scene tree structure
 - `get-node-properties` - Get properties of a specific node
 - `create-node` - Create a new node
 - `delete-node` - Delete a node
-- `modify-node` - Update node properties
+- `update-node-property` - Update node properties
+- `list-nodes` - List nodes under a parent
 
-### Script Commands
+### Script Tools (6)
 - `list-project-scripts` - List all scripts
 - `read-script` - Read a specific script
 - `modify-script` - Update script content
 - `create-script` - Create a new script
 - `analyze-script` - Analyze script structure
+- `get-current-script` - Get currently editing script
 
-### Scene Commands
+### Scene Tools (6)
 - `list-project-scenes` - List all scenes
 - `read-scene` - Read scene structure
 - `create-scene` - Create a new scene
 - `save-scene` - Save current scene
+- `open-scene` - Open a scene
+- `get-current-scene` - Get current scene info
 
-### Project Commands
+### Project Tools (5)
+- `get-project-info` - Get project information
 - `get-project-settings` - Get project settings
 - `list-project-resources` - List project resources
+- `create-resource` - Create a new resource
+- `get-project-structure` - Get project directory structure
 
-### Editor Commands
+### Editor Tools (5)
 - `get-editor-state` - Get current editor state
 - `run-project` - Run the project
 - `stop-project` - Stop the running project
+- `get-selected-nodes` - Get selected nodes
+- `set-editor-setting` - Modify editor settings
+
+### Debug Tools (5)
+- `get-editor-logs` - Get editor/runtime logs
+- `execute-script` - Execute GDScript expression
+- `get-performance-metrics` - Get performance data
+- `debug-print` - Print debug info
+- `execute-editor-script` - Execute GDScript script
 
 ## 🔒 Security Recommendations
 
@@ -157,16 +158,16 @@ Implement a day/night cycle system with dynamic lighting
 
 ## 📋 Requirements
 
-- Godot Engine 4.6 or higher
+- Godot Engine 4.x (recommended 4.5 or higher)
 - No additional dependencies (native implementation)
 
 ## 📖 Documentation
 
-For detailed documentation, see the `docs/` folder:
-- [Getting Started](docs/getting-started.md)
-- [Installation Guide](docs/installation-guide.md)
-- [Command Reference](docs/command-reference.md)
-- [Architecture](docs/architecture.md)
+For detailed documentation, see the `docs/current/` folder:
+- [Quick Start Guide](docs/current/quickstart.md)
+- [Architecture Design](docs/current/architecture.md)
+- [Tools Reference](docs/current/tools-reference.md)
+- [Testing Guide](docs/current/testing-guide.md)
 
 ## 🤝 Contributing
 
