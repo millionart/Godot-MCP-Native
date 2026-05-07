@@ -90,7 +90,7 @@ Godot MCP Native 采用 **三层架构**，将 AI Client、MCP 服务器和 Godo
 MCP Server 是核心中间层，负责：
 
 1. **工具管理**：
-   - 注册工具（33 个工具）
+   - 注册工具（43 个工具）
    - 验证工具参数
    - 执行工具逻辑
 
@@ -306,9 +306,9 @@ func _generate_session_id() -> String:
 
 ### 工具注册
 
-Godot-MCP 实现了 **33 个工具**，分为 6 大类：
+Godot-MCP 实现了 **43 个工具**，分为 6 大类：
 
-1. **Node Tools** (6 个)：节点管理
+1. **Node Tools** (16 个)：节点管理（创建、删除、修改属性、复制、移动、重命名、信号连接、组管理）
 2. **Script Tools** (6 个)：脚本管理
 3. **Scene Tools** (6 个)：场景管理
 4. **Editor Tools** (5 个)：编辑器操作

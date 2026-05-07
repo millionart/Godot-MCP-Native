@@ -72,104 +72,111 @@ test/
 
 ### GDScript 单元测试
 
-**工具**：Godot 内置测试框架
+**工具**：GUT (Godot Unit Test) 9.6.0
 
-**示例测试** (`test/tools/test_create_node.gd`)：
-```gdscript
-extends SceneTree
+**配置文件**：`.gutconfig.json`（项目根目录）
 
-const NodeToolsNative = preload("res://addons/godot_mcp/native_mcp/tools/node_tools_native.gd")
-
-var _tool_instance: NodeToolsNative = null
-var _pass_count: int = 0
-var _fail_count: int = 0
-
-func _ready() -> void:
-	print("=== Running test: create_node ===")
-	
-	_tool_instance = NodeToolsNative.new()
-	_tool_instance.initialize(get_editor_interface())
-	
-	# 运行测试用例
-	_test_create_valid_node()
-	_test_create_invalid_node_type()
-	_test_create_invalid_parent_path()
-	
-	# 打印结果
-	print("\n=== Test Results ===")
-	print("Passed: " + str(_pass_count))
-	print("Failed: " + str(_fail_count))
-	
-	if _fail_count == 0:
-		print("✓ All tests passed")
-	else:
-		print("✗ Some tests failed")
-	
-	quit()
-
-func _test_create_valid_node() -> void:
-	print("\nTest: create valid node")
-	
-	var result: Dictionary = _tool_instance.create_node({
-		"parent_path": "/root",
-		"node_type": "Node2D",
-		"node_name": "TestNode"
-	})
-	
-	_assert_equal(result["status"], "success", "Node creation status")
-	_assert_true(result.has("node_path"), "Has node_path")
-
-func _test_create_invalid_node_type() -> void:
-	print("\nTest: create invalid node type")
-	
-	var result: Dictionary = _tool_instance.create_node({
-		"parent_path": "/root",
-		"node_type": "InvalidType",
-		"node_name": "Test"
-	})
-	
-	_assert_equal(result["status"], "error", "Invalid node type status")
-	_assert_true(result.has("message"), "Has error message")
-
-func _test_create_invalid_parent_path() -> void:
-	print("\nTest: create invalid parent path")
-	
-	var result: Dictionary = _tool_instance.create_node({
-		"parent_path": "/non/existent",
-		"node_type": "Node2D",
-		"node_name": "Test"
-	})
-	
-	_assert_equal(result["status"], "error", "Invalid parent path status")
-	_assert_true(result.has("message"), "Has error message")
-
-# 断言辅助函数
-func _assert_equal(actual, expected: Variant, test_name: String) -> void:
-	if actual == expected:
-		_pass_count += 1
-		print("  ✓ " + test_name)
-	else:
-		_fail_count += 1
-		print("  ✗ " + test_name + ": expected " + str(expected) + ", got " + str(actual))
-
-func _assert_true(condition: bool, test_name: String) -> void:
-	if condition:
-		_pass_count += 1
-		print("  ✓ " + test_name)
-	else:
-		_fail_count += 1
-		print("  ✗ " + test_name)
+```json
+{
+  "dirs": ["res://test/unit/"],
+  "include_subdirs": true,
+  "log_level": 2,
+  "should_maximize": false,
+  "should_exit_on_finish": false,
+  "ignore_pause": true,
+  "suffix": ".gd",
+  "panel_options": {
+    "font_size": 14
+  }
+}
 ```
+
+**测试目录结构**：
+```
+test/unit/
+├── test_http_parsing.gd
+├── test_mcp_auth_manager.gd
+├── test_mcp_http_server.gd
+├── test_mcp_resource_manager.gd
+├── test_mcp_server_core.gd
+├── test_mcp_server_native.gd
+├── test_mcp_stdio_server.gd
+├── test_mcp_transport_base.gd
+├── test_mcp_types.gd
+├── test_node_tools_convert.gd
+├── test_path_validator.gd
+└── tools/
+    ├── test_debug_tools.gd
+    ├── test_editor_tools.gd
+    ├── test_node_tools.gd
+    ├── test_node_tools_enhanced.gd
+    ├── test_project_tools.gd
+    ├── test_resource_tools.gd
+    ├── test_scene_tools.gd
+    └── test_script_tools.gd
+```
+
+**当前测试规模**：19 个测试脚本，295 个测试用例，521 个断言
 
 **运行测试**：
-```bash
-# 在 Godot Editor 中
-# 1. 打开 test/tools/test_create_node.gd
-# 2. 点击 "运行" 按钮
-
-# 或使用命令行
-"C:\Program Files\Godot\Godot.exe" --path "F:\gitProjects\Godot-MCP" --script "test/tools/test_create_node.gd"
+```powershell
+# 命令行运行 GUT 测试
+& "f:/Godot/Godot_v4.6.1-stable_win64.exe" --headless --path "F:/gitProjects/Godot-MCP-Native" -s addons/gut/gut_cmdln.gd -gdir=res://test/unit/ -ginclude_subdirs -gexit
 ```
+
+**示例测试** (`test/unit/tools/test_node_tools_enhanced.gd`)：
+```gdscript
+extends "res://addons/gut/test.gd"
+
+var _node_tools: RefCounted = null
+
+func before_each():
+    _node_tools = load("res://addons/godot_mcp/tools/node_tools_native.gd").new()
+
+func after_each():
+    _node_tools = null
+
+func test_duplicate_node_missing_node_path():
+    var result: Dictionary = _node_tools._tool_duplicate_node({})
+    assert_has(result, "error", "Should return error for missing node_path")
+
+func test_rename_node_basic():
+    var node: Node = Node.new()
+    node.name = "OldName"
+    add_child_autofree(node)
+    node.name = "NewName"
+    assert_eq(str(node.name), "NewName", "Node name should be updated")
+
+func test_connect_signal_basic():
+    var emitter: Button = Button.new()
+    emitter.name = "Button"
+    add_child_autofree(emitter)
+    var signal_list: Array = emitter.get_signal_list()
+    var has_pressed: bool = false
+    for sig in signal_list:
+        if sig.get("name", "") == "pressed":
+            has_pressed = true
+            break
+    assert_true(has_pressed, "Button should have 'pressed' signal")
+```
+
+**GUT 断言方法**：
+| 方法 | 用途 |
+|------|------|
+| `assert_true(condition)` | 断言条件为真 |
+| `assert_false(condition)` | 断言条件为假 |
+| `assert_eq(a, b)` | 断言相等 |
+| `assert_ne(a, b)` | 断言不等 |
+| `assert_gt(a, b)` | 断言大于 |
+| `assert_lt(a, b)` | 断言小于 |
+| `assert_has(dict, key)` | 断言字典包含键 |
+| `assert_contains(str, substr)` | 断言字符串包含子串 |
+
+**GUT 注意事项**：
+- 使用 `add_child_autofree(node)` 将节点添加到场景树并自动释放
+- 不要手动调用 `node.free()`，`add_child_autofree` 会自动处理
+- 使用 `load("res://path/to/script.gd").new()` 而非 `ClassName.new()`（CLI 模式下 class_name 不可用）
+- `assert_has` 仅适用于 Dictionary 和 Array，不适用于 String
 
 ---
 

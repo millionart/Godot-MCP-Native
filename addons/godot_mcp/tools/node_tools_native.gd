@@ -16,6 +16,16 @@ func register_tools(server_core: RefCounted) -> void:
 	_register_get_node_properties(server_core)
 	_register_list_nodes(server_core)
 	_register_get_scene_tree(server_core)
+	_register_duplicate_node(server_core)
+	_register_move_node(server_core)
+	_register_rename_node(server_core)
+	_register_add_resource(server_core)
+	_register_set_anchor_preset(server_core)
+	_register_connect_signal(server_core)
+	_register_disconnect_signal(server_core)
+	_register_get_node_groups(server_core)
+	_register_set_node_groups(server_core)
+	_register_find_nodes_in_group(server_core)
 
 func _register_create_node(server_core: RefCounted) -> void:
 	server_core.register_tool(
@@ -603,3 +613,803 @@ static func _count_all_nodes(node: Node) -> int:
 		var child: Node = node.get_child(child_index)
 		count += _count_all_nodes(child)
 	return count
+
+# ===========================================
+# 节点工具增强 - 新增工具
+# ===========================================
+
+func _register_duplicate_node(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"duplicate_node",
+		"Duplicate a node and its children in the scene tree. Returns the new node path.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {
+					"type": "string",
+					"description": "Path to the node to duplicate (e.g. '/root/MainScene/Player')"
+				},
+				"new_name": {
+					"type": "string",
+					"description": "Name for the duplicated node. If empty, auto-generates a unique name."
+				}
+			},
+			"required": ["node_path"]
+		},
+		Callable(self, "_tool_duplicate_node"),
+		{
+			"type": "object",
+			"properties": {
+				"status": {"type": "string"},
+				"original_path": {"type": "string"},
+				"new_node_path": {"type": "string"},
+				"new_node_name": {"type": "string"}
+			}
+		},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+	)
+
+func _tool_duplicate_node(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var new_name: String = params.get("new_name", "")
+
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var target_node: Node = _resolve_node_path(node_path)
+	if not target_node:
+		return {"error": "Node not found: " + node_path}
+
+	var parent: Node = target_node.get_parent()
+	if not parent:
+		return {"error": "Cannot duplicate root node"}
+
+	var new_node: Node = target_node.duplicate()
+	if not new_node:
+		return {"error": "Failed to duplicate node"}
+
+	if not new_name.is_empty():
+		new_node.name = new_name
+	else:
+		var base_name: String = str(target_node.name)
+		var counter: int = 2
+		var candidate_name: String = base_name + str(counter)
+		while parent.has_node(candidate_name):
+			counter += 1
+			candidate_name = base_name + str(counter)
+		new_node.name = candidate_name
+
+	parent.add_child(new_node)
+
+	var scene_root: Node = _get_user_scene_root()
+	if scene_root:
+		new_node.owner = scene_root
+
+	editor_interface.mark_scene_as_unsaved()
+
+	return {
+		"status": "success",
+		"original_path": node_path,
+		"new_node_path": _make_friendly_path(new_node, scene_root),
+		"new_node_name": str(new_node.name)
+	}
+
+func _register_move_node(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"move_node",
+		"Move a node to a new parent in the scene tree. Optionally preserves global transform.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {
+					"type": "string",
+					"description": "Path to the node to move (e.g. '/root/MainScene/Player')"
+				},
+				"new_parent_path": {
+					"type": "string",
+					"description": "Path to the new parent node (e.g. '/root/MainScene/Enemies')"
+				},
+				"keep_global_transform": {
+					"type": "boolean",
+					"description": "Whether to preserve global transform. Default is true."
+				}
+			},
+			"required": ["node_path", "new_parent_path"]
+		},
+		Callable(self, "_tool_move_node"),
+		{
+			"type": "object",
+			"properties": {
+				"status": {"type": "string"},
+				"node_path": {"type": "string"},
+				"new_parent_path": {"type": "string"},
+				"new_node_path": {"type": "string"}
+			}
+		},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+	)
+
+func _tool_move_node(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var new_parent_path: String = params.get("new_parent_path", "")
+	var keep_global_transform: bool = params.get("keep_global_transform", true)
+
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	if new_parent_path.is_empty():
+		return {"error": "Missing required parameter: new_parent_path"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var target_node: Node = _resolve_node_path(node_path)
+	if not target_node:
+		return {"error": "Node not found: " + node_path}
+
+	var new_parent: Node = _resolve_node_path(new_parent_path)
+	if not new_parent:
+		return {"error": "New parent not found: " + new_parent_path}
+
+	if target_node == new_parent:
+		return {"error": "Cannot move node to itself"}
+
+	if target_node.is_ancestor_of(new_parent):
+		return {"error": "Cannot move node to its own descendant"}
+
+	if keep_global_transform:
+		target_node.reparent(new_parent, true)
+	else:
+		var old_parent: Node = target_node.get_parent()
+		if old_parent:
+			old_parent.remove_child(target_node)
+		new_parent.add_child(target_node)
+
+	var scene_root: Node = _get_user_scene_root()
+	if scene_root:
+		target_node.owner = scene_root
+
+	editor_interface.mark_scene_as_unsaved()
+
+	return {
+		"status": "success",
+		"node_path": node_path,
+		"new_parent_path": new_parent_path,
+		"new_node_path": _make_friendly_path(target_node, scene_root)
+	}
+
+func _register_rename_node(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"rename_node",
+		"Rename a node in the scene tree. The new name must be unique among siblings.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {
+					"type": "string",
+					"description": "Path to the node to rename (e.g. '/root/MainScene/Player')"
+				},
+				"new_name": {
+					"type": "string",
+					"description": "New name for the node"
+				}
+			},
+			"required": ["node_path", "new_name"]
+		},
+		Callable(self, "_tool_rename_node"),
+		{
+			"type": "object",
+			"properties": {
+				"status": {"type": "string"},
+				"old_name": {"type": "string"},
+				"new_name": {"type": "string"},
+				"node_path": {"type": "string"}
+			}
+		},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_rename_node(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var new_name: String = params.get("new_name", "")
+
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	if new_name.is_empty():
+		return {"error": "Missing required parameter: new_name"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var target_node: Node = _resolve_node_path(node_path)
+	if not target_node:
+		return {"error": "Node not found: " + node_path}
+
+	var old_name: String = str(target_node.name)
+
+	if old_name == new_name:
+		return {
+			"status": "success",
+			"old_name": old_name,
+			"new_name": new_name,
+			"node_path": node_path
+		}
+
+	var parent: Node = target_node.get_parent()
+	if parent and parent.has_node(new_name):
+		return {"error": "Name '" + new_name + "' already exists in parent"}
+
+	target_node.name = new_name
+
+	var scene_root: Node = _get_user_scene_root()
+	editor_interface.mark_scene_as_unsaved()
+
+	return {
+		"status": "success",
+		"old_name": old_name,
+		"new_name": new_name,
+		"node_path": _make_friendly_path(target_node, scene_root)
+	}
+
+func _register_add_resource(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"add_resource",
+		"Add a resource child node (e.g. CollisionShape2D, MeshInstance3D) to a target node.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {
+					"type": "string",
+					"description": "Path to the target parent node (e.g. '/root/MainScene/Player')"
+				},
+				"resource_type": {
+					"type": "string",
+					"description": "Type of resource node to add (e.g. 'CollisionShape2D', 'CollisionShape3D', 'MeshInstance3D', 'Sprite2D')"
+				},
+				"resource_name": {
+					"type": "string",
+					"description": "Name for the new resource node. If empty, uses the type as name."
+				}
+			},
+			"required": ["node_path", "resource_type"]
+		},
+		Callable(self, "_tool_add_resource"),
+		{
+			"type": "object",
+			"properties": {
+				"status": {"type": "string"},
+				"node_path": {"type": "string"},
+				"resource_node_path": {"type": "string"},
+				"resource_type": {"type": "string"}
+			}
+		},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+	)
+
+func _tool_add_resource(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var resource_type: String = params.get("resource_type", "")
+	var resource_name: String = params.get("resource_name", "")
+
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	if resource_type.is_empty():
+		return {"error": "Missing required parameter: resource_type"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var target_node: Node = _resolve_node_path(node_path)
+	if not target_node:
+		return {"error": "Node not found: " + node_path}
+
+	if not ClassDB.class_exists(resource_type):
+		return {"error": "Unknown resource type: " + resource_type}
+
+	if not ClassDB.is_parent_class(resource_type, "Node"):
+		return {"error": "Resource type must be a Node type: " + resource_type}
+
+	var resource_node: Node = ClassDB.instantiate(resource_type)
+	if not resource_node:
+		return {"error": "Failed to instantiate resource type: " + resource_type}
+
+	if not resource_name.is_empty():
+		resource_node.name = resource_name
+
+	target_node.add_child(resource_node)
+
+	var scene_root: Node = _get_user_scene_root()
+	if scene_root:
+		resource_node.owner = scene_root
+
+	editor_interface.mark_scene_as_unsaved()
+
+	return {
+		"status": "success",
+		"node_path": node_path,
+		"resource_node_path": _make_friendly_path(resource_node, scene_root),
+		"resource_type": resource_node.get_class()
+	}
+
+func _register_set_anchor_preset(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"set_anchor_preset",
+		"Set the anchor preset for a Control node. Only works on Control-derived nodes.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {
+					"type": "string",
+					"description": "Path to the Control node (e.g. '/root/MainScene/UI/Panel')"
+				},
+				"preset": {
+					"type": "integer",
+					"description": "LayoutPreset value (0-15): 0=TOP_LEFT, 1=TOP_RIGHT, 2=BOTTOM_LEFT, 3=BOTTOM_RIGHT, 4=CENTER_LEFT, 5=CENTER_TOP, 6=CENTER_RIGHT, 7=CENTER_BOTTOM, 8=CENTER, 9=LEFT_WIDE, 10=TOP_WIDE, 11=RIGHT_WIDE, 12=BOTTOM_WIDE, 13=VCENTER_WIDE, 14=HCENTER_WIDE, 15=FULL_RECT"
+				},
+				"keep_offsets": {
+					"type": "boolean",
+					"description": "Whether to keep current offsets. Default is false."
+				}
+			},
+			"required": ["node_path", "preset"]
+		},
+		Callable(self, "_tool_set_anchor_preset"),
+		{
+			"type": "object",
+			"properties": {
+				"status": {"type": "string"},
+				"preset_name": {"type": "string"},
+				"preset_value": {"type": "integer"}
+			}
+		},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_set_anchor_preset(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var preset: int = params.get("preset", 0)
+	var keep_offsets: bool = params.get("keep_offsets", false)
+
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var target_node: Node = _resolve_node_path(node_path)
+	if not target_node:
+		return {"error": "Node not found: " + node_path}
+
+	if not target_node is Control:
+		return {"error": "Node is not a Control: " + node_path}
+
+	if preset < 0 or preset > 15:
+		return {"error": "Invalid preset value. Must be 0-15, got: " + str(preset)}
+
+	var preset_names: Dictionary = {
+		0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT",
+		4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM",
+		8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE",
+		12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT"
+	}
+
+	var control: Control = target_node as Control
+	control.set_anchors_preset(preset, keep_offsets)
+
+	editor_interface.mark_scene_as_unsaved()
+
+	return {
+		"status": "success",
+		"preset_name": preset_names.get(preset, "UNKNOWN"),
+		"preset_value": preset
+	}
+
+func _register_connect_signal(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"connect_signal",
+		"Connect a signal from one node to a method on another node.",
+		{
+			"type": "object",
+			"properties": {
+				"emitter_path": {
+					"type": "string",
+					"description": "Path to the node that emits the signal (e.g. '/root/MainScene/Button')"
+				},
+				"signal_name": {
+					"type": "string",
+					"description": "Name of the signal to connect (e.g. 'pressed', 'body_entered')"
+				},
+				"receiver_path": {
+					"type": "string",
+					"description": "Path to the node that receives the signal (e.g. '/root/MainScene/Game')"
+				},
+				"receiver_method": {
+					"type": "string",
+					"description": "Name of the method to call when the signal fires (e.g. '_on_button_pressed')"
+				},
+				"flags": {
+					"type": "integer",
+					"description": "Connection flags: 0=DEFAULT, 1=DEFERRED, 2=ONE_SHOT, 4=PERSIST. Default is 0."
+				}
+			},
+			"required": ["emitter_path", "signal_name", "receiver_path", "receiver_method"]
+		},
+		Callable(self, "_tool_connect_signal"),
+		{
+			"type": "object",
+			"properties": {
+				"status": {"type": "string"},
+				"emitter": {"type": "string"},
+				"signal": {"type": "string"},
+				"receiver": {"type": "string"},
+				"method": {"type": "string"}
+			}
+		},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+	)
+
+func _tool_connect_signal(params: Dictionary) -> Dictionary:
+	var emitter_path: String = params.get("emitter_path", "")
+	var signal_name: String = params.get("signal_name", "")
+	var receiver_path: String = params.get("receiver_path", "")
+	var receiver_method: String = params.get("receiver_method", "")
+	var flags: int = params.get("flags", 0)
+
+	if emitter_path.is_empty():
+		return {"error": "Missing required parameter: emitter_path"}
+	if signal_name.is_empty():
+		return {"error": "Missing required parameter: signal_name"}
+	if receiver_path.is_empty():
+		return {"error": "Missing required parameter: receiver_path"}
+	if receiver_method.is_empty():
+		return {"error": "Missing required parameter: receiver_method"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var emitter: Node = _resolve_node_path(emitter_path)
+	if not emitter:
+		return {"error": "Emitter not found: " + emitter_path}
+
+	var receiver: Node = _resolve_node_path(receiver_path)
+	if not receiver:
+		return {"error": "Receiver not found: " + receiver_path}
+
+	var signal_list: Array = emitter.get_signal_list()
+	var signal_exists: bool = false
+	for sig in signal_list:
+		if sig.get("name", "") == signal_name:
+			signal_exists = true
+			break
+
+	if not signal_exists:
+		return {"error": "Signal '" + signal_name + "' not found on " + emitter_path}
+
+	var callable: Callable = Callable(receiver, receiver_method)
+
+	if emitter.is_connected(signal_name, callable):
+		return {"error": "Signal '" + signal_name + "' is already connected to " + receiver_method}
+
+	var err: int = emitter.connect(signal_name, callable, flags)
+	if err != OK:
+		return {"error": "Failed to connect signal: error code " + str(err)}
+
+	editor_interface.mark_scene_as_unsaved()
+
+	return {
+		"status": "success",
+		"emitter": emitter_path,
+		"signal": signal_name,
+		"receiver": receiver_path,
+		"method": receiver_method
+	}
+
+func _register_disconnect_signal(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"disconnect_signal",
+		"Disconnect a signal connection between two nodes.",
+		{
+			"type": "object",
+			"properties": {
+				"emitter_path": {
+					"type": "string",
+					"description": "Path to the node that emits the signal (e.g. '/root/MainScene/Button')"
+				},
+				"signal_name": {
+					"type": "string",
+					"description": "Name of the signal to disconnect (e.g. 'pressed')"
+				},
+				"receiver_path": {
+					"type": "string",
+					"description": "Path to the node that receives the signal (e.g. '/root/MainScene/Game')"
+				},
+				"receiver_method": {
+					"type": "string",
+					"description": "Name of the method that was connected (e.g. '_on_button_pressed')"
+				}
+			},
+			"required": ["emitter_path", "signal_name", "receiver_path", "receiver_method"]
+		},
+		Callable(self, "_tool_disconnect_signal"),
+		{
+			"type": "object",
+			"properties": {
+				"status": {"type": "string"},
+				"disconnected": {"type": "boolean"},
+				"emitter": {"type": "string"},
+				"signal": {"type": "string"}
+			}
+		},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_disconnect_signal(params: Dictionary) -> Dictionary:
+	var emitter_path: String = params.get("emitter_path", "")
+	var signal_name: String = params.get("signal_name", "")
+	var receiver_path: String = params.get("receiver_path", "")
+	var receiver_method: String = params.get("receiver_method", "")
+
+	if emitter_path.is_empty():
+		return {"error": "Missing required parameter: emitter_path"}
+	if signal_name.is_empty():
+		return {"error": "Missing required parameter: signal_name"}
+	if receiver_path.is_empty():
+		return {"error": "Missing required parameter: receiver_path"}
+	if receiver_method.is_empty():
+		return {"error": "Missing required parameter: receiver_method"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var emitter: Node = _resolve_node_path(emitter_path)
+	if not emitter:
+		return {"error": "Emitter not found: " + emitter_path}
+
+	var receiver: Node = _resolve_node_path(receiver_path)
+	if not receiver:
+		return {"error": "Receiver not found: " + receiver_path}
+
+	var callable: Callable = Callable(receiver, receiver_method)
+
+	if not emitter.is_connected(signal_name, callable):
+		return {
+			"status": "not_connected",
+			"disconnected": false,
+			"emitter": emitter_path,
+			"signal": signal_name,
+			"message": "Connection does not exist"
+		}
+
+	emitter.disconnect(signal_name, callable)
+
+	editor_interface.mark_scene_as_unsaved()
+
+	return {
+		"status": "success",
+		"disconnected": true,
+		"emitter": emitter_path,
+		"signal": signal_name
+	}
+
+func _register_get_node_groups(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_node_groups",
+		"Get all groups that a node belongs to.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {
+					"type": "string",
+					"description": "Path to the node (e.g. '/root/MainScene/Player')"
+				}
+			},
+			"required": ["node_path"]
+		},
+		Callable(self, "_tool_get_node_groups"),
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"groups": {"type": "array", "items": {"type": "string"}},
+				"group_count": {"type": "integer"}
+			}
+		},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_get_node_groups(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var target_node: Node = _resolve_node_path(node_path)
+	if not target_node:
+		return {"error": "Node not found: " + node_path}
+
+	var groups: Array[StringName] = target_node.get_groups()
+	var groups_array: Array = []
+	for group in groups:
+		groups_array.append(str(group))
+
+	return {
+		"node_path": node_path,
+		"groups": groups_array,
+		"group_count": groups_array.size()
+	}
+
+func _register_set_node_groups(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"set_node_groups",
+		"Set group memberships for a node. Can add and/or remove groups.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {
+					"type": "string",
+					"description": "Path to the node (e.g. '/root/MainScene/Player')"
+				},
+				"groups": {
+					"type": "array",
+					"items": {"type": "string"},
+					"description": "List of group names to add the node to."
+				},
+				"remove_groups": {
+					"type": "array",
+					"items": {"type": "string"},
+					"description": "List of group names to remove the node from."
+				},
+				"persistent": {
+					"type": "boolean",
+					"description": "Whether group membership persists when saving the scene. Default is false."
+				},
+				"clear_existing": {
+					"type": "boolean",
+					"description": "Whether to clear all existing groups before adding new ones. Default is false."
+				}
+			},
+			"required": ["node_path"]
+		},
+		Callable(self, "_tool_set_node_groups"),
+		{
+			"type": "object",
+			"properties": {
+				"status": {"type": "string"},
+				"added_groups": {"type": "array", "items": {"type": "string"}},
+				"removed_groups": {"type": "array", "items": {"type": "string"}},
+				"current_groups": {"type": "array", "items": {"type": "string"}}
+			}
+		},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+	)
+
+func _tool_set_node_groups(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var groups: Array = params.get("groups", [])
+	var remove_groups: Array = params.get("remove_groups", [])
+	var persistent: bool = params.get("persistent", false)
+	var clear_existing: bool = params.get("clear_existing", false)
+
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var target_node: Node = _resolve_node_path(node_path)
+	if not target_node:
+		return {"error": "Node not found: " + node_path}
+
+	var added_groups: Array = []
+	var removed_groups: Array = []
+
+	if clear_existing:
+		var current_groups: Array[StringName] = target_node.get_groups()
+		for group in current_groups:
+			target_node.remove_from_group(group)
+			removed_groups.append(str(group))
+
+	for group_name in remove_groups:
+		if target_node.is_in_group(group_name):
+			target_node.remove_from_group(group_name)
+			removed_groups.append(group_name)
+
+	for group_name in groups:
+		if not target_node.is_in_group(group_name):
+			target_node.add_to_group(group_name, persistent)
+			added_groups.append(group_name)
+
+	var current_groups: Array[StringName] = target_node.get_groups()
+	var current_groups_array: Array = []
+	for group in current_groups:
+		current_groups_array.append(str(group))
+
+	editor_interface.mark_scene_as_unsaved()
+
+	return {
+		"status": "success",
+		"added_groups": added_groups,
+		"removed_groups": removed_groups,
+		"current_groups": current_groups_array
+	}
+
+func _register_find_nodes_in_group(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"find_nodes_in_group",
+		"Find all nodes that belong to a specific group in the current scene.",
+		{
+			"type": "object",
+			"properties": {
+				"group": {
+					"type": "string",
+					"description": "Name of the group to search for (e.g. 'enemies', 'player')"
+				},
+				"node_type": {
+					"type": "string",
+					"description": "Optional filter by node type (e.g. 'Node2D', 'CharacterBody2D')"
+				}
+			},
+			"required": ["group"]
+		},
+		Callable(self, "_tool_find_nodes_in_group"),
+		{
+			"type": "object",
+			"properties": {
+				"group": {"type": "string"},
+				"nodes": {"type": "array"},
+				"node_count": {"type": "integer"}
+			}
+		},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_find_nodes_in_group(params: Dictionary) -> Dictionary:
+	var group: String = params.get("group", "")
+	var node_type: String = params.get("node_type", "")
+
+	if group.is_empty():
+		return {"error": "Missing required parameter: group"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var scene_root: Node = _get_user_scene_root()
+	if not scene_root:
+		return {"error": "No scene is currently open"}
+
+	var nodes_array: Array[Node] = scene_root.get_tree().get_nodes_in_group(group)
+
+	var result_nodes: Array = []
+	var scene_root_ref: Node = scene_root
+
+	for node in nodes_array:
+		if not node_type.is_empty() and node.get_class() != node_type:
+			continue
+
+		var node_info: Dictionary = {
+			"name": str(node.name),
+			"type": node.get_class(),
+			"path": _make_friendly_path(node, scene_root_ref)
+		}
+		result_nodes.append(node_info)
+
+	return {
+		"group": group,
+		"nodes": result_nodes,
+		"node_count": result_nodes.size()
+	}

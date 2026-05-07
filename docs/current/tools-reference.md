@@ -18,11 +18,11 @@
 
 ## 工具概述
 
-Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
+Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 | 类别 | 工具数量 | 源文件 | 用途 |
 |------|----------|--------|------|
-| [Node Tools](#node-tools) | 6 | `node_tools_native.gd` | 节点管理（创建、删除、修改属性） |
+| [Node Tools](#node-tools) | 16 | `node_tools_native.gd` | 节点管理（创建、删除、修改属性、复制、移动、重命名、信号、组） |
 | [Script Tools](#script-tools) | 6 | `script_tools_native.gd` | 脚本管理（读取、创建、修改、分析） |
 | [Scene Tools](#scene-tools) | 6 | `scene_tools_native.gd` | 场景管理（创建、保存、打开） |
 | [Editor Tools](#editor-tools) | 5 | `editor_tools_native.gd` | 编辑器操作（运行、停止、获取状态） |
@@ -251,9 +251,317 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
+### 7. duplicate_node
+
+复制节点及其子节点。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 要复制的节点路径 |
+| `new_name` | string | 否 | 新节点名称。如不提供，自动生成唯一名称（如 `Player2`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `original_path` | string | 原节点路径 |
+| `new_node_path` | string | 新节点的友好路径 |
+| `new_node_name` | string | 新节点名称 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`
+
+**行为**：
+- 使用 `node.duplicate()` 复制节点及其所有子节点
+- 默认复制标志为 `DUPLICATE_DEFAULT`（15），包含脚本、信号、组和内部状态
+- 复制的节点自动添加到原节点的父节点下
+- 自动设置 `owner` 为当前场景根节点
+
+---
+
+### 8. move_node
+
+将节点移动到新的父节点下。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 要移动的节点路径 |
+| `new_parent_path` | string | 是 | 新父节点路径 |
+| `keep_global_transform` | boolean | 否 | 是否保持全局变换（默认 `true`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `node_path` | string | 原节点路径 |
+| `new_parent_path` | string | 新父节点路径 |
+| `new_node_path` | string | 移动后的节点路径 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`
+
+**行为**：
+- 使用 `node.reparent()` 方法安全移动节点
+- `keep_global_transform=true` 时保持全局位置/旋转（推荐）
+- 不允许将节点移动到自身或其后代节点下
+
+---
+
+### 9. rename_node
+
+重命名场景中的节点。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 要重命名的节点路径 |
+| `new_name` | string | 是 | 新名称（必须在兄弟节点中唯一） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `old_name` | string | 原名称 |
+| `new_name` | string | 新名称 |
+| `node_path` | string | 重命名后的节点路径 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=true`
+
+**行为**：
+- 新名称必须在同一父节点下唯一
+- 重命名为相同名称时直接返回成功
+
+---
+
+### 10. add_resource
+
+向节点添加资源子节点（如碰撞形状、网格实例等）。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 目标父节点路径 |
+| `resource_type` | string | 是 | 资源节点类型（如 `CollisionShape2D`、`CollisionShape3D`、`MeshInstance3D`、`Sprite2D`） |
+| `resource_name` | string | 否 | 资源节点名称。如不提供，使用类型作为名称 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `node_path` | string | 目标父节点路径 |
+| `resource_node_path` | string | 新资源节点的友好路径 |
+| `resource_type` | string | 实际创建的节点类型 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`
+
+**行为**：
+- 使用 `ClassDB.instantiate()` 创建节点实例
+- 仅支持 `Node` 派生类型的实例化
+- 自动设置 `owner` 为当前场景根节点
+
+**常见资源类型**：
+| 类型 | 用途 |
+|------|------|
+| `CollisionShape2D` / `CollisionShape3D` | 碰撞形状 |
+| `MeshInstance3D` | 3D 网格实例 |
+| `Sprite2D` | 2D 精灵 |
+| `Area2D` | 检测区域 |
+| `StaticBody3D` | 静态物理体 |
+| `AudioStreamPlayer` | 音频播放器 |
+
+---
+
+### 11. set_anchor_preset
+
+设置 Control 节点的锚点预设。仅对 Control 派生节点有效。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | Control 节点路径 |
+| `preset` | int | 是 | LayoutPreset 枚举值（0-15） |
+| `keep_offsets` | boolean | 否 | 是否保持当前偏移（默认 `false`） |
+
+**LayoutPreset 枚举值**：
+| 值 | 名称 | 描述 |
+|-----|------|------|
+| 0 | `TOP_LEFT` | 左上角 |
+| 1 | `TOP_RIGHT` | 右上角 |
+| 2 | `BOTTOM_LEFT` | 左下角 |
+| 3 | `BOTTOM_RIGHT` | 右下角 |
+| 4 | `CENTER_LEFT` | 左边居中 |
+| 5 | `CENTER_TOP` | 顶部居中 |
+| 6 | `CENTER_RIGHT` | 右边居中 |
+| 7 | `CENTER_BOTTOM` | 底部居中 |
+| 8 | `CENTER` | 完全居中 |
+| 9 | `LEFT_WIDE` | 左侧宽 |
+| 10 | `TOP_WIDE` | 顶部宽 |
+| 11 | `RIGHT_WIDE` | 右侧宽 |
+| 12 | `BOTTOM_WIDE` | 底部宽 |
+| 13 | `VCENTER_WIDE` | 垂直居中宽 |
+| 14 | `HCENTER_WIDE` | 水平居中宽 |
+| 15 | `FULL_RECT` | 填满父节点 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `preset_name` | string | 预设名称（如 `"FULL_RECT"`） |
+| `preset_value` | int | 预设值 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=true`
+
+---
+
+### 12. connect_signal
+
+连接信号到接收方法。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `emitter_path` | string | 是 | 发射信号的节点路径 |
+| `signal_name` | string | 是 | 信号名称（如 `pressed`、`body_entered`） |
+| `receiver_path` | string | 是 | 接收方法的节点路径 |
+| `receiver_method` | string | 是 | 接收方法名（如 `_on_button_pressed`） |
+| `flags` | int | 否 | 连接标志（默认 `0`） |
+
+**连接标志**：
+| 值 | 名称 | 描述 |
+|-----|------|------|
+| 0 | `CONNECT_DEFAULT` | 默认连接 |
+| 1 | `CONNECT_DEFERRED` | 延迟调用（帧末尾） |
+| 2 | `CONNECT_ONE_SHOT` | 一次性连接（触发后自动断开） |
+| 4 | `CONNECT_PERSIST` | 持久连接（保存到场景） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `emitter` | string | 发射节点路径 |
+| `signal` | string | 信号名称 |
+| `receiver` | string | 接收节点路径 |
+| `method` | string | 接收方法名 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`
+
+**行为**：
+- 验证信号存在于发射节点
+- 检查信号是否已连接（避免重复连接）
+- 连接失败时返回错误码
+
+---
+
+### 13. disconnect_signal
+
+断开信号连接。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `emitter_path` | string | 是 | 发射信号的节点路径 |
+| `signal_name` | string | 是 | 信号名称 |
+| `receiver_path` | string | 是 | 接收方法的节点路径 |
+| `receiver_method` | string | 是 | 接收方法名 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` 或 `"not_connected"` |
+| `disconnected` | boolean | 是否成功断开 |
+| `emitter` | string | 发射节点路径 |
+| `signal` | string | 信号名称 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=true`
+
+**行为**：
+- 如果连接不存在，返回 `disconnected=false` 但不报错
+- 使用 `is_connected()` 检查连接是否存在
+
+---
+
+### 14. get_node_groups
+
+获取节点所属的所有组。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `groups` | Array[string] | 组名列表 |
+| `group_count` | int | 组数量 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`
+
+---
+
+### 15. set_node_groups
+
+设置节点的组成员关系。支持添加、移除和清空操作。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `groups` | Array[string] | 否 | 要添加的组名列表 |
+| `remove_groups` | Array[string] | 否 | 要移除的组名列表 |
+| `persistent` | boolean | 否 | 是否持久化到场景文件（默认 `false`） |
+| `clear_existing` | boolean | 否 | 是否先清除所有现有组（默认 `false`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `added_groups` | Array[string] | 已添加的组名列表 |
+| `removed_groups` | Array[string] | 已移除的组名列表 |
+| `current_groups` | Array[string] | 当前所有组名列表 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`
+
+**行为**：
+- `clear_existing=true` 时先清除所有现有组，再添加新组
+- 添加已存在的组不会重复添加
+- 移除不存在的组不会报错
+- `persistent=true` 时组关系会保存到场景文件
+
+---
+
+### 16. find_nodes_in_group
+
+查找属于指定组的所有节点。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `group` | string | 是 | 组名 |
+| `node_type` | string | 否 | 按节点类型过滤（如 `Node2D`、`CharacterBody2D`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `group` | string | 搜索的组名 |
+| `nodes` | Array[Dictionary] | 节点信息数组 |
+| `node_count` | int | 节点数量 |
+
+**每个节点信息**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `name` | string | 节点名称 |
+| `type` | string | 节点类型 |
+| `path` | string | 节点友好路径 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`
+
+---
+
 ## Script Tools
 
-### 7. list_project_scripts
+### 17. list_project_scripts
 
 列出项目中的所有 GDScript 文件。
 
@@ -272,7 +580,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 8. read_script
+### 18. read_script
 
 读取指定脚本的内容。
 
@@ -292,7 +600,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 9. create_script
+### 19. create_script
 
 创建新脚本文件，支持模板和自动附加到节点。
 
@@ -317,7 +625,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 10. modify_script
+### 20. modify_script
 
 修改现有脚本的内容。支持全量替换和单行替换。
 
@@ -339,7 +647,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 11. analyze_script
+### 21. analyze_script
 
 分析脚本的代码结构。
 
@@ -364,7 +672,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 12. get_current_script
+### 22. get_current_script
 
 获取编辑器中当前正在编辑的脚本。
 
@@ -385,7 +693,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ## Scene Tools
 
-### 13. create_scene
+### 23. create_scene
 
 创建新场景文件。
 
@@ -406,7 +714,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 14. save_scene
+### 24. save_scene
 
 保存当前打开的场景。
 
@@ -425,7 +733,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 15. open_scene
+### 25. open_scene
 
 打开指定场景文件。会关闭当前打开的场景。
 
@@ -445,7 +753,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 16. get_current_scene
+### 26. get_current_scene
 
 获取当前打开的场景信息。
 
@@ -464,7 +772,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 17. get_scene_structure
+### 27. get_scene_structure
 
 获取当前场景的完整树结构。
 
@@ -494,7 +802,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 18. list_project_scenes
+### 28. list_project_scenes
 
 列出项目中的所有场景文件。
 
@@ -515,7 +823,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ## Editor Tools
 
-### 19. get_editor_state
+### 29. get_editor_state
 
 获取 Godot Editor 的当前状态。
 
@@ -533,7 +841,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 20. run_project
+### 30. run_project
 
 运行当前项目（Play 按钮）。
 
@@ -552,7 +860,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 21. stop_project
+### 31. stop_project
 
 停止运行项目（Stop 按钮）。
 
@@ -568,7 +876,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 22. get_selected_nodes
+### 32. get_selected_nodes
 
 获取当前选中的节点列表（含类型和脚本信息）。
 
@@ -605,7 +913,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 23. set_editor_setting
+### 33. set_editor_setting
 
 修改 Godot Editor 的设置。
 
@@ -631,7 +939,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ## Debug Tools
 
-### 24. get_editor_logs
+### 34. get_editor_logs
 
 获取编辑器或运行时日志。支持过滤、分页和排序。
 
@@ -663,7 +971,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 25. execute_script
+### 35. execute_script
 
 在编辑器中执行 GDScript 表达式。使用 Godot 的 `Expression` 类进行安全求值。
 
@@ -688,7 +996,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 26. get_performance_metrics
+### 36. get_performance_metrics
 
 获取项目运行的性能数据。
 
@@ -706,7 +1014,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 27. debug_print
+### 37. debug_print
 
 在 Godot Editor 输出面板中打印调试信息。
 
@@ -726,7 +1034,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 28. execute_editor_script
+### 38. execute_editor_script
 
 在编辑器上下文中执行完整的 GDScript 脚本。与 `execute_script` 不同，此工具支持多行语句、循环、条件判断等。
 
@@ -764,7 +1072,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ## Project Tools
 
-### 29. get_project_info
+### 39. get_project_info
 
 获取项目的基本信息。
 
@@ -783,7 +1091,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 30. get_project_settings
+### 40. get_project_settings
 
 获取项目的设置值。
 
@@ -802,7 +1110,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 31. list_project_resources
+### 41. list_project_resources
 
 列出项目中的所有资源文件。
 
@@ -824,7 +1132,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 32. create_resource
+### 42. create_resource
 
 创建新的 Godot 资源文件。
 
@@ -846,7 +1154,7 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ---
 
-### 33. get_project_structure
+### 43. get_project_structure
 
 获取项目的目录结构和文件类型统计。
 
@@ -976,11 +1284,17 @@ Godot MCP Native 实现了 **33 个工具**，分为 6 大类：
 
 ## 总结
 
-本手册详细说明了 Godot MCP Native 项目的所有 33 个工具。每个工具都有清晰的参数说明、返回值描述和注解信息。
+本手册详细说明了 Godot MCP Native 项目的所有 43 个工具。每个工具都有清晰的参数说明、返回值描述和注解信息。
 
 **提示**：
 - 使用 `tools/list` 方法获取所有工具的实时列表和完整 JSON Schema
 - 关注每个工具的注解（`readOnlyHint`、`destructiveHint` 等）来理解工具的行为
 - `update_node_property` 支持 Undo/Redo，可通过 `Ctrl+Z` 撤销
+- `duplicate_node` 可复制节点及其子节点，自动生成唯一名称
+- `move_node` 使用 `reparent()` 安全移动节点，支持保持全局变换
+- `connect_signal` / `disconnect_signal` 管理节点间的信号连接
+- `set_node_groups` / `get_node_groups` / `find_nodes_in_group` 管理节点组
+- `set_anchor_preset` 快速设置 Control 节点的布局锚点
 - `execute_editor_script` 适合复杂脚本执行，`execute_script` 适合简单表达式求值
 - 所有文件路径都经过 `PathValidator` 安全验证
+
