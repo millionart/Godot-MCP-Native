@@ -13,8 +13,8 @@
 - **完整项目访问**：AI 助手可以读取和修改脚本、场景、节点和资源
 - **原生实现**：无需 Node.js 依赖——完全在 Godot 中运行
 - **实时编辑**：直接在编辑器中应用 AI 建议
-- **全面的工具集**（33+ 工具）：
-  - **节点工具**（6 个）：创建、修改和管理场景节点
+- **全面的工具集**（43+ 工具）：
+  - **节点工具**（16 个）：创建、修改、管理场景节点，复制、移动、重命名，信号连接，组管理
   - **脚本工具**（6 个）：编辑、分析和创建 GDScript 文件
   - **场景工具**（6 个）：操作场景结构并保存场景
   - **编辑器工具**（5 个）：控制编辑器功能和调试
@@ -106,13 +106,23 @@
 
 ## 📚 可用命令
 
-### 节点工具 (6)
+### 节点工具 (16)
 - `get-scene-tree` - 获取场景树结构
 - `get-node-properties` - 获取特定节点的属性
 - `create-node` - 创建新节点
 - `delete-node` - 删除节点
 - `update-node-property` - 更新节点属性
 - `list-nodes` - 列出父节点下的所有节点
+- `duplicate-node` - 复制节点及子节点
+- `move-node` - 移动节点到新父节点
+- `rename-node` - 重命名节点
+- `add-resource` - 向节点添加资源子节点（碰撞形状、网格等）
+- `set-anchor-preset` - 设置 Control 节点锚点预设
+- `connect-signal` - 连接节点间的信号
+- `disconnect-signal` - 断开信号连接
+- `get-node-groups` - 获取节点所属的组
+- `set-node-groups` - 设置节点的组成员关系
+- `find-nodes-in-group` - 查找组中的所有节点
 
 ### 脚本工具 (6)
 - `list-project-scripts` - 列出所有脚本

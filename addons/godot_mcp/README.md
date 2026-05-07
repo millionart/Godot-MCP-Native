@@ -13,8 +13,8 @@ A powerful Godot Engine plugin that integrates AI assistants (Claude, etc.) via 
 - **Full Project Access**: AI assistants can read and modify scripts, scenes, nodes, and resources
 - **Native Implementation**: No Node.js dependency required - runs entirely within Godot
 - **Real-time Editing**: Apply AI suggestions directly in the editor
-- **Comprehensive Tool Set** (33+ tools):
-  - **Node Tools** (6): Create, modify, and manage scene nodes
+- **Comprehensive Tool Set** (43+ tools):
+  - **Node Tools** (16): Create, modify, manage scene nodes, duplicate, move, rename, signal connections, group management
   - **Script Tools** (6): Edit, analyze, and create GDScript files
   - **Scene Tools** (6): Manipulate scene structure and save scenes
   - **Editor Tools** (5): Control editor functionality and debug
@@ -104,13 +104,23 @@ Implement a day/night cycle system with dynamic lighting
 
 ## 📚 Available Commands
 
-### Node Tools (6)
+### Node Tools (16)
 - `get-scene-tree` - Get scene tree structure
 - `get-node-properties` - Get properties of a specific node
 - `create-node` - Create a new node
 - `delete-node` - Delete a node
 - `update-node-property` - Update node properties
 - `list-nodes` - List nodes under a parent
+- `duplicate-node` - Duplicate a node and its children
+- `move-node` - Move a node to a new parent
+- `rename-node` - Rename a node in the scene
+- `add-resource` - Add a resource child node (collision shape, mesh, etc.)
+- `set-anchor-preset` - Set anchor preset for Control nodes
+- `connect-signal` - Connect a signal between nodes
+- `disconnect-signal` - Disconnect a signal connection
+- `get-node-groups` - Get groups a node belongs to
+- `set-node-groups` - Set group memberships for a node
+- `find-nodes-in-group` - Find all nodes in a specific group
 
 ### Script Tools (6)
 - `list-project-scripts` - List all scripts
