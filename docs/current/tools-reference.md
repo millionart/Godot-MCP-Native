@@ -18,15 +18,15 @@
 
 ## 工具概述
 
-Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
+Godot MCP Native 实现了 **50 个工具**，分为 6 大类：
 
 | 类别 | 工具数量 | 源文件 | 用途 |
 |------|----------|--------|------|
 | [Node Tools](#node-tools) | 16 | `node_tools_native.gd` | 节点管理（创建、删除、修改属性、复制、移动、重命名、信号、组） |
-| [Script Tools](#script-tools) | 6 | `script_tools_native.gd` | 脚本管理（读取、创建、修改、分析） |
+| [Script Tools](#script-tools) | 9 | `script_tools_native.gd` | 脚本管理（读取、创建、修改、分析、附加、验证、搜索） |
 | [Scene Tools](#scene-tools) | 6 | `scene_tools_native.gd` | 场景管理（创建、保存、打开） |
-| [Editor Tools](#editor-tools) | 5 | `editor_tools_native.gd` | 编辑器操作（运行、停止、获取状态） |
-| [Debug Tools](#debug-tools) | 5 | `debug_tools_native.gd` | 调试和日志 |
+| [Editor Tools](#editor-tools) | 8 | `editor_tools_native.gd` | 编辑器操作（运行、停止、获取状态、截图、信号、重载） |
+| [Debug Tools](#debug-tools) | 6 | `debug_tools_native.gd` | 调试和日志（日志获取、清除、脚本执行、性能监控） |
 | [Project Tools](#project-tools) | 5 | `project_tools_native.gd` | 项目配置（信息、设置、结构） |
 
 ### 工具调用格式
@@ -691,9 +691,111 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
+### 23. attach_script
+
+将现有 GDScript 文件附加到场景中的节点。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 目标节点路径（如 `/root/MainScene/Player`） |
+| `script_path` | string | 是 | 脚本文件路径（如 `res://scripts/player.gd`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `node_path` | string | 目标节点路径 |
+| `script_path` | string | 附加的脚本路径 |
+| `previous_script` | string | 被替换的旧脚本路径（空字符串表示无旧脚本） |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=true`
+
+**行为**：
+- 使用 `node.set_script()` 附加脚本
+- 如果节点已有脚本，返回 `previous_script` 记录旧脚本路径
+- 附加后自动刷新 `EditorFileSystem`
+
+---
+
+### 24. validate_script
+
+验证 GDScript 语法，不执行脚本。检查错误和警告。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `script_path` | string | 否 | 要验证的脚本文件路径（如 `res://scripts/player.gd`） |
+| `content` | string | 否 | 直接验证的脚本内容（与 `script_path` 二选一） |
+| `check_warnings` | boolean | 否 | 是否检查警告（默认 `true`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `valid` | boolean | 脚本是否通过验证 |
+| `errors` | Array[Dictionary] | 错误列表 |
+| `warnings` | Array[Dictionary] | 警告列表 |
+| `error_count` | int | 错误数量 |
+| `warning_count` | int | 警告数量 |
+
+**错误/警告条目结构**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `line` | int | 行号 |
+| `column` | int | 列号 |
+| `message` | string | 错误/警告消息 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`
+
+**行为**：
+- 支持文件路径和直接内容两种验证模式
+- 使用 `GDScript.new() + reload()` 进行原生语法验证
+- `script_path` 和 `content` 至少提供一个
+
+---
+
+### 25. search_in_files
+
+在项目文件中搜索文本模式。支持字面量和正则表达式匹配。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `pattern` | string | 是 | 搜索模式（文本或正则表达式） |
+| `search_path` | string | 否 | 搜索目录（默认 `res://`） |
+| `file_extensions` | Array[string] | 否 | 文件扩展名过滤（默认 `[".gd"]`） |
+| `use_regex` | boolean | 否 | 是否使用正则匹配（默认 `false`，字面量匹配） |
+| `case_sensitive` | boolean | 否 | 是否区分大小写（默认 `true`） |
+| `max_results` | int | 否 | 最大返回结果数（默认 `50`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `pattern` | string | 搜索模式 |
+| `results` | Array[Dictionary] | 搜索结果数组 |
+| `total_matches` | int | 匹配总数 |
+| `files_searched` | int | 搜索的文件数 |
+
+**每个文件结果**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `file` | string | 文件路径 |
+| `matches` | Array[Dictionary] | 匹配列表 |
+| `match_count` | int | 匹配数量 |
+
+**每个匹配条目**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `line` | int | 行号 |
+| `text` | string | 匹配的文本内容 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`
+
+---
+
 ## Scene Tools
 
-### 23. create_scene
+### 26. create_scene
 
 创建新场景文件。
 
@@ -714,7 +816,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 24. save_scene
+### 27. save_scene
 
 保存当前打开的场景。
 
@@ -733,7 +835,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 25. open_scene
+### 28. open_scene
 
 打开指定场景文件。会关闭当前打开的场景。
 
@@ -753,7 +855,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 26. get_current_scene
+### 29. get_current_scene
 
 获取当前打开的场景信息。
 
@@ -772,7 +874,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 27. get_scene_structure
+### 30. get_scene_structure
 
 获取当前场景的完整树结构。
 
@@ -802,7 +904,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 28. list_project_scenes
+### 31. list_project_scenes
 
 列出项目中的所有场景文件。
 
@@ -823,7 +925,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ## Editor Tools
 
-### 29. get_editor_state
+### 32. get_editor_state
 
 获取 Godot Editor 的当前状态。
 
@@ -841,7 +943,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 30. run_project
+### 33. run_project
 
 运行当前项目（Play 按钮）。
 
@@ -860,7 +962,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 31. stop_project
+### 34. stop_project
 
 停止运行项目（Stop 按钮）。
 
@@ -876,7 +978,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 32. get_selected_nodes
+### 35. get_selected_nodes
 
 获取当前选中的节点列表（含类型和脚本信息）。
 
@@ -913,7 +1015,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 33. set_editor_setting
+### 36. set_editor_setting
 
 修改 Godot Editor 的设置。
 
@@ -937,9 +1039,86 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
+### 37. get_editor_screenshot
+
+截取编辑器视口截图并保存到文件。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `viewport_type` | string | 否 | 视口类型：`3d` 或 `2d`（默认 `3d`） |
+| `viewport_index` | int | 否 | 3D 视口索引 0-3（默认 `0`） |
+| `save_path` | string | 否 | 截图保存路径（默认 `res://screenshot_editor.png`） |
+| `format` | string | 否 | 图片格式：`png` 或 `jpg`（默认 `png`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `save_path` | string | 截图保存路径 |
+| `size` | string | 图片尺寸（如 `1920x1080`） |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=false`
+
+---
+
+### 38. get_signals
+
+获取节点的所有信号及其连接信息。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `include_connections` | boolean | 否 | 是否包含连接详情（默认 `true`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `signals` | Array[Dictionary] | 信号信息数组 |
+| `signal_count` | int | 信号数量 |
+| `connection_count` | int | 连接总数 |
+
+**每个信号信息**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `name` | string | 信号名称 |
+| `arguments` | int | 参数数量 |
+| `connections` | Array[Dictionary] | 连接列表（仅 `include_connections=true`） |
+| `connection_count` | int | 连接数量（仅 `include_connections=true`） |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`
+
+---
+
+### 39. reload_project
+
+重新扫描项目文件系统并重新加载脚本。适用于外部文件修改后同步。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `full_scan` | boolean | 否 | 是否执行全量扫描（默认 `false`，仅扫描源文件） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` 或 `"already_scanning"` |
+| `scan_type` | string | `"full"` 或 `"sources_only"` |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`
+
+**行为**：
+- `full_scan=false`：使用 `EditorFileSystem.scan_sources()`，仅扫描源文件变更
+- `full_scan=true`：使用 `EditorFileSystem.scan()`，全量重新扫描
+- 如果正在扫描中，返回 `already_scanning` 状态和当前进度
+
+---
+
 ## Debug Tools
 
-### 34. get_editor_logs
+### 40. get_editor_logs
 
 获取编辑器或运行时日志。支持过滤、分页和排序。
 
@@ -971,7 +1150,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 35. execute_script
+### 41. execute_script
 
 在编辑器中执行 GDScript 表达式。使用 Godot 的 `Expression` 类进行安全求值。
 
@@ -996,7 +1175,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 36. get_performance_metrics
+### 42. get_performance_metrics
 
 获取项目运行的性能数据。
 
@@ -1014,7 +1193,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 37. debug_print
+### 43. debug_print
 
 在 Godot Editor 输出面板中打印调试信息。
 
@@ -1034,7 +1213,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 38. execute_editor_script
+### 44. execute_editor_script
 
 在编辑器上下文中执行完整的 GDScript 脚本。与 `execute_script` 不同，此工具支持多行语句、循环、条件判断等。
 
@@ -1070,9 +1249,35 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
+### 45. clear_output
+
+清除编辑器输出面板和 MCP 日志缓冲区。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `clear_mcp_buffer` | boolean | 否 | 是否清除 MCP 日志缓冲区（默认 `true`） |
+| `clear_editor_panel` | boolean | 否 | 是否清除编辑器输出面板（默认 `true`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `mcp_buffer_cleared` | boolean | MCP 缓冲区是否已清除 |
+| `editor_panel_cleared` | boolean | 编辑器面板是否已清除 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=true`, `idempotentHint=true`
+
+**行为**：
+- 清除 MCP 日志缓冲区（线程安全，使用 Mutex 保护）
+- 清除编辑器输出面板（通过遍历节点树查找 `EditorLog` 面板）
+- 两个清除操作独立控制
+
+---
+
 ## Project Tools
 
-### 39. get_project_info
+### 46. get_project_info
 
 获取项目的基本信息。
 
@@ -1091,7 +1296,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 40. get_project_settings
+### 47. get_project_settings
 
 获取项目的设置值。
 
@@ -1110,7 +1315,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 41. list_project_resources
+### 48. list_project_resources
 
 列出项目中的所有资源文件。
 
@@ -1132,7 +1337,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 42. create_resource
+### 49. create_resource
 
 创建新的 Godot 资源文件。
 
@@ -1154,7 +1359,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ---
 
-### 43. get_project_structure
+### 50. get_project_structure
 
 获取项目的目录结构和文件类型统计。
 
@@ -1284,7 +1489,7 @@ Godot MCP Native 实现了 **43 个工具**，分为 6 大类：
 
 ## 总结
 
-本手册详细说明了 Godot MCP Native 项目的所有 43 个工具。每个工具都有清晰的参数说明、返回值描述和注解信息。
+本手册详细说明了 Godot MCP Native 项目的所有 50 个工具。每个工具都有清晰的参数说明、返回值描述和注解信息。
 
 **提示**：
 - 使用 `tools/list` 方法获取所有工具的实时列表和完整 JSON Schema

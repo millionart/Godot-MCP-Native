@@ -37,6 +37,7 @@ func register_tools(server_core: RefCounted) -> void:
 	_register_get_performance_metrics(server_core)
 	_register_debug_print(server_core)
 	_register_execute_editor_script(server_core)
+	_register_clear_output(server_core)
 
 func _on_log_message(level: String, message: String) -> void:
 	var log_entry: String = "[%s] %s" % [level, message]
@@ -594,3 +595,103 @@ func _normalize_indentation(code: String) -> String:
 				removed = min_indent
 		result_lines.append(new_line)
 	return "\n".join(result_lines)
+
+# ============================================================================
+# clear_output - 清除输出面板和日志缓冲区
+# ============================================================================
+
+func _register_clear_output(server_core: RefCounted) -> void:
+	var tool_name: String = "clear_output"
+	var description: String = "Clear the editor output panel and MCP log buffer."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"clear_mcp_buffer": {
+				"type": "boolean",
+				"description": "Whether to clear the MCP log buffer. Default is true."
+			},
+			"clear_editor_panel": {
+				"type": "boolean",
+				"description": "Whether to clear the editor output panel. Default is true."
+			}
+		}
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"status": {"type": "string"},
+			"mcp_buffer_cleared": {"type": "boolean"},
+			"editor_panel_cleared": {"type": "boolean"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": false,
+		"destructiveHint": true,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+		Callable(self, "_tool_clear_output"),
+		output_schema, annotations)
+
+func _tool_clear_output(params: Dictionary) -> Dictionary:
+	var clear_mcp_buffer: bool = params.get("clear_mcp_buffer", true)
+	var clear_editor_panel: bool = params.get("clear_editor_panel", true)
+
+	var mcp_cleared: bool = false
+	var mcp_panel_cleared: bool = false
+	var panel_cleared: bool = false
+
+	if clear_mcp_buffer:
+		_log_mutex.lock()
+		_log_buffer.clear()
+		_log_mutex.unlock()
+		mcp_cleared = true
+		mcp_panel_cleared = _clear_mcp_panel_log()
+
+	if clear_editor_panel:
+		var editor_interface: EditorInterface = _get_editor_interface()
+		if editor_interface:
+			var base_control: Control = editor_interface.get_base_control()
+			if base_control:
+				var log_panel: Node = base_control.find_child("*Output*", true, false)
+				if log_panel:
+					var rich_text: RichTextLabel = _find_rich_text_label(log_panel)
+					if rich_text:
+						rich_text.clear()
+						panel_cleared = true
+
+	return {
+		"status": "success",
+		"mcp_buffer_cleared": mcp_cleared,
+		"mcp_panel_cleared": mcp_panel_cleared,
+		"editor_panel_cleared": panel_cleared
+	}
+
+func _clear_mcp_panel_log() -> bool:
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return false
+	var main_screen: Control = editor_interface.get_editor_main_screen()
+	if not main_screen:
+		return false
+	for child in main_screen.get_children():
+		if child.get_script() and child.get_script().resource_path.find("mcp_panel_native") >= 0:
+			var text_edit: TextEdit = child.find_child("*TextEdit*", true, false)
+			if text_edit and not text_edit.editable:
+				text_edit.text = ""
+				return true
+	return false
+
+func _find_rich_text_label(node: Node) -> RichTextLabel:
+	if node is RichTextLabel:
+		return node as RichTextLabel
+	for child in node.get_children():
+		var result: RichTextLabel = _find_rich_text_label(child)
+		if result:
+			return result
+	return null

@@ -52,20 +52,14 @@ static func _make_friendly_path(node: Node, scene_root: Node) -> String:
 # ============================================================================
 
 func register_tools(server_core: RefCounted) -> void:
-	# 注册get_editor_state工具
 	_register_get_editor_state(server_core)
-	
-	# 注册run_project工具
 	_register_run_project(server_core)
-	
-	# 注册stop_project工具
 	_register_stop_project(server_core)
-	
-	# 注册get_selected_nodes工具
 	_register_get_selected_nodes(server_core)
-	
-	# 注册set_editor_setting工具
 	_register_set_editor_setting(server_core)
+	_register_get_editor_screenshot(server_core)
+	_register_get_signals(server_core)
+	_register_reload_project(server_core)
 
 # ============================================================================
 # get_editor_state - 获取编辑器状态
@@ -403,3 +397,269 @@ func _tool_set_editor_setting(params: Dictionary) -> Dictionary:
 		"old_value": str(old_value) if old_value != null else "null",
 		"new_value": str(setting_value)
 	}
+
+# ============================================================================
+# get_editor_screenshot - 截取编辑器视口
+# ============================================================================
+
+func _register_get_editor_screenshot(server_core: RefCounted) -> void:
+	var tool_name: String = "get_editor_screenshot"
+	var description: String = "Capture a screenshot of the editor viewport and save it to a file."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"viewport_type": {
+				"type": "string",
+				"description": "Viewport type: '3d' or '2d'. Default is '3d'.",
+				"enum": ["3d", "2d"]
+			},
+			"viewport_index": {
+				"type": "integer",
+				"description": "3D viewport index (0-3). Default is 0."
+			},
+			"save_path": {
+				"type": "string",
+				"description": "Path to save the screenshot (e.g. 'res://screenshots/editor.png')."
+			},
+			"format": {
+				"type": "string",
+				"description": "Image format: 'png' or 'jpg'. Default is 'png'.",
+				"enum": ["png", "jpg"]
+			}
+		}
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"status": {"type": "string"},
+			"save_path": {"type": "string"},
+			"size": {"type": "string"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": true,
+		"destructiveHint": false,
+		"idempotentHint": false,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+		Callable(self, "_tool_get_editor_screenshot"),
+		output_schema, annotations)
+
+func _tool_get_editor_screenshot(params: Dictionary) -> Dictionary:
+	var viewport_type: String = params.get("viewport_type", "3d")
+	var viewport_index: int = params.get("viewport_index", 0)
+	var save_path: String = params.get("save_path", "res://screenshot_editor.png")
+	var format: String = params.get("format", "png")
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var path_validation: Dictionary = PathValidator.validate_path(save_path)
+	if not path_validation["valid"]:
+		return {"error": "Invalid save path: " + path_validation["error"]}
+	save_path = path_validation["sanitized"]
+
+	var viewport: SubViewport = null
+	if viewport_type == "3d":
+		viewport = editor_interface.get_editor_viewport_3d(viewport_index)
+	else:
+		viewport = editor_interface.get_editor_viewport_2d()
+
+	if not viewport:
+		return {"error": "Failed to get editor viewport"}
+
+	var texture: ViewportTexture = viewport.get_texture()
+	if not texture:
+		return {"error": "Failed to get viewport texture"}
+
+	var image: Image = texture.get_image()
+	if not image:
+		return {"error": "Failed to capture viewport image"}
+
+	var save_dir: String = save_path.get_base_dir()
+	if not save_dir.is_empty() and not DirAccess.dir_exists_absolute(save_dir):
+		DirAccess.make_dir_recursive_absolute(save_dir)
+
+	var err: Error = OK
+	if format == "jpg":
+		err = image.save_jpg(save_path, 0.9)
+	else:
+		err = image.save_png(save_path)
+
+	if err != OK:
+		return {"error": "Failed to save screenshot: error " + str(err)}
+
+	return {
+		"status": "success",
+		"save_path": save_path,
+		"size": str(image.get_width()) + "x" + str(image.get_height())
+	}
+
+# ============================================================================
+# get_signals - 获取节点的所有信号及连接
+# ============================================================================
+
+func _register_get_signals(server_core: RefCounted) -> void:
+	var tool_name: String = "get_signals"
+	var description: String = "Get all signals and their connections for a node."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"node_path": {
+				"type": "string",
+				"description": "Path to the node (e.g. '/root/MainScene/Player')"
+			},
+			"include_connections": {
+				"type": "boolean",
+				"description": "Whether to include connection details. Default is true."
+			}
+		},
+		"required": ["node_path"]
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"node_path": {"type": "string"},
+			"signals": {"type": "array"},
+			"signal_count": {"type": "integer"},
+			"connection_count": {"type": "integer"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": true,
+		"destructiveHint": false,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+		Callable(self, "_tool_get_signals"),
+		output_schema, annotations)
+
+func _tool_get_signals(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var include_connections: bool = params.get("include_connections", true)
+
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var target_node: Node = _resolve_node_path(editor_interface, node_path)
+	if not target_node:
+		return {"error": "Node not found: " + node_path}
+
+	var signal_list: Array = target_node.get_signal_list()
+	var signals: Array = []
+	var total_connections: int = 0
+
+	for sig in signal_list:
+		var signal_info: Dictionary = {
+			"name": sig.get("name", ""),
+			"arguments": sig.get("args", []).size()
+		}
+
+		if include_connections:
+			var connections: Array = target_node.get_signal_connection_list(sig.get("name", ""))
+			var connection_list: Array = []
+			for conn in connections:
+				connection_list.append({
+					"callable": str(conn.get("callable", "")),
+					"flags": conn.get("flags", 0)
+				})
+				total_connections += 1
+			signal_info["connections"] = connection_list
+			signal_info["connection_count"] = connection_list.size()
+
+		signals.append(signal_info)
+
+	return {
+		"node_path": node_path,
+		"signals": signals,
+		"signal_count": signals.size(),
+		"connection_count": total_connections
+	}
+
+func _resolve_node_path(editor_interface: EditorInterface, path: String) -> Node:
+	var edited_scene: Node = editor_interface.get_edited_scene_root()
+	if not edited_scene:
+		return null
+	if path == str(edited_scene.get_path()) or path == "/root/" + edited_scene.name:
+		return edited_scene
+	if path.begins_with("/root/" + edited_scene.name + "/"):
+		var relative: String = path.substr(("/root/" + edited_scene.name + "/").length())
+		return edited_scene.get_node_or_null(relative)
+	return edited_scene.get_node_or_null(path)
+
+# ============================================================================
+# reload_project - 重新扫描文件系统并重新加载脚本
+# ============================================================================
+
+func _register_reload_project(server_core: RefCounted) -> void:
+	var tool_name: String = "reload_project"
+	var description: String = "Rescan the project filesystem and reload scripts. Useful after external file changes."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"full_scan": {
+				"type": "boolean",
+				"description": "Whether to perform a full scan (true) or source-only scan (false). Default is false."
+			}
+		}
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"status": {"type": "string"},
+			"scan_type": {"type": "string"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": false,
+		"destructiveHint": false,
+		"idempotentHint": false,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+		Callable(self, "_tool_reload_project"),
+		output_schema, annotations)
+
+func _tool_reload_project(params: Dictionary) -> Dictionary:
+	var full_scan: bool = params.get("full_scan", false)
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var fs: EditorFileSystem = editor_interface.get_resource_filesystem()
+	if not fs:
+		return {"error": "Failed to get EditorFileSystem"}
+
+	if fs.is_scanning():
+		return {
+			"status": "already_scanning",
+			"progress": fs.get_scanning_progress(),
+			"message": "Filesystem scan is already in progress"
+		}
+
+	if full_scan:
+		fs.scan()
+		return {"status": "success", "scan_type": "full"}
+	else:
+		fs.scan_sources()
+		return {"status": "success", "scan_type": "sources_only"}

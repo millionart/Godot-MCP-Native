@@ -30,6 +30,9 @@ func register_tools(server_core: RefCounted) -> void:
 	_register_modify_script(server_core)
 	_register_analyze_script(server_core)
 	_register_get_current_script(server_core)
+	_register_attach_script(server_core)
+	_register_validate_script(server_core)
+	_register_search_in_files(server_core)
 
 # ============================================================================
 # list_project_scripts - 列出所有脚本
@@ -649,3 +652,421 @@ func _tool_get_current_script(params: Dictionary) -> Dictionary:
 		"content": content,
 		"line_count": line_count
 	}
+
+# ============================================================================
+# attach_script - 将脚本附加到节点
+# ============================================================================
+
+func _register_attach_script(server_core: RefCounted) -> void:
+	var tool_name: String = "attach_script"
+	var description: String = "Attach an existing GDScript file to a node in the scene tree."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"node_path": {
+				"type": "string",
+				"description": "Path to the node to attach the script to (e.g. '/root/MainScene/Player')"
+			},
+			"script_path": {
+				"type": "string",
+				"description": "Path to the script file (e.g. 'res://scripts/player.gd')"
+			}
+		},
+		"required": ["node_path", "script_path"]
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"status": {"type": "string"},
+			"node_path": {"type": "string"},
+			"script_path": {"type": "string"},
+			"previous_script": {"type": "string"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": false,
+		"destructiveHint": false,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+		Callable(self, "_tool_attach_script"),
+		output_schema, annotations)
+
+func _tool_attach_script(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var script_path: String = params.get("script_path", "")
+
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	if script_path.is_empty():
+		return {"error": "Missing required parameter: script_path"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var validation: Dictionary = PathValidator.validate_file_path(script_path, [".gd"])
+	if not validation["valid"]:
+		return {"error": "Invalid script path: " + validation["error"]}
+	script_path = validation["sanitized"]
+
+	if not FileAccess.file_exists(script_path):
+		return {"error": "Script file not found: " + script_path}
+
+	var target_node: Node = _resolve_node_path(editor_interface, node_path)
+	if not target_node:
+		return {"error": "Node not found: " + node_path}
+
+	var previous_script: String = ""
+	var old_script: Variant = target_node.get_script()
+	if old_script and old_script is Script:
+		previous_script = old_script.resource_path
+
+	var script_res: Script = load(script_path)
+	if not script_res:
+		return {"error": "Failed to load script: " + script_path}
+
+	target_node.set_script(script_res)
+	editor_interface.get_resource_filesystem().scan()
+
+	return {
+		"status": "success",
+		"node_path": node_path,
+		"script_path": script_path,
+		"previous_script": previous_script
+	}
+
+# ============================================================================
+# validate_script - 验证 GDScript 语法
+# ============================================================================
+
+func _register_validate_script(server_core: RefCounted) -> void:
+	var tool_name: String = "validate_script"
+	var description: String = "Validate GDScript syntax without executing it. Checks for errors and warnings."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"script_path": {
+				"type": "string",
+				"description": "Path to the script file to validate (e.g. 'res://scripts/player.gd')"
+			},
+			"content": {
+				"type": "string",
+				"description": "Optional script content to validate directly (instead of reading from file)"
+			},
+			"check_warnings": {
+				"type": "boolean",
+				"description": "Whether to check for warnings. Default is true."
+			}
+		},
+		"required": []
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"valid": {"type": "boolean"},
+			"errors": {"type": "array"},
+			"warnings": {"type": "array"},
+			"error_count": {"type": "integer"},
+			"warning_count": {"type": "integer"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": true,
+		"destructiveHint": false,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+		Callable(self, "_tool_validate_script"),
+		output_schema, annotations)
+
+func _tool_validate_script(params: Dictionary) -> Dictionary:
+	var script_path: String = params.get("script_path", "")
+	var content: String = params.get("content", "")
+	var check_warnings: bool = params.get("check_warnings", true)
+
+	if script_path.is_empty() and content.is_empty():
+		return {"error": "Must provide either script_path or content"}
+
+	if content.is_empty():
+		var validation: Dictionary = PathValidator.validate_file_path(script_path, [".gd"])
+		if not validation["valid"]:
+			return {"error": "Invalid path: " + validation["error"]}
+		script_path = validation["sanitized"]
+
+		if not FileAccess.file_exists(script_path):
+			return {"error": "Script file not found: " + script_path}
+
+		var file: FileAccess = FileAccess.open(script_path, FileAccess.READ)
+		if not file:
+			return {"error": "Failed to open file: " + script_path}
+		content = file.get_as_text()
+		file.close()
+
+	var validation_content: String = _strip_class_names(content)
+	var test_script: GDScript = GDScript.new()
+	test_script.source_code = validation_content
+	var reload_err: Error = test_script.reload()
+
+	var errors: Array = []
+	var warnings: Array = []
+
+	if reload_err != OK:
+		var error_msg: String = test_script.get_meta("_error_text", "") if test_script.has_meta("_error_text") else ""
+		if error_msg.is_empty():
+			var err_lines: PackedStringArray = content.split("\n")
+			for i in range(err_lines.size()):
+				var line: String = err_lines[i].strip_edges()
+				if line.is_empty():
+					continue
+				if _is_syntax_error_line(line):
+					errors.append({
+						"line": i + 1,
+						"column": 0,
+						"message": "Syntax error near: " + line
+					})
+					break
+			if errors.is_empty():
+				errors.append({
+					"line": 0,
+					"column": 0,
+					"message": "Script has syntax errors"
+				})
+
+	if check_warnings and reload_err == OK:
+		var source_lines: PackedStringArray = content.split("\n")
+		for i in range(source_lines.size()):
+			var line: String = source_lines[i].strip_edges()
+			if line.begins_with("var ") and not ":" in line and not "=" in line:
+				warnings.append({
+					"line": i + 1,
+					"column": 0,
+					"message": "Variable lacks type hint"
+				})
+
+	return {
+		"valid": errors.is_empty(),
+		"errors": errors,
+		"warnings": warnings,
+		"error_count": errors.size(),
+		"warning_count": warnings.size()
+	}
+
+func _is_syntax_error_line(line: String) -> bool:
+	var error_keywords: Array = ["unexpected", "expected", "indent", "mismatched"]
+	var line_lower: String = line.to_lower()
+	for keyword in error_keywords:
+		if keyword in line_lower:
+			return true
+	return false
+
+func _strip_class_names(source: String) -> String:
+	var lines: PackedStringArray = source.split("\n")
+	var result: PackedStringArray = []
+	for line in lines:
+		var stripped: String = line.strip_edges()
+		if stripped.begins_with("class_name "):
+			result.append("")
+		else:
+			result.append(line)
+	return "\n".join(result)
+
+# ============================================================================
+# search_in_files - 在项目文件中搜索内容
+# ============================================================================
+
+func _register_search_in_files(server_core: RefCounted) -> void:
+	var tool_name: String = "search_in_files"
+	var description: String = "Search for text patterns in project files. Supports literal text and regex matching."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"pattern": {
+				"type": "string",
+				"description": "Search pattern (text or regex)"
+			},
+			"search_path": {
+				"type": "string",
+				"description": "Directory to search in. Default is 'res://'."
+			},
+			"file_extensions": {
+				"type": "array",
+				"items": {"type": "string"},
+				"description": "File extensions to include (e.g. ['.gd', '.tscn']). Default is ['.gd']."
+			},
+			"use_regex": {
+				"type": "boolean",
+				"description": "Whether to use regex matching. Default is false (literal match)."
+			},
+			"case_sensitive": {
+				"type": "boolean",
+				"description": "Whether the search is case-sensitive. Default is true."
+			},
+			"max_results": {
+				"type": "integer",
+				"description": "Maximum number of results to return. Default is 50."
+			}
+		},
+		"required": ["pattern"]
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"pattern": {"type": "string"},
+			"results": {"type": "array"},
+			"total_matches": {"type": "integer"},
+			"files_searched": {"type": "integer"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": true,
+		"destructiveHint": false,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+		Callable(self, "_tool_search_in_files"),
+		output_schema, annotations)
+
+func _tool_search_in_files(params: Dictionary) -> Dictionary:
+	var pattern: String = params.get("pattern", "")
+	var search_path: String = params.get("search_path", "res://")
+	var file_extensions: Array = params.get("file_extensions", [".gd"])
+	var use_regex: bool = params.get("use_regex", false)
+	var case_sensitive: bool = params.get("case_sensitive", true)
+	var max_results: int = params.get("max_results", 50)
+
+	if pattern.is_empty():
+		return {"error": "Missing required parameter: pattern"}
+
+	var validation: Dictionary = PathValidator.validate_directory_path(search_path)
+	if not validation["valid"]:
+		return {"error": "Invalid path: " + validation["error"]}
+	search_path = validation["sanitized"]
+
+	var regex: RegEx = null
+	if use_regex:
+		regex = RegEx.new()
+		var compile_err: int = regex.compile(pattern)
+		if compile_err != OK:
+			return {"error": "Invalid regex pattern: " + pattern}
+
+	var state: Dictionary = {
+		"results": [],
+		"files_searched": 0,
+		"total_matches": 0,
+		"max_results": max_results
+	}
+
+	_search_recursive(search_path, pattern, file_extensions, use_regex,
+		case_sensitive, regex, state)
+
+	return {
+		"pattern": pattern,
+		"results": state["results"],
+		"total_matches": state["total_matches"],
+		"files_searched": state["files_searched"]
+	}
+
+func _search_recursive(
+	dir_path: String, pattern: String, extensions: Array,
+	use_regex: bool, case_sensitive: bool, regex: RegEx, state: Dictionary
+) -> void:
+	if state["total_matches"] >= state["max_results"]:
+		return
+
+	var dir: DirAccess = DirAccess.open(dir_path)
+	if not dir:
+		return
+
+	dir.list_dir_begin()
+	var file_name: String = dir.get_next()
+
+	while not file_name.is_empty():
+		if state["total_matches"] >= state["max_results"]:
+			break
+
+		if file_name == "." or file_name == "..":
+			file_name = dir.get_next()
+			continue
+
+		var full_path: String = dir_path.path_join(file_name)
+
+		if dir.current_is_dir():
+			_search_recursive(full_path, pattern, extensions, use_regex,
+				case_sensitive, regex, state)
+		else:
+			var ext_match: bool = extensions.is_empty()
+			for ext in extensions:
+				if file_name.ends_with(ext):
+					ext_match = true
+					break
+
+			if ext_match:
+				state["files_searched"] = int(state["files_searched"]) + 1
+				_search_file(full_path, pattern, use_regex, case_sensitive, regex, state)
+
+		file_name = dir.get_next()
+
+	dir.list_dir_end()
+
+func _search_file(
+	file_path: String, pattern: String, use_regex: bool,
+	case_sensitive: bool, regex: RegEx, state: Dictionary
+) -> void:
+	var file: FileAccess = FileAccess.open(file_path, FileAccess.READ)
+	if not file:
+		return
+
+	var line_number: int = 0
+	var file_matches: Array = []
+
+	while not file.eof_reached() and state["total_matches"] < state["max_results"]:
+		var line: String = file.get_line()
+		line_number += 1
+
+		var found: bool = false
+		var match_text: String = ""
+
+		if use_regex and regex:
+			var match_result: RegExMatch = regex.search(line)
+			if match_result:
+				found = true
+				match_text = match_result.get_string()
+		else:
+			var search_line: String = line if case_sensitive else line.to_lower()
+			var search_pattern: String = pattern if case_sensitive else pattern.to_lower()
+			var pos: int = search_line.find(search_pattern)
+			if pos >= 0:
+				found = true
+				match_text = line.strip_edges()
+
+		if found:
+			file_matches.append({
+				"line": line_number,
+				"text": match_text
+			})
+			state["total_matches"] = int(state["total_matches"]) + 1
+
+	file.close()
+
+	if not file_matches.is_empty():
+		state["results"].append({
+			"file": file_path,
+			"matches": file_matches,
+			"match_count": file_matches.size()
+		})

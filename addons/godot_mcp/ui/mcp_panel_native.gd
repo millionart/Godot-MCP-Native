@@ -486,6 +486,9 @@ func _on_rate_limit_changed(value: float) -> void:
 		_plugin.rate_limit = int(value)
 
 func _on_clear_log_pressed() -> void:
+	clear_log()
+
+func clear_log() -> void:
 	if _log_text_edit:
 		_log_text_edit.text = ""
 
