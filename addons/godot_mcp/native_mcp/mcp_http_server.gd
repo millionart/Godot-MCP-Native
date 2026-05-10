@@ -93,6 +93,15 @@ func set_auth_manager(manager: RefCounted) -> void:
 ## 启动 HTTP 服务器
 ## @returns: bool - 启动成功返回 true，失败返回 false
 func start() -> bool:
+	var conflict_info: String = _check_port_conflict(_port)
+	if not conflict_info.is_empty():
+		var error_msg: String = "Port " + str(_port) + " is already in use! " + conflict_info + " Please change the port in MCP settings or close the conflicting application."
+		server_error.emit(error_msg)
+		if _log_callback.is_valid():
+			_log_callback.call("ERROR", error_msg)
+		push_error(error_msg)
+		return false
+	
 	_tcp_server = TCPServer.new()
 	
 	var error: Error = _tcp_server.listen(_port)
@@ -112,6 +121,36 @@ func start() -> bool:
 		_log_callback.call("INFO", "Server started on port " + str(_port))
 	
 	return true
+
+func _check_port_conflict(port: int) -> String:
+	var output: Array = []
+	var exit_code: int = OS.execute("netstat", ["-ano"], output)
+	if exit_code != OK or output.is_empty():
+		return ""
+	
+	var port_str: String = ":" + str(port) + " "
+	var lines: PackedStringArray = output[0].split("\n")
+	for line in lines:
+		var stripped: String = line.strip_edges()
+		if stripped.find(port_str) >= 0 and stripped.find("LISTENING") >= 0:
+			var parts: PackedStringArray = stripped.split(" ", false)
+			var pid: String = ""
+			if parts.size() >= 5:
+				pid = parts[parts.size() - 1]
+			if pid.is_empty() or not pid.is_valid_int():
+				continue
+			var proc_output: Array = []
+			var proc_exit: int = OS.execute("tasklist", ["/FI", "PID eq " + pid, "/FO", "CSV", "/NH"], proc_output)
+			if proc_exit == OK and not proc_output.is_empty():
+				var proc_line: String = proc_output[0].strip_edges().replace("\"", "")
+				if proc_line.find("INFO:") >= 0:
+					return "(PID " + pid + ")"
+				var proc_parts: PackedStringArray = proc_line.split(",")
+				if proc_parts.size() >= 2:
+					var proc_name: String = proc_parts[0]
+					return "(PID " + pid + ", process: " + proc_name + ")"
+			return "(PID " + pid + ")"
+	return ""
 
 ## 停止 HTTP 服务器
 func stop() -> void:
