@@ -5,7 +5,7 @@
 ## 前置要求
 
 ### 必需软件
-- **Godot 4.x** (推荐 4.3 或更高版本)
+- **Godot 4.x** (推荐 4.6 或更高版本)
 - **Git** (用于版本控制)
 - **Python 3.8+** (用于测试脚本)
 
@@ -59,7 +59,7 @@ HTTP 模式通过 HTTP 协议通信，支持远程访问和 SSE 流式响应。
 ```json
 {
   "mcpServers": {
-    "godot": {
+    "godot-mcp": {
       "url": "http://localhost:9080/mcp",
       "headers": {
         "Authorization": "Bearer your-token-here"

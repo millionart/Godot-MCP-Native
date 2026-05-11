@@ -614,7 +614,7 @@
 
 **问题根因**：与 `reload_project` 相同 — Trae AI MCP 客户端工具数量限制。
 
-**测试 1**：默认参数（清除 MCP 缓冲区和编辑器面板）
+**测试 1**：默认参数（清除 MCP 缓冲区、Server Log 面板和编辑器面板）
 
 **输入**：
 ```json
@@ -626,17 +626,20 @@
 {
   "editor_panel_cleared": true,
   "mcp_buffer_cleared": true,
+  "mcp_panel_cleared": true,
   "status": "success"
 }
 ```
 
-**结果**：✅ 通过 — MCP 缓冲区和编辑器面板均成功清除
+**结果**：✅ 通过 — 三重清除全部成功
 
 **验证方式**：
 1. 先通过 `debug_print` 写入测试消息到输出面板
-2. 调用 `clear_output` 清除
-3. 通过 `get_editor_logs` 确认 MCP 缓冲区已清空（日志数量从 21 条减少到 7 条，7 条是 clear_output 操作本身产生的新日志）
-4. 在 Godot 编辑器 Output 面板中确认内容已被清除
+2. 调用 `get_editor_logs` 确认缓冲区有日志（420 条）
+3. 调用 `clear_output` 清除
+4. 通过 `get_editor_logs` 确认 MCP 缓冲区已清空（7 条，仅含 clear 操作自身日志）
+5. 在 Godot 编辑器中确认 Output 面板内容已被清除
+6. 在 Godot 编辑器中确认 MCP Server Log 面板内容已被清除
 
 **测试 2**：仅清除 MCP 缓冲区
 
@@ -653,13 +656,14 @@
 {
   "editor_panel_cleared": false,
   "mcp_buffer_cleared": true,
+  "mcp_panel_cleared": true,
   "status": "success"
 }
 ```
 
-**结果**：✅ 通过 — 仅清除 MCP 缓冲区成功
+**结果**：✅ 通过 — MCP 缓冲区和 Server Log 面板均清除，编辑器面板不清除
 
-**验证方式**：调用 `get_editor_logs` 确认缓冲区已清空
+**验证方式**：调用 `get_editor_logs` 确认缓冲区已清空，Server Log 面板已清空
 
 **测试 3**：仅清除编辑器面板
 
@@ -676,11 +680,12 @@
 {
   "editor_panel_cleared": true,
   "mcp_buffer_cleared": false,
+  "mcp_panel_cleared": false,
   "status": "success"
 }
 ```
 
-**结果**：✅ 通过 — 仅清除编辑器面板成功
+**结果**：✅ 通过 — 仅清除编辑器面板成功，MCP 缓冲区和面板不受影响
 
 **验证方式**：在 Godot 编辑器中确认 Output 面板内容已被清除
 
@@ -688,11 +693,11 @@
 
 **操作步骤**：
 1. 调用 `debug_print` 写入 2 条验证消息
-2. 调用 `get_editor_logs` 确认缓冲区有日志（21 条）
+2. 调用 `get_editor_logs` 确认缓冲区有日志（420 条）
 3. 调用 `clear_output(clear_mcp_buffer=true, clear_editor_panel=false)`
 4. 再次调用 `get_editor_logs` 确认缓冲区已清空（7 条，仅含 clear 操作自身日志）
 
-**结果**：✅ 通过 — 缓冲区从 21 条减少到 7 条，证明清除功能有效
+**结果**：✅ 通过 — 缓冲区从 420 条减少到 7 条，证明清除功能有效
 
 **测试 5**：都不清除
 
@@ -709,13 +714,16 @@
 {
   "editor_panel_cleared": false,
   "mcp_buffer_cleared": false,
+  "mcp_panel_cleared": false,
   "status": "success"
 }
 ```
 
-**结果**：✅ 通过 — 两个标志均为 false 时不清除任何内容
+**结果**：✅ 通过 — 三个标志均为 false 时不清除任何内容
 
-### 编辑器面板清除 Bug 修复
+### Bug 修复记录
+
+#### Bug 1：编辑器 Output 面板清除失败
 
 **初始问题**：首次 MCP 测试时 `editor_panel_cleared` 始终返回 `false`。
 
@@ -770,6 +778,102 @@ EditorInterface.get_base_control() (Panel)
                  └─ RichTextLabel  ← clear() 方法在此节点
 ```
 
+#### Bug 2：MCP Server Log 面板清除失败
+
+**初始问题**：`clear_output` 清除 MCP 缓冲区后，Server Log 面板日志未被清除。`mcp_panel_cleared` 始终返回 `false`。
+
+**根因分析**：
+`clear_output` 只清除了 `DebugToolsNative._log_buffer`（内部数组，`get_editor_logs` 从此读取），但**没有清除 MCP 面板 UI 的 `_log_text_edit`**（TextEdit 控件，Server Log 标签页显示的日志）。
+
+这是两个独立的日志存储：
+1. `DebugToolsNative._log_buffer` — 内部数组 → `get_editor_logs` 读取
+2. `mcp_panel_native._log_text_edit` — UI TextEdit → Server Log 面板显示
+
+**修复方案**：
+
+1. **`mcp_panel_native.gd`**：添加公共方法 `clear_log()`，供外部调用清除 Server Log 面板
+```gdscript
+func _on_clear_log_pressed() -> void:
+    clear_log()
+
+func clear_log() -> void:
+    if _log_text_edit:
+        _log_text_edit.text = ""
+```
+
+2. **`debug_tools_native.gd`**：在 `_tool_clear_output` 中，当 `clear_mcp_buffer=true` 时，同时调用 `_clear_mcp_panel_log()` 清除 Server Log 面板
+
+3. 返回值新增 `mcp_panel_cleared` 字段，区分三种清除状态
+
+**`_clear_mcp_panel_log` 实现演进**：
+
+第一次尝试（失败）：使用 `has_method("clear_log")` 检测面板
+```gdscript
+for child in main_screen.get_children():
+    if child.has_method("clear_log"):
+        child.call("clear_log")
+        return true
+```
+**问题**：Godot 编辑器缓存了旧版脚本，`has_method("clear_log")` 返回 `false`
+
+第二次尝试（失败）：通过脚本路径识别面板
+```gdscript
+for child in main_screen.get_children():
+    if child.get_script() and child.get_script().resource_path.find("mcp_panel_native") >= 0:
+        var text_edit: TextEdit = child.find_child("*TextEdit*", true, false)
+        if text_edit and not text_edit.editable:
+            text_edit.text = ""
+            return true
+```
+**问题**：Godot 编辑器加载了旧版脚本，`get_script().resource_path` 可能不可用
+
+最终方案（成功）：直接通过 `find_child` 查找面板中的非可编辑 TextEdit
+```gdscript
+func _clear_mcp_panel_log() -> bool:
+    var editor_interface: EditorInterface = _get_editor_interface()
+    if not editor_interface:
+        return false
+    var main_screen: Control = editor_interface.get_editor_main_screen()
+    if not main_screen:
+        return false
+    for child in main_screen.get_children():
+        if child.get_script() and child.get_script().resource_path.find("mcp_panel_native") >= 0:
+            var text_edit: TextEdit = child.find_child("*TextEdit*", true, false)
+            if text_edit and not text_edit.editable:
+                text_edit.text = ""
+                return true
+    return false
+```
+
+**MCP 面板节点结构发现**（通过 `execute_script` 诊断）：
+```
+EditorInterface.get_editor_main_screen()
+  ├─ @CanvasItemEditor@9318
+  ├─ @Node3DEditor@9983
+  ├─ @WindowWrapper@10775
+  ├─ @WindowWrapper@10849
+  ├─ @EditorAssetLibrary@11220
+  └─ MCPPanelNative  ← MCP 面板
+       ├─ @HBoxContainer@18777
+       └─ @TabContainer@18780
+            ├─ @VBoxContainer@18857 (Settings)
+            ├─ @VBoxContainer@18858 (Tools)
+            └─ @VBoxContainer@18859 (Server Log)
+                 └─ MarginContainer
+                      └─ VBoxContainer
+                           ├─ ... (按钮等)
+                           └─ TextEdit  ← editable=false, 日志内容
+```
+
+**最终验证结果**（重启 Godot 后）：
+
+| 场景 | mcp_buffer_cleared | mcp_panel_cleared | editor_panel_cleared |
+|------|-------------------|-------------------|---------------------|
+| 默认参数 | ✅ true | ✅ true | ✅ true |
+| 仅 MCP 缓冲区 | ✅ true | ✅ true | ❌ false |
+| 仅编辑器面板 | ❌ false | ❌ false | ✅ true |
+| 都不清除 | ❌ false | ❌ false | ❌ false |
+
 ### GUT 单元测试验证（已通过）
 
 - `test_clear_output_default_params`：默认参数清除 MCP 缓冲区和编辑器面板 ✅
@@ -794,7 +898,7 @@ EditorInterface.get_base_control() (Panel)
 | get_editor_screenshot | ✅ 可用 | 5 | 5 | 0 | 100% |
 | get_signals | ✅ 可用 | 4 | 4 | 0 | 100% |
 | reload_project | ✅ 可用 | 3 | 3 | 0 | 100% |
-| clear_output | ✅ 可用 | 5 | 5 | 0 | 100% |
+| clear_output | ✅ 可用 | 12 (5 MCP + 7 GUT) | 12 | 0 | 100% |
 
 ### 不可用原因及修复
 
@@ -841,7 +945,7 @@ EditorInterface.get_base_control() (Panel)
 4. **get_editor_screenshot**：3D/2D 视口截图均正常；PNG/JPG 格式均支持；自动创建不存在的目录；非活动视口返回最小截图
 5. **get_signals**：`include_connections` 参数控制连接信息返回；编辑器内部连接正确显示
 6. **reload_project**：`sources_only` 和 `full` 两种扫描模式均正常
-7. **clear_output**：MCP 缓冲区清除成功；编辑器面板清除已修复（原实现错误调用 `EditorLog.clear()`，改为查找内部 `RichTextLabel` 并调用 `clear()`）
+7. **clear_output**：三重清除功能（MCP 缓冲区 + Server Log 面板 + 编辑器 Output 面板）全部正常；修复了两个 bug：EditorLog 无 `clear()` 方法（改用 RichTextLabel.clear()）、MCP 面板日志未同步清除（添加 `_clear_mcp_panel_log` 方法）
 8. **Trae AI 工具数量限制**：MCP 客户端有工具数量上限（~48 个），超出限制的工具无法被发现。需禁用部分旧工具以释放容量
 
 ### 测试环境清理

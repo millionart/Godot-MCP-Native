@@ -13,12 +13,12 @@ A powerful Godot Engine plugin that integrates AI assistants (Claude, etc.) via 
 - **Full Project Access**: AI assistants can read and modify scripts, scenes, nodes, and resources
 - **Native Implementation**: No Node.js dependency required - runs entirely within Godot
 - **Real-time Editing**: Apply AI suggestions directly in the editor
-- **Comprehensive Tool Set** (62 tools):
+- **Comprehensive Tool Set** (70 tools):
   - **Node Tools** (16): Create, modify, manage scene nodes, duplicate, move, rename, signal connections, group management
   - **Script Tools** (9): Edit, analyze, create, attach, validate GDScript files, search in files
   - **Scene Tools** (6): Manipulate scene structure and save scenes
   - **Editor Tools** (8): Control editor functionality, screenshot, signal inspection, filesystem reload
-  - **Debug Tools** (18): Logging, script execution, debugger sessions, breakpoints, stack/variable inspection, profilers, runtime probe
+  - **Debug Tools** (26): Logging, script execution, debugger sessions, breakpoints, stack/variable inspection, profilers, runtime probe
   - **Project Tools** (5): Access project settings and list resources
 
 ## 📦 Installation
@@ -158,7 +158,7 @@ Implement a day/night cycle system with dynamic lighting
 - `get-signals` - Inspect node signals and connections
 - `reload-project` - Rescan the project filesystem
 
-### Debug Tools (18)
+### Debug Tools (26)
 - `get-editor-logs` - Get editor/runtime logs
 - `execute-script` - Execute GDScript expression
 - `get-performance-metrics` - Get performance data
@@ -177,6 +177,14 @@ Implement a day/night cycle system with dynamic lighting
 - `remove-runtime-probe` - Remove the MCP runtime probe node from the current scene
 - `request-debug-break` - Ask the runtime probe to enter Godot's debug break loop
 - `send-debug-command` - Send step/next/out/continue/stack debugger commands to breaked sessions
+- `get-runtime-info` - Query runtime metrics (FPS, node count, etc.) through the probe
+- `get-runtime-scene-tree` - Read the live runtime scene tree from the running game
+- `inspect-runtime-node` - Inspect a live runtime node and its serializable properties
+- `update-runtime-node-property` - Modify a property on a live runtime node
+- `call-runtime-node-method` - Call a method on a live runtime node
+- `evaluate-runtime-expression` - Evaluate a GDScript expression in the running game
+- `await-runtime-condition` - Poll a runtime expression until truthy or timeout
+- `assert-runtime-condition` - Assert a runtime expression becomes truthy within timeout
 
 ## 🔒 Security Recommendations
 

@@ -13,12 +13,12 @@
 - **完整项目访问**：AI 助手可以读取和修改脚本、场景、节点和资源
 - **原生实现**：无需 Node.js 依赖——完全在 Godot 中运行
 - **实时编辑**：直接在编辑器中应用 AI 建议
-- **全面的工具集**（62 个工具）：
+- **全面的工具集**（70 个工具）：
   - **节点工具**（16 个）：创建、修改、管理场景节点，复制、移动、重命名，信号连接，组管理
   - **脚本工具**（9 个）：编辑、分析、创建、附加、验证 GDScript 文件，文件搜索
   - **场景工具**（6 个）：操作场景结构并保存场景
   - **编辑器工具**（8 个）：控制编辑器功能、截图、信号检查、文件系统重载
-  - **调试工具**（18 个）：日志、脚本执行、调试会话、断点、栈帧/变量读取、性能分析器、运行时探针
+  - **调试工具**（26 个）：日志、脚本执行、调试会话、断点、栈帧/变量读取、性能分析器、运行时探针
   - **项目工具**（5 个）：访问项目设置和列出资源
 
 ## 📦 安装
@@ -160,7 +160,7 @@
 - `get-signals` - 检查节点信号和连接
 - `reload-project` - 重新扫描项目文件系统
 
-### 调试工具 (18)
+### 调试工具 (26)
 - `get-editor-logs` - 获取编辑器/运行时日志
 - `execute-script` - 执行 GDScript 表达式
 - `get-performance-metrics` - 获取性能数据
@@ -179,6 +179,14 @@
 - `remove-runtime-probe` - 从当前场景移除 MCP 运行时探针节点
 - `request-debug-break` - 请求运行时探针进入 Godot 调试暂停循环
 - `send-debug-command` - 向已暂停会话发送 step/next/out/continue/stack 调试命令
+- `get-runtime-info` - 通过探针查询运行时指标（FPS、节点数等）
+- `get-runtime-scene-tree` - 从运行中的游戏读取实时场景树
+- `inspect-runtime-node` - 检查运行时节点及其可序列化属性
+- `update-runtime-node-property` - 修改运行时节点上的属性
+- `call-runtime-node-method` - 调用运行时节点上的方法
+- `evaluate-runtime-expression` - 在运行中的游戏计算 GDScript 表达式
+- `await-runtime-condition` - 轮询运行时表达式直到为真或超时
+- `assert-runtime-condition` - 断言运行时表达式在超时内变为真
 
 ## 🔒 安全建议
 

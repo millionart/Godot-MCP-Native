@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "godot-mcp-stdio": {
+    "godot-mcp": {
       "command": "path/to/godot.exe",
       "args": [
         "--headless",

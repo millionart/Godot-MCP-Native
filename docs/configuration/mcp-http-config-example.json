@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "godot-mcp-http": {
+    "godot-mcp": {
       "url": "http://localhost:9080/mcp",
       "headers": {
         "Authorization": "Bearer your-secret-token-here"

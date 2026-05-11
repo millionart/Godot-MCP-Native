@@ -11,9 +11,9 @@ func after_each():
 func test_classifier_initializes():
 	assert_ne(_classifier, null, "Classifier should initialize")
 
-func test_all_50_tools_registered():
+func test_all_70_tools_registered():
 	var all_tools: Array = _classifier.get_all_tools()
-	assert_eq(all_tools.size(), 50, "Should have exactly 50 tools registered")
+	assert_eq(all_tools.size(), 70, "Should have exactly 70 tools registered")
 
 func test_core_tools_count_within_limit():
 	var core_tools: Array = _classifier.get_core_tools()
@@ -21,7 +21,7 @@ func test_core_tools_count_within_limit():
 
 func test_supplementary_tools_count():
 	var supp_tools: Array = _classifier.get_supplementary_tools()
-	assert_eq(supp_tools.size(), 4, "Should have 4 supplementary tools")
+	assert_eq(supp_tools.size(), 24, "Should have 24 supplementary tools")
 
 func test_get_tool_category_create_node():
 	var cat: String = _classifier.get_tool_category("create_node")
@@ -87,6 +87,26 @@ func test_is_supplementary_tool():
 	assert_true(_classifier.is_supplementary_tool("reload_project"), "reload_project should be supplementary")
 	assert_true(_classifier.is_supplementary_tool("execute_script"), "execute_script should be supplementary")
 	assert_true(_classifier.is_supplementary_tool("get_performance_metrics"), "get_performance_metrics should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("get_debugger_sessions"), "get_debugger_sessions should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("set_debugger_breakpoint"), "set_debugger_breakpoint should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("send_debugger_message"), "send_debugger_message should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("toggle_debugger_profiler"), "toggle_debugger_profiler should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("get_debugger_messages"), "get_debugger_messages should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("add_debugger_capture_prefix"), "add_debugger_capture_prefix should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("get_debug_stack_frames"), "get_debug_stack_frames should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("get_debug_stack_variables"), "get_debug_stack_variables should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("install_runtime_probe"), "install_runtime_probe should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("remove_runtime_probe"), "remove_runtime_probe should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("request_debug_break"), "request_debug_break should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("send_debug_command"), "send_debug_command should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("get_runtime_info"), "get_runtime_info should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("get_runtime_scene_tree"), "get_runtime_scene_tree should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("inspect_runtime_node"), "inspect_runtime_node should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("update_runtime_node_property"), "update_runtime_node_property should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("call_runtime_node_method"), "call_runtime_node_method should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("evaluate_runtime_expression"), "evaluate_runtime_expression should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("await_runtime_condition"), "await_runtime_condition should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("assert_runtime_condition"), "assert_runtime_condition should be supplementary")
 
 func test_get_core_max_count():
 	assert_eq(_classifier.get_core_max_count(), 40, "Core max count should be 40")

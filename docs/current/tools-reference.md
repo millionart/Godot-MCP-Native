@@ -18,7 +18,7 @@
 
 ## 工具概述
 
-Godot MCP Native 实现了 **62 个工具**，分为 6 大类：
+Godot MCP Native 实现了 **70 个工具**，分为 6 大类：
 
 | 类别 | 工具数量 | 源文件 | 用途 |
 |------|----------|--------|------|
@@ -26,7 +26,7 @@ Godot MCP Native 实现了 **62 个工具**，分为 6 大类：
 | [Script Tools](#script-tools) | 9 | `script_tools_native.gd` | 脚本管理（读取、创建、修改、分析、附加、验证、搜索） |
 | [Scene Tools](#scene-tools) | 6 | `scene_tools_native.gd` | 场景管理（创建、保存、打开） |
 | [Editor Tools](#editor-tools) | 8 | `editor_tools_native.gd` | 编辑器操作（运行、停止、获取状态、截图、信号、重载） |
-| [Debug Tools](#debug-tools) | 18 | `debug_tools_native.gd` | 调试和日志（日志获取、脚本执行、调试会话、断点、栈帧/变量读取、Profiler、运行时探针） |
+| [Debug Tools](#debug-tools) | 26 | `debug_tools_native.gd` | 调试和日志（日志获取、脚本执行、调试会话、断点、栈帧/变量读取、Profiler、运行时探针） |
 | [Project Tools](#project-tools) | 5 | `project_tools_native.gd` | 项目配置（信息、设置、结构） |
 
 ### 工具调用格式
@@ -1508,9 +1508,192 @@ Godot MCP Native 实现了 **62 个工具**，分为 6 大类：
 
 ---
 
+### 58. get_runtime_info
+
+通过运行时探针查询正在运行的游戏实例，返回运行时指标。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间（毫秒），默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `fps` | number | 当前帧率 |
+| `physics_frames` | int | 物理帧计数 |
+| `process_frames` | int | 处理帧计数 |
+| `debugger_active` | boolean | 调试器是否连接 |
+| `current_scene` | string | 当前场景路径 |
+| `node_count` | int | 场景节点总数 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 59. get_runtime_scene_tree
+
+从运行中的游戏实例读取实时场景树。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `max_depth` | int | 否 | 最大遍历深度，默认 `6` |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间（毫秒），默认 `1500` |
+
+**返回值**：运行时场景树根节点结构，包含 name、type、path、child_count、children。
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 60. inspect_runtime_node
+
+通过运行时探针检查运行时节点及其序列化属性。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 运行时节点路径 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间（毫秒），默认 `1500` |
+
+**返回值**：节点信息，包括 name、type、path 和可序列化的 properties。
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 61. update_runtime_node_property
+
+通过运行时探针修改运行时节点上的属性。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 运行时节点路径 |
+| `property_name` | string | 是 | 属性名称 |
+| `property_value` | variant | 是 | 属性值（支持自动类型转换） |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间（毫秒），默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `property_name` | string | 属性名称 |
+| `old_value` | variant | 修改前的值 |
+| `new_value` | variant | 修改后的值 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 62. call_runtime_node_method
+
+在运行时节点上调用方法并返回序列化后的结果。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 运行时节点路径 |
+| `method_name` | string | 是 | 方法名称 |
+| `arguments` | Array | 否 | 方法参数数组 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间（毫秒），默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `method_name` | string | 方法名称 |
+| `arguments` | Array | 传入的参数 |
+| `result` | variant | 方法返回结果 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 63. evaluate_runtime_expression
+
+在运行中的游戏实例中计算 GDScript 表达式，可选相对目标节点。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `expression` | string | 是 | GDScript 表达式 |
+| `node_path` | string | 否 | 目标节点路径（作为表达式基座） |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间（毫秒），默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `expression` | string | 原始表达式 |
+| `node_path` | string | 目标节点路径 |
+| `value` | variant | 表达式计算结果 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 64. await_runtime_condition
+
+轮询运行时表达式直到其为真或超时。适用于等待游戏状态变化。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `expression` | string | 是 | GDScript 表达式 |
+| `node_path` | string | 否 | 目标节点路径 |
+| `timeout_ms` | int | 否 | 超时时间（毫秒），默认 `3000` |
+| `poll_interval_ms` | int | 否 | 轮询间隔（毫秒），默认 `100` |
+| `session_id` | int | 否 | 目标调试会话 ID |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `condition_met` | boolean | 条件是否已满足 |
+| `attempts` | int | 轮询次数 |
+| `elapsed_ms` | int | 总轮询耗时（毫秒） |
+| `last_value` | variant | 最后一次表达式值 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 65. assert_runtime_condition
+
+断言运行时表达式在超时窗口内变为真。相当于带断言的 `await_runtime_condition`。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `expression` | string | 是 | GDScript 表达式 |
+| `node_path` | string | 否 | 目标节点路径 |
+| `timeout_ms` | int | 否 | 超时时间（毫秒），默认 `3000` |
+| `poll_interval_ms` | int | 否 | 轮询间隔（毫秒），默认 `100` |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `description` | string | 否 | 断言描述 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` 或 `"failed"` |
+| `description` | string | 断言描述 |
+| `attempts` | int | 轮询次数 |
+| `elapsed_ms` | int | 总耗时（毫秒） |
+| `last_value` | variant | 最后一次表达式值 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
 ## Project Tools
 
-### 58. get_project_info
+### 66. get_project_info
 
 获取项目的基本信息。
 
@@ -1529,7 +1712,7 @@ Godot MCP Native 实现了 **62 个工具**，分为 6 大类：
 
 ---
 
-### 59. get_project_settings
+### 67. get_project_settings
 
 获取项目的设置值。
 
@@ -1548,7 +1731,7 @@ Godot MCP Native 实现了 **62 个工具**，分为 6 大类：
 
 ---
 
-### 60. list_project_resources
+### 68. list_project_resources
 
 列出项目中的所有资源文件。
 
@@ -1570,7 +1753,7 @@ Godot MCP Native 实现了 **62 个工具**，分为 6 大类：
 
 ---
 
-### 61. create_resource
+### 69. create_resource
 
 创建新的 Godot 资源文件。
 
@@ -1592,7 +1775,7 @@ Godot MCP Native 实现了 **62 个工具**，分为 6 大类：
 
 ---
 
-### 62. get_project_structure
+### 70. get_project_structure
 
 获取项目的目录结构和文件类型统计。
 
@@ -1722,7 +1905,7 @@ Godot MCP Native 实现了 **62 个工具**，分为 6 大类：
 
 ## 总结
 
-本手册详细说明了 Godot MCP Native 项目的所有 62 个工具。每个工具都有清晰的参数说明、返回值描述和注解信息。
+本手册详细说明了 Godot MCP Native 项目的所有 70 个工具。每个工具都有清晰的参数说明、返回值描述和注解信息。
 
 **提示**：
 - 使用 `tools/list` 方法获取所有工具的实时列表和完整 JSON Schema

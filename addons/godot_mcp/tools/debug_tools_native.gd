@@ -171,7 +171,8 @@ func _register_get_debugger_sessions(server_core: RefCounted) -> void:
 		{"type": "object", "properties": {}},
 		Callable(self, "_tool_get_debugger_sessions"),
 		{"type": "object", "properties": {"sessions": {"type": "array"}, "count": {"type": "integer"}}},
-		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_get_debugger_sessions(params: Dictionary) -> Dictionary:
@@ -197,7 +198,8 @@ func _register_set_debugger_breakpoint(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_set_debugger_breakpoint"),
 		{"type": "object", "properties": {"status": {"type": "string"}, "sessions_updated": {"type": "integer"}}},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_set_debugger_breakpoint(params: Dictionary) -> Dictionary:
@@ -229,7 +231,8 @@ func _register_send_debugger_message(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_send_debugger_message"),
 		{"type": "object", "properties": {"status": {"type": "string"}, "sessions_updated": {"type": "integer"}}},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_send_debugger_message(params: Dictionary) -> Dictionary:
@@ -259,7 +262,8 @@ func _register_toggle_debugger_profiler(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_toggle_debugger_profiler"),
 		{"type": "object", "properties": {"status": {"type": "string"}, "sessions_updated": {"type": "integer"}}},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_toggle_debugger_profiler(params: Dictionary) -> Dictionary:
@@ -288,7 +292,8 @@ func _register_get_debugger_messages(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_get_debugger_messages"),
 		{"type": "object", "properties": {"messages": {"type": "array"}, "count": {"type": "integer"}, "total_available": {"type": "integer"}}},
-		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_get_debugger_messages(params: Dictionary) -> Dictionary:
@@ -310,7 +315,8 @@ func _register_add_debugger_capture_prefix(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_add_debugger_capture_prefix"),
 		{"type": "object", "properties": {"status": {"type": "string"}, "prefixes": {"type": "array"}}},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_add_debugger_capture_prefix(params: Dictionary) -> Dictionary:
@@ -336,7 +342,8 @@ func _register_get_debug_stack_frames(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_get_debug_stack_frames"),
 		{"type": "object", "properties": {"frames": {"type": "array"}, "count": {"type": "integer"}, "refresh_result": {"type": "object"}}},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_get_debug_stack_frames(params: Dictionary) -> Dictionary:
@@ -363,7 +370,8 @@ func _register_get_debug_stack_variables(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_get_debug_stack_variables"),
 		{"type": "object", "properties": {"frame": {"type": "integer"}, "variables": {"type": "array"}, "count": {"type": "integer"}, "refresh_result": {"type": "object"}}},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_get_debug_stack_variables(params: Dictionary) -> Dictionary:
@@ -392,7 +400,8 @@ func _register_install_runtime_probe(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_install_runtime_probe"),
 		{"type": "object", "properties": {"status": {"type": "string"}, "node_path": {"type": "string"}, "persistent": {"type": "boolean"}}},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_install_runtime_probe(params: Dictionary) -> Dictionary:
@@ -433,7 +442,8 @@ func _register_remove_runtime_probe(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_remove_runtime_probe"),
 		{"type": "object", "properties": {"status": {"type": "string"}, "removed_node": {"type": "string"}}},
-		{"readOnlyHint": false, "destructiveHint": true, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": true, "idempotentHint": true, "openWorldHint": false},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_remove_runtime_probe(params: Dictionary) -> Dictionary:
@@ -465,7 +475,8 @@ func _register_request_debug_break(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_request_debug_break"),
 		{"type": "object", "properties": {"status": {"type": "string"}, "sessions_updated": {"type": "integer"}}},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_request_debug_break(params: Dictionary) -> Dictionary:
@@ -489,7 +500,8 @@ func _register_send_debug_command(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_send_debug_command"),
 		{"type": "object", "properties": {"status": {"type": "string"}, "sessions_updated": {"type": "integer"}, "note": {"type": "string"}}},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_send_debug_command(params: Dictionary) -> Dictionary:
@@ -512,7 +524,8 @@ func _register_get_runtime_info(server_core: RefCounted) -> void:
 		{"type": "object", "properties": {"session_id": {"type": "integer"}, "timeout_ms": {"type": "integer", "default": 1500}}},
 		Callable(self, "_tool_get_runtime_info"),
 		{"type": "object", "properties": {"fps": {"type": "number"}, "physics_frames": {"type": "integer"}, "process_frames": {"type": "integer"}, "debugger_active": {"type": "boolean"}, "current_scene": {"type": "string"}, "node_count": {"type": "integer"}}},
-		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_get_runtime_info(params: Dictionary) -> Dictionary:
@@ -535,7 +548,8 @@ func _register_get_runtime_scene_tree(server_core: RefCounted) -> void:
 		{"type": "object", "properties": {"max_depth": {"type": "integer", "default": 6}, "session_id": {"type": "integer"}, "timeout_ms": {"type": "integer", "default": 1500}}},
 		Callable(self, "_tool_get_runtime_scene_tree"),
 		{"type": "object", "properties": {"name": {"type": "string"}, "type": {"type": "string"}, "path": {"type": "string"}, "child_count": {"type": "integer"}, "children": {"type": "array"}}},
-		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_get_runtime_scene_tree(params: Dictionary) -> Dictionary:
@@ -556,7 +570,8 @@ func _register_inspect_runtime_node(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_inspect_runtime_node"),
 		{"type": "object", "properties": {"name": {"type": "string"}, "type": {"type": "string"}, "path": {"type": "string"}, "properties": {"type": "object"}}},
-		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_inspect_runtime_node(params: Dictionary) -> Dictionary:
@@ -582,7 +597,8 @@ func _register_update_runtime_node_property(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_update_runtime_node_property"),
 		{"type": "object", "properties": {"node_path": {"type": "string"}, "property_name": {"type": "string"}, "old_value": {}, "new_value": {}}},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_update_runtime_node_property(params: Dictionary) -> Dictionary:
@@ -609,7 +625,8 @@ func _register_call_runtime_node_method(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_call_runtime_node_method"),
 		{"type": "object", "properties": {"node_path": {"type": "string"}, "method_name": {"type": "string"}, "arguments": {"type": "array"}, "result": {}}},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_call_runtime_node_method(params: Dictionary) -> Dictionary:
@@ -635,7 +652,8 @@ func _register_evaluate_runtime_expression(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_evaluate_runtime_expression"),
 		{"type": "object", "properties": {"expression": {"type": "string"}, "node_path": {"type": "string"}, "value": {}}},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_evaluate_runtime_expression(params: Dictionary) -> Dictionary:
@@ -662,7 +680,8 @@ func _register_await_runtime_condition(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_await_runtime_condition"),
 		{"type": "object", "properties": {"condition_met": {"type": "boolean"}, "attempts": {"type": "integer"}, "elapsed_ms": {"type": "integer"}, "last_value": {}}},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_await_runtime_condition(params: Dictionary) -> Dictionary:
@@ -706,7 +725,8 @@ func _register_assert_runtime_condition(server_core: RefCounted) -> void:
 		},
 		Callable(self, "_tool_assert_runtime_condition"),
 		{"type": "object", "properties": {"status": {"type": "string"}, "description": {"type": "string"}, "attempts": {"type": "integer"}, "elapsed_ms": {"type": "integer"}, "last_value": {}}},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true},
+		"supplementary", "Debug-Advanced"
 	)
 
 func _tool_assert_runtime_condition(params: Dictionary) -> Dictionary:
