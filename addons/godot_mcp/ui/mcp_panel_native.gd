@@ -25,11 +25,30 @@ var _cors_origin_edit: LineEdit = null
 var _rate_limit_spin: SpinBox = null
 var _connection_info_label: Label = null
 
+var _transport_title_label: Label = null
+var _transport_mode_label: Label = null
+var _http_port_label: Label = null
+var _auth_token_label: Label = null
+var _cors_origin_label: Label = null
+var _log_level_label: Label = null
+var _security_label: Label = null
+var _rate_limit_label: Label = null
+var _language_label: Label = null
+var _clear_log_button: Button = null
+var _refresh_tools_button: Button = null
+
 var _tab_container: TabContainer = null
 var _debounce_timer: Timer = null
 var _group_widgets: Dictionary = {}
+var _language_option: OptionButton = null
+
+var _translation_manager: MCPTranslationManager = null
+var _settings_manager: MCPSettingsManager = null
 
 func _ready() -> void:
+	_translation_manager = MCPTranslationManager.new()
+	_translation_manager.load_all()
+	_settings_manager = MCPSettingsManager.new()
 	_create_ui()
 	_debounce_timer = Timer.new()
 	_debounce_timer.one_shot = true
@@ -42,15 +61,37 @@ func _exit_tree() -> void:
 
 func set_plugin(plugin: EditorPlugin) -> void:
 	_plugin = plugin
+	if _translation_manager == null:
+		_translation_manager = MCPTranslationManager.new()
+		_translation_manager.load_all()
+	if _settings_manager == null:
+		_settings_manager = MCPSettingsManager.new()
 	if _plugin and _plugin.has_method("get_native_server"):
 		_server_core = _plugin.get_native_server()
-	_update_ui_state()
-	_refresh_tools_list()
+	_load_settings()
+	_refresh_translations()
 
 func set_server_core(server_core: RefCounted) -> void:
 	_server_core = server_core
 	_update_ui_state()
 	_refresh_tools_list()
+
+func _tr(key: String) -> String:
+	if _translation_manager:
+		return _translation_manager.get_text(key)
+	return key
+
+func _trf(key: String, args: Array) -> String:
+	var text: String = _tr(key)
+	var placeholder_count: int = 0
+	for i in text.length():
+		if text[i] == "%":
+			i += 1
+			if i < text.length() and text[i] in "dsf":
+				placeholder_count += 1
+	if placeholder_count > 0 and placeholder_count == args.size():
+		return text % args
+	return text
 
 func _create_ui() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -73,9 +114,9 @@ func _create_ui() -> void:
 	_tab_container.add_child(log_tab)
 	_tab_container.add_child(tools_tab)
 
-	_tab_container.set_tab_title(0, "Settings")
-	_tab_container.set_tab_title(1, "Server Log")
-	_tab_container.set_tab_title(2, "Tool Manager")
+	_tab_container.set_tab_title(0, _tr("ui.settings"))
+	_tab_container.set_tab_title(1, _tr("ui.server_log"))
+	_tab_container.set_tab_title(2, _tr("ui.tool_manager"))
 
 	_update_ui_state()
 	_refresh_tools_list()
@@ -85,7 +126,7 @@ func _create_status_bar() -> HBoxContainer:
 	bar.add_theme_constant_override("separation", 8)
 
 	_status_label = Label.new()
-	_status_label.text = "Status: Unknown"
+	_status_label.text = _tr("ui.status_unknown")
 	_status_label.add_theme_font_size_override("font_size", 14)
 	_status_label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	bar.add_child(_status_label)
@@ -97,12 +138,12 @@ func _create_status_bar() -> HBoxContainer:
 	bar.add_child(_connection_info_label)
 
 	_start_button = Button.new()
-	_start_button.text = "Start Server"
+	_start_button.text = _tr("ui.start_server")
 	_start_button.pressed.connect(_on_start_pressed)
 	bar.add_child(_start_button)
 
 	_stop_button = Button.new()
-	_stop_button.text = "Stop Server"
+	_stop_button.text = _tr("ui.stop_server")
 	_stop_button.pressed.connect(_on_stop_pressed)
 	bar.add_child(_stop_button)
 
@@ -127,17 +168,17 @@ func _create_settings_tab() -> VBoxContainer:
 	content.add_theme_constant_override("separation", 6)
 	margin.add_child(content)
 
-	var transport_title: Label = Label.new()
-	transport_title.text = "传输设置:"
-	transport_title.add_theme_font_size_override("font_size", 13)
-	content.add_child(transport_title)
+	_transport_title_label = Label.new()
+	_transport_title_label.text = _tr("ui.transport_settings")
+	_transport_title_label.add_theme_font_size_override("font_size", 13)
+	content.add_child(_transport_title_label)
 
 	var transport_hbox: HBoxContainer = HBoxContainer.new()
 	content.add_child(transport_hbox)
 
-	var transport_label: Label = Label.new()
-	transport_label.text = "传输模式:"
-	transport_hbox.add_child(transport_label)
+	_transport_mode_label = Label.new()
+	_transport_mode_label.text = _tr("ui.transport_mode")
+	transport_hbox.add_child(_transport_mode_label)
 
 	_transport_mode_option = OptionButton.new()
 	_transport_mode_option.add_item("http", 1)
@@ -151,9 +192,9 @@ func _create_settings_tab() -> VBoxContainer:
 	var port_hbox: HBoxContainer = HBoxContainer.new()
 	_http_config_container.add_child(port_hbox)
 
-	var port_label: Label = Label.new()
-	port_label.text = "端口:"
-	port_hbox.add_child(port_label)
+	_http_port_label = Label.new()
+	_http_port_label.text = _tr("ui.http_port")
+	port_hbox.add_child(_http_port_label)
 
 	_http_port_spin = SpinBox.new()
 	_http_port_spin.min_value = 1024
@@ -167,37 +208,37 @@ func _create_settings_tab() -> VBoxContainer:
 	_http_config_container.add_child(auth_hbox)
 
 	_auth_enabled_check = CheckBox.new()
-	_auth_enabled_check.text = "启用认证"
+	_auth_enabled_check.text = _tr("ui.enable_auth")
 	_auth_enabled_check.toggled.connect(_on_auth_enabled_toggled)
 	auth_hbox.add_child(_auth_enabled_check)
 
-	var token_label: Label = Label.new()
-	token_label.text = "Token:"
-	auth_hbox.add_child(token_label)
+	_auth_token_label = Label.new()
+	_auth_token_label.text = _tr("ui.auth_token")
+	auth_hbox.add_child(_auth_token_label)
 
 	_auth_token_edit = LineEdit.new()
 	_auth_token_edit.secret = true
-	_auth_token_edit.placeholder_text = "输入认证令牌"
+	_auth_token_edit.placeholder_text = _tr("ui.token_placeholder")
 	_auth_token_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_auth_token_edit.text_changed.connect(_on_auth_token_changed)
 	auth_hbox.add_child(_auth_token_edit)
 
 	_sse_enabled_check = CheckBox.new()
-	_sse_enabled_check.text = "启用 SSE"
+	_sse_enabled_check.text = _tr("ui.enable_sse")
 	_sse_enabled_check.toggled.connect(_on_sse_enabled_toggled)
 	_http_config_container.add_child(_sse_enabled_check)
 
 	_allow_remote_check = CheckBox.new()
-	_allow_remote_check.text = "允许远程访问"
+	_allow_remote_check.text = _tr("ui.allow_remote")
 	_allow_remote_check.toggled.connect(_on_allow_remote_toggled)
 	_http_config_container.add_child(_allow_remote_check)
 
 	var cors_hbox: HBoxContainer = HBoxContainer.new()
 	_http_config_container.add_child(cors_hbox)
 
-	var cors_label: Label = Label.new()
-	cors_label.text = "CORS 源:"
-	cors_hbox.add_child(cors_label)
+	_cors_origin_label = Label.new()
+	_cors_origin_label.text = _tr("ui.cors_origin")
+	cors_hbox.add_child(_cors_origin_label)
 
 	_cors_origin_edit = LineEdit.new()
 	_cors_origin_edit.text = "*"
@@ -210,16 +251,16 @@ func _create_settings_tab() -> VBoxContainer:
 	content.add_child(HSeparator.new())
 
 	_auto_start_check = CheckBox.new()
-	_auto_start_check.text = "Auto Start"
+	_auto_start_check.text = _tr("ui.auto_start")
 	_auto_start_check.toggled.connect(_on_auto_start_toggled)
 	content.add_child(_auto_start_check)
 
 	var log_hbox: HBoxContainer = HBoxContainer.new()
 	content.add_child(log_hbox)
 
-	var log_label: Label = Label.new()
-	log_label.text = "Log Level:"
-	log_hbox.add_child(log_label)
+	_log_level_label = Label.new()
+	_log_level_label.text = _tr("ui.log_level")
+	log_hbox.add_child(_log_level_label)
 
 	_log_level_option = OptionButton.new()
 	_log_level_option.add_item("ERROR", 0)
@@ -232,9 +273,9 @@ func _create_settings_tab() -> VBoxContainer:
 	var security_hbox: HBoxContainer = HBoxContainer.new()
 	content.add_child(security_hbox)
 
-	var security_label: Label = Label.new()
-	security_label.text = "Security:"
-	security_hbox.add_child(security_label)
+	_security_label = Label.new()
+	_security_label.text = _tr("ui.security")
+	security_hbox.add_child(_security_label)
 
 	_security_level_option = OptionButton.new()
 	_security_level_option.add_item("PERMISSIVE", 0)
@@ -245,9 +286,9 @@ func _create_settings_tab() -> VBoxContainer:
 	var rate_hbox: HBoxContainer = HBoxContainer.new()
 	content.add_child(rate_hbox)
 
-	var rate_label: Label = Label.new()
-	rate_label.text = "Rate Limit:"
-	rate_hbox.add_child(rate_label)
+	_rate_limit_label = Label.new()
+	_rate_limit_label.text = _tr("ui.rate_limit")
+	rate_hbox.add_child(_rate_limit_label)
 
 	_rate_limit_spin = SpinBox.new()
 	_rate_limit_spin.min_value = 10
@@ -256,6 +297,21 @@ func _create_settings_tab() -> VBoxContainer:
 	_rate_limit_spin.value = 100
 	_rate_limit_spin.value_changed.connect(_on_rate_limit_changed)
 	rate_hbox.add_child(_rate_limit_spin)
+
+	content.add_child(HSeparator.new())
+
+	var lang_hbox: HBoxContainer = HBoxContainer.new()
+	content.add_child(lang_hbox)
+
+	_language_label = Label.new()
+	_language_label.text = _tr("ui.language")
+	lang_hbox.add_child(_language_label)
+
+	_language_option = OptionButton.new()
+	_language_option.add_item(_tr("ui.english"), 0)
+	_language_option.add_item(_tr("ui.chinese"), 1)
+	_language_option.item_selected.connect(_on_language_selected)
+	lang_hbox.add_child(_language_option)
 
 	return tab
 
@@ -286,11 +342,11 @@ func _create_log_tab() -> VBoxContainer:
 	_log_text_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_child(_log_text_edit)
 
-	var clear_log_button: Button = Button.new()
-	clear_log_button.text = "Clear Log"
-	clear_log_button.pressed.connect(_on_clear_log_pressed)
-	clear_log_button.size_flags_horizontal = Control.SIZE_SHRINK_END
-	content.add_child(clear_log_button)
+	_clear_log_button = Button.new()
+	_clear_log_button.text = _tr("ui.clear_log")
+	_clear_log_button.pressed.connect(_on_clear_log_pressed)
+	_clear_log_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	content.add_child(_clear_log_button)
 
 	return tab
 
@@ -317,13 +373,13 @@ func _create_tools_tab() -> VBoxContainer:
 	var toolbar: HBoxContainer = HBoxContainer.new()
 	content.add_child(toolbar)
 
-	var refresh_button: Button = Button.new()
-	refresh_button.text = "Refresh Tools"
-	refresh_button.pressed.connect(_refresh_tools_list)
-	toolbar.add_child(refresh_button)
+	_refresh_tools_button = Button.new()
+	_refresh_tools_button.text = _tr("ui.refresh_tools")
+	_refresh_tools_button.pressed.connect(_refresh_tools_list)
+	toolbar.add_child(_refresh_tools_button)
 
 	_tools_count_label = Label.new()
-	_tools_count_label.text = "Tools: 0"
+	_tools_count_label.text = _tr("ui.tools_init")
 	_tools_count_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	toolbar.add_child(_tools_count_label)
 
@@ -349,10 +405,10 @@ func _update_ui_state() -> void:
 		is_running = _server_core.is_running()
 
 	if is_running:
-		_status_label.text = "Status: Running"
+		_status_label.text = _tr("ui.status_running")
 		_status_label.add_theme_color_override("font_color", Color.GREEN)
 	else:
-		_status_label.text = "Status: Stopped"
+		_status_label.text = _tr("ui.status_stopped")
 		_status_label.add_theme_color_override("font_color", Color.RED)
 
 	if _start_button:
@@ -414,9 +470,9 @@ func _update_ui_state() -> void:
 			var port: int = 9080
 			if _plugin and _plugin.get("http_port") != null:
 				port = _plugin.http_port
-			_connection_info_label.text = "URL: http://localhost:" + str(port) + "/mcp"
+			_connection_info_label.text = _trf("ui.connection_url", [port])
 		elif mode == "stdio" and is_running:
-			_connection_info_label.text = "Mode: stdio (via stdin/stdout)"
+			_connection_info_label.text = _tr("ui.connection_stdio")
 		else:
 			_connection_info_label.text = ""
 
@@ -446,14 +502,17 @@ func _on_stop_pressed() -> void:
 func _on_auto_start_toggled(button_pressed: bool) -> void:
 	if _plugin:
 		_plugin.auto_start = button_pressed
+	_debounce_save()
 
 func _on_log_level_selected(index: int) -> void:
 	if _plugin:
 		_plugin.log_level = index
+	_debounce_save()
 
 func _on_security_level_selected(index: int) -> void:
 	if _plugin:
 		_plugin.security_level = index
+	_debounce_save()
 
 func _on_transport_mode_selected(index: int) -> void:
 	var mode: String = _transport_mode_option.get_item_text(index)
@@ -461,36 +520,44 @@ func _on_transport_mode_selected(index: int) -> void:
 		_plugin.transport_mode = mode
 	_http_config_container.visible = (mode == "http")
 	_update_ui_state()
+	_debounce_save()
 
 func _on_http_port_changed(value: float) -> void:
 	if _plugin:
 		_plugin.http_port = int(value)
+	_debounce_save()
 
 func _on_auth_enabled_toggled(enabled: bool) -> void:
 	if _plugin:
 		_plugin.auth_enabled = enabled
 	if _auth_token_edit:
 		_auth_token_edit.editable = enabled
+	_debounce_save()
 
 func _on_auth_token_changed(text: String) -> void:
 	if _plugin:
 		_plugin.auth_token = text
+	_debounce_save()
 
 func _on_sse_enabled_toggled(enabled: bool) -> void:
 	if _plugin:
 		_plugin.sse_enabled = enabled
+	_debounce_save()
 
 func _on_allow_remote_toggled(enabled: bool) -> void:
 	if _plugin:
 		_plugin.allow_remote = enabled
+	_debounce_save()
 
 func _on_cors_origin_changed(text: String) -> void:
 	if _plugin:
 		_plugin.cors_origin = text
+	_debounce_save()
 
 func _on_rate_limit_changed(value: float) -> void:
 	if _plugin:
 		_plugin.rate_limit = int(value)
+	_debounce_save()
 
 func _on_clear_log_pressed() -> void:
 	clear_log()
@@ -539,7 +606,7 @@ func _refresh_tools_list() -> void:
 
 	if core_group_names.size() > 0:
 		var core_section: Label = Label.new()
-		core_section.text = "Core Tools"
+		core_section.text = _tr("ui.core_tools")
 		core_section.add_theme_font_size_override("font_size", 14)
 		core_section.add_theme_color_override("font_color", Color(0.3, 0.7, 0.7))
 		core_section.add_theme_constant_override("margin_top", 4)
@@ -550,7 +617,7 @@ func _refresh_tools_list() -> void:
 
 	if supp_group_names.size() > 0:
 		var supp_section: Label = Label.new()
-		supp_section.text = "Supplementary Tools"
+		supp_section.text = _tr("ui.supplementary_tools")
 		supp_section.add_theme_font_size_override("font_size", 14)
 		supp_section.add_theme_color_override("font_color", Color(0.7, 0.7, 0.3))
 		supp_section.add_theme_constant_override("margin_top", 8)
@@ -563,7 +630,7 @@ func _refresh_tools_list() -> void:
 
 func _create_group_widget(group_name: String, group_tools: Array) -> void:
 	var widget: MCPToolGroupItem = MCPToolGroupItem.new()
-	widget.setup(group_name, group_tools)
+	widget.setup(group_name, group_tools, _translation_manager)
 	widget.group_toggled.connect(_on_group_toggled)
 	widget.item_toggled.connect(_on_tool_toggled)
 	_tools_list_container.add_child(widget)
@@ -602,10 +669,139 @@ func _update_tools_count() -> void:
 			core_total += 1
 			if en:
 				core_enabled += 1
-	_tools_count_label.text = "Core: %d/%d  |  Supp: %d/%d  |  Total: %d/%d" % [
+	_tools_count_label.text = _trf("ui.tools_count", [
 		core_enabled, core_total, supp_enabled, supp_total,
 		core_enabled + supp_enabled, core_total + supp_total
-	]
+	])
+
+func _refresh_translations() -> void:
+	if _tab_container:
+		_tab_container.set_tab_title(0, _tr("ui.settings"))
+		_tab_container.set_tab_title(1, _tr("ui.server_log"))
+		_tab_container.set_tab_title(2, _tr("ui.tool_manager"))
+	if _start_button:
+		_start_button.text = _tr("ui.start_server")
+	if _stop_button:
+		_stop_button.text = _tr("ui.stop_server")
+	if _auth_enabled_check:
+		_auth_enabled_check.text = _tr("ui.enable_auth")
+	if _sse_enabled_check:
+		_sse_enabled_check.text = _tr("ui.enable_sse")
+	if _allow_remote_check:
+		_allow_remote_check.text = _tr("ui.allow_remote")
+	if _auto_start_check:
+		_auto_start_check.text = _tr("ui.auto_start")
+	if _auth_token_edit:
+		_auth_token_edit.placeholder_text = _tr("ui.token_placeholder")
+	if _transport_title_label:
+		_transport_title_label.text = _tr("ui.transport_settings")
+	if _transport_mode_label:
+		_transport_mode_label.text = _tr("ui.transport_mode")
+	if _http_port_label:
+		_http_port_label.text = _tr("ui.http_port")
+	if _auth_token_label:
+		_auth_token_label.text = _tr("ui.auth_token")
+	if _cors_origin_label:
+		_cors_origin_label.text = _tr("ui.cors_origin")
+	if _log_level_label:
+		_log_level_label.text = _tr("ui.log_level")
+	if _security_label:
+		_security_label.text = _tr("ui.security")
+	if _rate_limit_label:
+		_rate_limit_label.text = _tr("ui.rate_limit")
+	if _language_label:
+		_language_label.text = _tr("ui.language")
+	if _clear_log_button:
+		_clear_log_button.text = _tr("ui.clear_log")
+	if _refresh_tools_button:
+		_refresh_tools_button.text = _tr("ui.refresh_tools")
+	if _language_option:
+		var current_locale: String = _translation_manager.get_locale() if _translation_manager else "en"
+		var locales: Array = _translation_manager.get_available_locales() if _translation_manager else ["en", "zh"]
+		_language_option.set_block_signals(true)
+		_language_option.clear()
+		_language_option.add_item(_tr("ui.english"), 0)
+		_language_option.add_item(_tr("ui.chinese"), 1)
+		var idx: int = locales.find(current_locale)
+		if idx >= 0:
+			_language_option.select(idx)
+		_language_option.set_block_signals(false)
+	if _tools_count_label:
+		_tools_count_label.text = _tr("ui.tools_init")
+	_update_ui_state()
+	_update_connection_info()
+	_refresh_tools_list()
+
+func _update_connection_info() -> void:
+	if not _connection_info_label:
+		return
+	var is_running: bool = false
+	if _server_core and _server_core.has_method("is_running"):
+		is_running = _server_core.is_running()
+	var mode: String = "stdio"
+	if _plugin and _plugin.get("transport_mode") != null:
+		mode = _plugin.transport_mode
+	if mode == "http" and is_running:
+		var port: int = 9080
+		if _plugin and _plugin.get("http_port") != null:
+			port = _plugin.http_port
+		_connection_info_label.text = _tr("ui.connection_url") % [port]
+	elif mode == "stdio" and is_running:
+		_connection_info_label.text = _tr("ui.connection_stdio")
+	else:
+		_connection_info_label.text = ""
+
+func _load_settings() -> void:
+	if not _settings_manager:
+		return
+	var s: Dictionary = _settings_manager.load_settings()
+	_transport_mode_option.select(0 if s.transport_mode == "http" else 1)
+	_http_port_spin.value = s.http_port
+	_auth_enabled_check.button_pressed = s.auth_enabled
+	_auth_token_edit.text = s.auth_token
+	_sse_enabled_check.button_pressed = s.sse_enabled
+	_allow_remote_check.button_pressed = s.allow_remote
+	_cors_origin_edit.text = s.cors_origin
+	_auto_start_check.button_pressed = s.auto_start
+	_log_level_option.select(s.log_level)
+	_security_level_option.select(s.security_level)
+	_rate_limit_spin.value = s.rate_limit
+	if _translation_manager and s.language != _translation_manager.get_locale():
+		_translation_manager.set_locale(s.language)
+		_refresh_translations()
+	if _language_option:
+		var locales: Array = _translation_manager.get_available_locales() if _translation_manager else ["en", "zh"]
+		var idx: int = locales.find(s.language)
+		if idx >= 0:
+			_language_option.set_block_signals(true)
+			_language_option.select(idx)
+			_language_option.set_block_signals(false)
+
+func _save_settings() -> void:
+	if not _settings_manager:
+		return
+	var settings: Dictionary = {
+		"transport_mode": _transport_mode_option.get_item_text(_transport_mode_option.selected) if _transport_mode_option else "http",
+		"http_port": int(_http_port_spin.value) if _http_port_spin else 9080,
+		"auth_enabled": _auth_enabled_check.button_pressed if _auth_enabled_check else false,
+		"auth_token": _auth_token_edit.text if _auth_token_edit else "",
+		"sse_enabled": _sse_enabled_check.button_pressed if _sse_enabled_check else true,
+		"allow_remote": _allow_remote_check.button_pressed if _allow_remote_check else false,
+		"cors_origin": _cors_origin_edit.text if _cors_origin_edit else "*",
+		"auto_start": _auto_start_check.button_pressed if _auto_start_check else false,
+		"log_level": _log_level_option.selected if _log_level_option else 2,
+		"security_level": _security_level_option.selected if _security_level_option else 1,
+		"rate_limit": int(_rate_limit_spin.value) if _rate_limit_spin else 100,
+		"language": _translation_manager.get_locale() if _translation_manager else "en"
+	}
+	_settings_manager.save_settings(settings)
+
+func _on_language_selected(index: int) -> void:
+	var locales: Array = _translation_manager.get_available_locales() if _translation_manager else ["en", "zh"]
+	if index >= 0 and index < locales.size():
+		_translation_manager.set_locale(locales[index])
+		_refresh_translations()
+	_debounce_save()
 
 func _debounce_save() -> void:
 	if _debounce_timer:
@@ -616,6 +812,7 @@ func _on_debounce_timeout() -> void:
 		_server_core.save_tool_states()
 	if _server_core and _server_core.has_method("notify_tool_list_changed"):
 		_server_core.notify_tool_list_changed()
+	_save_settings()
 
 func update_log(message: String) -> void:
 	if not _log_text_edit:

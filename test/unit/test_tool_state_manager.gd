@@ -111,7 +111,7 @@ func test_validate_config_integrity_no_meta():
 	assert_false(result, "Config without meta section should be invalid")
 
 func test_storage_version_constant():
-	assert_eq(_state_manager.STORAGE_VERSION, 1, "Storage version should be 1")
+	assert_eq(_state_manager.storage_version, 1, "Storage version should be 1")
 
 func test_config_file_name_constant():
-	assert_eq(_state_manager.CONFIG_FILE_NAME, "mcp_tool_state.cfg", "Config file name should be mcp_tool_state.cfg")
+	assert_eq(_state_manager.config_file_name, "mcp_tool_state.cfg", "Config file name should be mcp_tool_state.cfg")

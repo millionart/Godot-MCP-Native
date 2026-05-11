@@ -5,12 +5,14 @@ extends VBoxContainer
 var _group_name: String = ""
 var _is_collapsed: bool = false
 var _group_check: CheckBox = null
+var _translation_manager: MCPTranslationManager = null
 
 signal group_toggled(group_name: String, enabled: bool)
 signal item_toggled(tool_name: String, enabled: bool)
 
-func setup(group_name: String, items: Array) -> void:
+func setup(group_name: String, items: Array, translation_manager = null) -> void:
 	_group_name = group_name
+	_translation_manager = translation_manager
 
 	var header: HBoxContainer = HBoxContainer.new()
 	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -82,6 +84,11 @@ func get_tool_container() -> VBoxContainer:
 			return child as VBoxContainer
 	return null
 
+func _tr(key: String) -> String:
+	if _translation_manager:
+		return _translation_manager.get_text(key)
+	return key
+
 func _toggle_collapse() -> void:
 	_is_collapsed = not _is_collapsed
 	var container: VBoxContainer = get_tool_container()
@@ -117,7 +124,7 @@ func _update_count() -> void:
 	if header:
 		var count_label: Label = header.get_node("CountLabel") as Label
 		if count_label:
-			count_label.text = "Enabled: %d / %d" % [enabled, total]
+			count_label.text = _tr("ui.enabled_format") % [enabled, total]
 
 	if _group_check:
 		_group_check.set_block_signals(true)
