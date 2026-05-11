@@ -132,6 +132,18 @@ With authentication:
 }
 ```
 
+### Connecting with Codex
+
+#### HTTP Mode Configuration
+
+```toml
+[mcp_servers]
+
+[mcp_servers.godot-mcp]
+type = "streamableHttp"
+url = "http://localhost:19080/mcp"
+```
+
 ## 💬 Example Prompts
 
 Once connected, you can interact with your Godot project through Claude:

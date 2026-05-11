@@ -134,6 +134,18 @@ npm install mcp-remote
 }
 ```
 
+### 连接 Codex
+
+#### HTTP 模式配置
+
+```toml
+[mcp_servers]
+
+[mcp_servers.godot-mcp]
+type = "streamableHttp"
+url = "http://localhost:19080/mcp"
+```
+
 ## 💬 示例提示
 
 连接后，您可以通过 Claude 与 Godot 项目交互：
