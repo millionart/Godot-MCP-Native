@@ -64,3 +64,8 @@ func set_auth_manager(manager: RefCounted) -> void:
 ## @param context: Variant - 传输上下文
 func send_response(response: Dictionary, context: Variant) -> void:
 	push_error("McpTransportBase.send_response() is not implemented")
+
+## 发送原始 JSON-RPC 消息（用于服务端推送通知）
+## @param message: Dictionary - 完整的 JSON-RPC 消息（包含 jsonrpc/method/params）
+func send_raw_message(message: Dictionary) -> void:
+	push_error("McpTransportBase.send_raw_message() is not implemented")

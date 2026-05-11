@@ -58,7 +58,8 @@ func _register_create_node(server_core: RefCounted) -> void:
 				"node_type": {"type": "string"}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
+		"core", "Node-Write"
 	)
 
 func _resolve_node_path(node_path: String) -> Node:
@@ -145,7 +146,8 @@ func _register_delete_node(server_core: RefCounted) -> void:
 				"deleted_node": {"type": "string"}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": true, "idempotentHint": false, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": true, "idempotentHint": false, "openWorldHint": false},
+		"core", "Node-Write"
 	)
 
 func _tool_delete_node(params: Dictionary) -> Dictionary:
@@ -208,7 +210,8 @@ func _register_update_node_property(server_core: RefCounted) -> void:
 				"new_value": {"type": "string"}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"core", "Node-Write"
 	)
 
 func _tool_update_node_property(params: Dictionary) -> Dictionary:
@@ -287,7 +290,8 @@ func _register_get_node_properties(server_core: RefCounted) -> void:
 				"properties": {"type": "object"}
 			}
 		},
-		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"core", "Node-Read"
 	)
 
 func _tool_get_node_properties(params: Dictionary) -> Dictionary:
@@ -349,7 +353,8 @@ func _register_list_nodes(server_core: RefCounted) -> void:
 				"count": {"type": "integer"}
 			}
 		},
-		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"core", "Node-Read"
 	)
 
 func _tool_list_nodes(params: Dictionary) -> Dictionary:
@@ -403,7 +408,8 @@ func _register_get_scene_tree(server_core: RefCounted) -> void:
 				"total_nodes": {"type": "integer"}
 			}
 		},
-		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"core", "Node-Read"
 	)
 
 func _tool_get_scene_tree(params: Dictionary) -> Dictionary:
@@ -646,7 +652,8 @@ func _register_duplicate_node(server_core: RefCounted) -> void:
 				"new_node_name": {"type": "string"}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
+		"core", "Node-Write"
 	)
 
 func _tool_duplicate_node(params: Dictionary) -> Dictionary:
@@ -730,7 +737,8 @@ func _register_move_node(server_core: RefCounted) -> void:
 				"new_node_path": {"type": "string"}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
+		"core", "Node-Write"
 	)
 
 func _tool_move_node(params: Dictionary) -> Dictionary:
@@ -810,7 +818,8 @@ func _register_rename_node(server_core: RefCounted) -> void:
 				"node_path": {"type": "string"}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"core", "Node-Write"
 	)
 
 func _tool_rename_node(params: Dictionary) -> Dictionary:
@@ -888,7 +897,8 @@ func _register_add_resource(server_core: RefCounted) -> void:
 				"resource_type": {"type": "string"}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
+		"core", "Node-Write"
 	)
 
 func _tool_add_resource(params: Dictionary) -> Dictionary:
@@ -968,7 +978,8 @@ func _register_set_anchor_preset(server_core: RefCounted) -> void:
 				"preset_value": {"type": "integer"}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"core", "Node-Write"
 	)
 
 func _tool_set_anchor_preset(params: Dictionary) -> Dictionary:
@@ -1052,7 +1063,8 @@ func _register_connect_signal(server_core: RefCounted) -> void:
 				"method": {"type": "string"}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
+		"core", "Node-Write"
 	)
 
 func _tool_connect_signal(params: Dictionary) -> Dictionary:
@@ -1148,7 +1160,8 @@ func _register_disconnect_signal(server_core: RefCounted) -> void:
 				"signal": {"type": "string"}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"core", "Node-Write"
 	)
 
 func _tool_disconnect_signal(params: Dictionary) -> Dictionary:
@@ -1223,7 +1236,8 @@ func _register_get_node_groups(server_core: RefCounted) -> void:
 				"group_count": {"type": "integer"}
 			}
 		},
-		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"core", "Node-Read"
 	)
 
 func _tool_get_node_groups(params: Dictionary) -> Dictionary:
@@ -1293,7 +1307,8 @@ func _register_set_node_groups(server_core: RefCounted) -> void:
 				"current_groups": {"type": "array", "items": {"type": "string"}}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
+		"core", "Node-Write"
 	)
 
 func _tool_set_node_groups(params: Dictionary) -> Dictionary:
@@ -1374,7 +1389,8 @@ func _register_find_nodes_in_group(server_core: RefCounted) -> void:
 				"node_count": {"type": "integer"}
 			}
 		},
-		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"core", "Node-Read"
 	)
 
 func _tool_find_nodes_in_group(params: Dictionary) -> Dictionary:

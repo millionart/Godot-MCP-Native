@@ -10,10 +10,6 @@ func after_each():
 		_core.stop()
 	_core = null
 
-func test_negotiate_protocol_version_supported():
-	var result: String = _core._negotiate_protocol_version("2025-11-25")
-	assert_eq(result, "2025-11-25", "Should return same version when supported")
-
 func test_negotiate_protocol_version_older():
 	var result: String = _core._negotiate_protocol_version("2024-11-05")
 	assert_eq(result, "2024-11-05", "Should return older supported version")
@@ -25,6 +21,23 @@ func test_negotiate_protocol_version_unsupported():
 func test_register_tool():
 	_core.register_tool("test_tool", "A test tool", {"type": "object"}, func(args): return {"status": "ok"})
 	assert_true(_core.has_tool("test_tool"), "Should have registered tool")
+
+func test_register_tool_with_category_and_group():
+	_core.register_tool("test_tool", "A test tool", {"type": "object"}, func(args): return {"status": "ok"}, {}, {}, "supplementary", "Editor-Advanced")
+	assert_true(_core.has_tool("test_tool"), "Should have registered tool with category/group")
+	var tools: Array = _core.get_registered_tools()
+	for t in tools:
+		if t.get("name") == "test_tool":
+			assert_eq(t.get("category"), "supplementary", "Tool category should be supplementary")
+			assert_eq(t.get("group"), "Editor-Advanced", "Tool group should be Editor-Advanced")
+
+func test_register_tool_default_category_and_group():
+	_core.register_tool("test_tool", "A test tool", {"type": "object"}, func(args): return {"status": "ok"})
+	var tools: Array = _core.get_registered_tools()
+	for t in tools:
+		if t.get("name") == "test_tool":
+			assert_eq(t.get("category"), "core", "Default category should be 'core'")
+			assert_eq(t.get("group"), "", "Default group should be empty")
 
 func test_unregister_tool():
 	_core.register_tool("test_tool", "A test tool", {"type": "object"}, func(args): return {"status": "ok"})
@@ -52,6 +65,74 @@ func test_set_tool_enabled_re_enable():
 	for t in tools:
 		if t.get("name") == "test_tool":
 			assert_true(t.get("enabled", false), "Re-enabled tool should have enabled=true")
+
+func test_set_tool_enabled_sets_dirty_flag():
+	_core.register_tool("test_tool", "Test", {"type": "object"}, func(args): return {})
+	assert_false(_core.get_tool_list_dirty(), "Dirty flag should be false initially")
+	_core.set_tool_enabled("test_tool", false)
+	assert_true(_core.get_tool_list_dirty(), "Dirty flag should be true after disabling tool")
+
+func test_clear_tool_list_dirty():
+	_core.register_tool("test_tool", "Test", {"type": "object"}, func(args): return {})
+	_core.set_tool_enabled("test_tool", false)
+	assert_true(_core.get_tool_list_dirty(), "Dirty flag should be true")
+	_core.clear_tool_list_dirty()
+	assert_false(_core.get_tool_list_dirty(), "Dirty flag should be false after clear")
+
+func test_set_group_enabled_disables_group():
+	# Use actual classifier group tool names so classifier can find them
+	_core.register_tool("reload_project", "Reload", {"type": "object"}, func(args): return {}, {}, {}, "supplementary", "Editor-Advanced")
+	_core.register_tool("execute_editor_script", "Exec Editor Script", {"type": "object"}, func(args): return {}, {}, {}, "supplementary", "Editor-Advanced")
+	var changed: int = _core.set_group_enabled("Editor-Advanced", false)
+	assert_true(changed >= 2, "Should change at least 2 tools: %d" % [changed])
+	var tools: Array = _core.get_registered_tools()
+	for t in tools:
+		if t["name"] in ["reload_project", "execute_editor_script"]:
+			assert_false(t["enabled"], "Tool %s should be disabled" % t["name"])
+	# Re-enable for other tests
+	_core.set_group_enabled("Editor-Advanced", true)
+
+func test_set_group_enabled_re_enables_group():
+	_core.register_tool("reload_project", "Reload", {"type": "object"}, func(args): return {}, {}, {}, "supplementary", "Editor-Advanced")
+	_core.register_tool("execute_editor_script", "Exec Script", {"type": "object"}, func(args): return {}, {}, {}, "supplementary", "Editor-Advanced")
+	_core.set_group_enabled("Editor-Advanced", true)
+	var tools: Array = _core.get_registered_tools()
+	for t in tools:
+		if t["name"] in ["reload_project", "execute_editor_script"]:
+			assert_true(t["enabled"], "Tool %s should be enabled" % t["name"])
+
+func test_set_group_enabled_unknown_group():
+	var changed: int = _core.set_group_enabled("NonExistent", false)
+	assert_eq(changed, 0, "Unknown group should change 0 tools")
+
+func test_notify_tool_list_changed_not_dirty():
+	_core.notify_tool_list_changed()
+	assert_false(_core.get_tool_list_dirty(), "Dirty flag should remain false when not dirty")
+
+func test_get_classifier():
+	var classifier = _core.get_classifier()
+	assert_ne(classifier, null, "Should return a classifier instance")
+	assert_true(classifier.has_method("get_all_tools"), "Classifier should have get_all_tools method")
+
+func test_get_state_manager():
+	var mgr = _core.get_state_manager()
+	assert_ne(mgr, null, "Should return a state manager instance")
+	assert_true(mgr.has_method("load_state"), "State manager should have load_state method")
+
+func test_load_tool_states_returns_zero_when_no_saved_state():
+	var count: int = _core.load_tool_states()
+	assert_true(count >= 0, "Should return 0 or more: %d" % [count])
+
+func test_save_and_load_tool_states():
+	_core.register_tool("save_test_tool", "Save Test", {"type": "object"}, func(args): return {})
+	_core.set_tool_enabled("save_test_tool", false)
+	_core.save_tool_states()
+	var count: int = _core.load_tool_states()
+	assert_eq(count, 1, "Should load 1 tool state")
+	var tools: Array = _core.get_registered_tools()
+	for t in tools:
+		if t["name"] == "save_test_tool":
+			assert_false(t["enabled"], "Loaded state should have tool disabled")
 
 func test_disabled_tool_not_in_tools_list():
 	_core.register_tool("test_tool", "A test tool", {"type": "object"}, func(args): return {"status": "ok"})

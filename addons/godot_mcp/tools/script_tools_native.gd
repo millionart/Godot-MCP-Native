@@ -77,7 +77,8 @@ func _register_list_project_scripts(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_list_project_scripts"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Script")
 
 func _tool_list_project_scripts(params: Dictionary) -> Dictionary:
 	# 参数提取
@@ -174,7 +175,8 @@ func _register_read_script(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_read_script"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Script")
 
 func _tool_read_script(params: Dictionary) -> Dictionary:
 	# 参数提取
@@ -263,7 +265,8 @@ func _register_create_script(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_create_script"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Script")
 
 func _tool_create_script(params: Dictionary) -> Dictionary:
 	var script_path: String = params.get("script_path", "")
@@ -410,7 +413,8 @@ func _register_modify_script(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_modify_script"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Script")
 
 func _tool_modify_script(params: Dictionary) -> Dictionary:
 	# 参数提取
@@ -519,7 +523,8 @@ func _register_analyze_script(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_analyze_script"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Script")
 
 func _tool_analyze_script(params: Dictionary) -> Dictionary:
 	# 参数提取
@@ -618,7 +623,8 @@ func _register_get_current_script(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_current_script"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Script")
 
 func _tool_get_current_script(params: Dictionary) -> Dictionary:
 	var editor_interface: EditorInterface = _get_editor_interface()
@@ -695,7 +701,8 @@ func _register_attach_script(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 		Callable(self, "_tool_attach_script"),
-		output_schema, annotations)
+		output_schema, annotations,
+		"core", "Script")
 
 func _tool_attach_script(params: Dictionary) -> Dictionary:
 	var node_path: String = params.get("node_path", "")
@@ -788,7 +795,8 @@ func _register_validate_script(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 		Callable(self, "_tool_validate_script"),
-		output_schema, annotations)
+		output_schema, annotations,
+		"core", "Script")
 
 func _tool_validate_script(params: Dictionary) -> Dictionary:
 	var script_path: String = params.get("script_path", "")
@@ -940,7 +948,8 @@ func _register_search_in_files(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 		Callable(self, "_tool_search_in_files"),
-		output_schema, annotations)
+		output_schema, annotations,
+		"core", "Script")
 
 func _tool_search_in_files(params: Dictionary) -> Dictionary:
 	var pattern: String = params.get("pattern", "")

@@ -7,6 +7,40 @@ func test_mcp_tool_info_valid():
 	tool.callable = func(args): return {}
 	assert_true(tool.is_valid(), "Tool with all fields should be valid")
 	assert_true(tool.enabled, "Newly created tool should be enabled by default")
+	assert_eq(tool.category, "core", "Default category should be 'core'")
+	assert_eq(tool.group, "", "Default group should be empty")
+
+func test_mcp_tool_category_field():
+	var tool: MCPTypes.MCPTool = MCPTypes.MCPTool.new()
+	tool.name = "test_tool"
+	tool.description = "A test tool"
+	tool.callable = func(args): return {}
+	tool.category = "supplementary"
+	assert_eq(tool.category, "supplementary", "Category should be settable")
+	assert_true(tool.is_valid(), "Tool with supplementary category should still be valid")
+	tool.category = "core"
+	assert_eq(tool.category, "core", "Category should be changeable to core")
+
+func test_mcp_tool_group_field():
+	var tool: MCPTypes.MCPTool = MCPTypes.MCPTool.new()
+	tool.name = "test_tool"
+	tool.description = "A test tool"
+	tool.callable = func(args): return {}
+	tool.group = "Node-Read"
+	assert_eq(tool.group, "Node-Read", "Group should be settable")
+	assert_true(tool.is_valid(), "Tool with group should still be valid")
+
+func test_mcp_tool_to_dict_with_category():
+	var tool: MCPTypes.MCPTool = MCPTypes.MCPTool.new()
+	tool.name = "test_tool"
+	tool.description = "A test tool"
+	tool.callable = func(args): return {}
+	tool.category = "supplementary"
+	tool.group = "Editor-Advanced"
+	var d: Dictionary = tool.to_dict()
+	assert_eq(d["name"], "test_tool", "Dict should have correct name")
+	assert_eq(d["description"], "A test tool", "Dict should have correct description")
+	assert_true(tool.is_valid(), "Tool should still be valid")
 
 func test_mcp_tool_enabled_flag():
 	var tool: MCPTypes.MCPTool = MCPTypes.MCPTool.new()

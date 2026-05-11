@@ -100,7 +100,8 @@ func _register_get_editor_state(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_editor_state"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Editor")
 
 func _tool_get_editor_state(params: Dictionary) -> Dictionary:
 	var editor_interface: EditorInterface = _get_editor_interface()
@@ -174,7 +175,8 @@ func _register_run_project(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_run_project"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Editor")
 
 func _tool_run_project(params: Dictionary) -> Dictionary:
 	var editor_interface: EditorInterface = _get_editor_interface()
@@ -232,7 +234,8 @@ func _register_stop_project(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_stop_project"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Editor")
 
 func _tool_stop_project(params: Dictionary) -> Dictionary:
 	var editor_interface: EditorInterface = _get_editor_interface()
@@ -284,7 +287,8 @@ func _register_get_selected_nodes(server_core: RefCounted) -> void:
 	
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_selected_nodes"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Editor")
 
 func _tool_get_selected_nodes(params: Dictionary) -> Dictionary:
 	var editor_interface: EditorInterface = _get_editor_interface()
@@ -365,7 +369,8 @@ func _register_set_editor_setting(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_set_editor_setting"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Editor")
 
 func _tool_set_editor_setting(params: Dictionary) -> Dictionary:
 	var setting_name: String = params.get("setting_name", "")
@@ -448,7 +453,8 @@ func _register_get_editor_screenshot(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 		Callable(self, "_tool_get_editor_screenshot"),
-		output_schema, annotations)
+		output_schema, annotations,
+		"core", "Editor")
 
 func _tool_get_editor_screenshot(params: Dictionary) -> Dictionary:
 	var viewport_type: String = params.get("viewport_type", "3d")
@@ -543,7 +549,8 @@ func _register_get_signals(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 		Callable(self, "_tool_get_signals"),
-		output_schema, annotations)
+		output_schema, annotations,
+		"core", "Editor")
 
 func _tool_get_signals(params: Dictionary) -> Dictionary:
 	var node_path: String = params.get("node_path", "")
@@ -637,7 +644,8 @@ func _register_reload_project(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 		Callable(self, "_tool_reload_project"),
-		output_schema, annotations)
+		output_schema, annotations,
+		"supplementary", "Editor-Advanced")
 
 func _tool_reload_project(params: Dictionary) -> Dictionary:
 	var full_scan: bool = params.get("full_scan", false)

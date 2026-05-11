@@ -52,3 +52,14 @@ func test_stdio_server_implements_start():
 	assert_true(stdio_server.has_method("start"), "Stdio server should implement start")
 	assert_true(stdio_server.has_method("stop"), "Stdio server should implement stop")
 	assert_true(stdio_server.has_method("is_running"), "Stdio server should implement is_running")
+
+func test_transport_base_has_send_raw_message():
+	assert_true(_transport_base.has_method("send_raw_message"), "Transport base should have send_raw_message method")
+
+func test_http_server_has_send_raw_message():
+	var http_server: RefCounted = load("res://addons/godot_mcp/native_mcp/mcp_http_server.gd").new()
+	assert_true(http_server.has_method("send_raw_message"), "HTTP server should inherit send_raw_message method")
+
+func test_stdio_server_has_send_raw_message():
+	var stdio_server: RefCounted = load("res://addons/godot_mcp/native_mcp/mcp_stdio_server.gd").new()
+	assert_true(stdio_server.has_method("send_raw_message"), "Stdio server should have send_raw_message method")

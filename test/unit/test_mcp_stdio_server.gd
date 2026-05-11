@@ -88,3 +88,11 @@ func test_mutex_exists():
 func test_stop_when_not_running():
 	_stdio_server.stop()
 	assert_false(_stdio_server._active, "Should remain not active after stop")
+
+func test_stdio_server_has_send_raw_message():
+	assert_true(_stdio_server.has_method("send_raw_message"), "Stdio server should have send_raw_message method")
+
+func test_send_raw_message_output():
+	var test_message: Dictionary = {"jsonrpc": "2.0", "method": "notifications/tools/list_changed", "params": {}}
+	_stdio_server.send_raw_message(test_message)
+	assert_true(true, "send_raw_message should not crash when called")

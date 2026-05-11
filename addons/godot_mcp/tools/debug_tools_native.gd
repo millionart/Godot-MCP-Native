@@ -110,7 +110,7 @@ func _register_get_editor_logs(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_editor_logs"),
-						  output_schema, annotations)
+						  output_schema, annotations, "core", "Debug")
 
 func _tool_get_editor_logs(params: Dictionary) -> Dictionary:
 	var source: String = params.get("source", "mcp")
@@ -279,7 +279,7 @@ func _register_execute_script(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_execute_script"),
-						  output_schema, annotations)
+						  output_schema, annotations, "supplementary", "Debug-Advanced")
 
 func _tool_execute_script(params: Dictionary) -> Dictionary:
 	var code: String = params.get("code", "")
@@ -374,7 +374,7 @@ func _register_get_performance_metrics(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_performance_metrics"),
-						  output_schema, annotations)
+						  output_schema, annotations, "supplementary", "Debug-Advanced")
 
 func _tool_get_performance_metrics(params: Dictionary) -> Dictionary:
 	# 使用Performance单例获取性能指标
@@ -437,7 +437,7 @@ func _register_debug_print(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_debug_print"),
-						  output_schema, annotations)
+						  output_schema, annotations, "core", "Debug")
 
 func _tool_debug_print(params: Dictionary) -> Dictionary:
 	# 参数提取
@@ -500,7 +500,7 @@ func _register_execute_editor_script(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_execute_editor_script"),
-						  output_schema, annotations)
+						  output_schema, annotations, "supplementary", "Debug-Advanced")
 
 func _tool_execute_editor_script(params: Dictionary) -> Dictionary:
 	var code: String = params.get("code", "")
@@ -636,7 +636,7 @@ func _register_clear_output(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 		Callable(self, "_tool_clear_output"),
-		output_schema, annotations)
+		output_schema, annotations, "core", "Debug")
 
 func _tool_clear_output(params: Dictionary) -> Dictionary:
 	var clear_mcp_buffer: bool = params.get("clear_mcp_buffer", true)

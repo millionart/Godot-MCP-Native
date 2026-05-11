@@ -87,3 +87,11 @@ func test_request_timeout_constant():
 func test_auth_header_constants():
 	assert_eq(_http_server.AUTH_HEADER, "authorization", "Auth header should be 'authorization'")
 	assert_eq(_http_server.AUTH_SCHEME, "Bearer", "Auth scheme should be 'Bearer'")
+
+func test_http_server_has_send_raw_message():
+	assert_true(_http_server.has_method("send_raw_message"), "HTTP server should have send_raw_message method")
+
+func test_http_server_send_raw_message_logs():
+	var test_message: Dictionary = {"jsonrpc": "2.0", "method": "notifications/tools/list_changed", "params": {}}
+	_http_server.send_raw_message(test_message)
+	assert_true(true, "send_raw_message should not crash when no SSE connections")

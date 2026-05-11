@@ -26,12 +26,19 @@ var _rate_limit_spin: SpinBox = null
 var _connection_info_label: Label = null
 
 var _tab_container: TabContainer = null
+var _debounce_timer: Timer = null
+var _group_widgets: Dictionary = {}
 
 func _ready() -> void:
 	_create_ui()
+	_debounce_timer = Timer.new()
+	_debounce_timer.one_shot = true
+	_debounce_timer.timeout.connect(_on_debounce_timeout)
+	add_child(_debounce_timer)
 
 func _exit_tree() -> void:
-	pass
+	if _debounce_timer:
+		_debounce_timer.stop()
 
 func set_plugin(plugin: EditorPlugin) -> void:
 	_plugin = plugin
@@ -496,46 +503,83 @@ func _refresh_tools_list() -> void:
 	if not _tools_list_container:
 		return
 
+	for child in _tools_list_container.get_children():
+		child.queue_free()
+	_group_widgets.clear()
+
 	var tools: Array = []
 	if _server_core and _server_core.has_method("get_registered_tools"):
 		tools = _server_core.get_registered_tools()
 
-	var existing_tools: Dictionary = {}
-	for child in _tools_list_container.get_children():
-		var check: CheckBox = child.get_child(0) as CheckBox if child.get_child_count() > 0 else null
-		if check:
-			existing_tools[check.text] = check.button_pressed
-		child.queue_free()
+	var classifier = null
+	if _server_core and _server_core.has_method("get_classifier"):
+		classifier = _server_core.get_classifier()
 
-	var enabled_count: int = 0
+	var tools_by_group: Dictionary = {}
 	for tool_info in tools:
-		var tool_name: String = tool_info.get("name", "Unknown")
-		var is_enabled: bool = tool_info.get("enabled", true)
-		if is_enabled:
-			enabled_count += 1
+		var group: String = tool_info.get("group", "")
+		if not tools_by_group.has(group):
+			tools_by_group[group] = []
+		tools_by_group[group].append(tool_info)
 
-		var tool_hbox: HBoxContainer = HBoxContainer.new()
-		_tools_list_container.add_child(tool_hbox)
+	var all_groups: Array = []
+	if classifier and classifier.has_method("get_all_groups"):
+		all_groups = classifier.get_all_groups()
 
-		var tool_check: CheckBox = CheckBox.new()
-		tool_check.text = tool_name
-		tool_check.button_pressed = is_enabled
-		tool_check.toggled.connect(_on_tool_toggled.bind(tool_name))
-		tool_hbox.add_child(tool_check)
+	var core_group_names: Array = []
+	var supp_group_names: Array = []
+	for group_name in all_groups:
+		if tools_by_group.has(group_name):
+			var sample: Dictionary = tools_by_group[group_name][0]
+			var cat: String = sample.get("category", "core")
+			if cat == "supplementary":
+				supp_group_names.append(group_name)
+			else:
+				core_group_names.append(group_name)
 
-		var desc_label: Label = Label.new()
-		desc_label.text = tool_info.get("description", "")
-		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
-		desc_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		tool_hbox.add_child(desc_label)
+	if core_group_names.size() > 0:
+		var core_section: Label = Label.new()
+		core_section.text = "Core Tools"
+		core_section.add_theme_font_size_override("font_size", 14)
+		core_section.add_theme_color_override("font_color", Color(0.3, 0.7, 0.7))
+		core_section.add_theme_constant_override("margin_top", 4)
+		_tools_list_container.add_child(core_section)
 
-	if _tools_count_label:
-		_tools_count_label.text = "Enabled: %d / %d" % [enabled_count, tools.size()]
+		for group_name in core_group_names:
+			_create_group_widget(group_name, tools_by_group[group_name])
 
-func _on_tool_toggled(button_pressed: bool, tool_name: String) -> void:
-	if _server_core and _server_core.has_method("set_tool_enabled"):
-		_server_core.set_tool_enabled(tool_name, button_pressed)
+	if supp_group_names.size() > 0:
+		var supp_section: Label = Label.new()
+		supp_section.text = "Supplementary Tools"
+		supp_section.add_theme_font_size_override("font_size", 14)
+		supp_section.add_theme_color_override("font_color", Color(0.7, 0.7, 0.3))
+		supp_section.add_theme_constant_override("margin_top", 8)
+		_tools_list_container.add_child(supp_section)
+
+		for group_name in supp_group_names:
+			_create_group_widget(group_name, tools_by_group[group_name])
+
 	_update_tools_count()
+
+func _create_group_widget(group_name: String, group_tools: Array) -> void:
+	var widget: MCPToolGroupItem = MCPToolGroupItem.new()
+	widget.setup(group_name, group_tools)
+	widget.group_toggled.connect(_on_group_toggled)
+	widget.item_toggled.connect(_on_tool_toggled)
+	_tools_list_container.add_child(widget)
+	_group_widgets[group_name] = widget
+
+func _on_tool_toggled(tool_name: String, enabled: bool) -> void:
+	if _server_core and _server_core.has_method("set_tool_enabled"):
+		_server_core.set_tool_enabled(tool_name, enabled)
+	_update_tools_count()
+	_debounce_save()
+
+func _on_group_toggled(group_name: String, enabled: bool) -> void:
+	if _server_core and _server_core.has_method("set_group_enabled"):
+		_server_core.set_group_enabled(group_name, enabled)
+	_update_tools_count()
+	_debounce_save()
 
 func _update_tools_count() -> void:
 	if not _tools_count_label:
@@ -543,11 +587,35 @@ func _update_tools_count() -> void:
 	var tools: Array = []
 	if _server_core and _server_core.has_method("get_registered_tools"):
 		tools = _server_core.get_registered_tools()
-	var enabled_count: int = 0
+	var core_total: int = 0
+	var core_enabled: int = 0
+	var supp_total: int = 0
+	var supp_enabled: int = 0
 	for tool_info in tools:
-		if tool_info.get("enabled", true):
-			enabled_count += 1
-	_tools_count_label.text = "Enabled: %d / %d" % [enabled_count, tools.size()]
+		var cat: String = tool_info.get("category", "core")
+		var en: bool = tool_info.get("enabled", true)
+		if cat == "supplementary":
+			supp_total += 1
+			if en:
+				supp_enabled += 1
+		else:
+			core_total += 1
+			if en:
+				core_enabled += 1
+	_tools_count_label.text = "Core: %d/%d  |  Supp: %d/%d  |  Total: %d/%d" % [
+		core_enabled, core_total, supp_enabled, supp_total,
+		core_enabled + supp_enabled, core_total + supp_total
+	]
+
+func _debounce_save() -> void:
+	if _debounce_timer:
+		_debounce_timer.start(0.5)
+
+func _on_debounce_timeout() -> void:
+	if _server_core and _server_core.has_method("save_tool_states"):
+		_server_core.save_tool_states()
+	if _server_core and _server_core.has_method("notify_tool_list_changed"):
+		_server_core.notify_tool_list_changed()
 
 func update_log(message: String) -> void:
 	if not _log_text_edit:

@@ -185,6 +185,14 @@ func _send_error(id: Variant, code: int, message: String, data: Variant = null) 
 	var error_response: Dictionary = MCPTypes.create_error_response(id, code, message, data)
 	_send_response(error_response)
 
+## 发送原始 JSON-RPC 消息（直接输出到 stdout）
+## @param message: Dictionary - 完整的 JSON-RPC 消息
+func send_raw_message(message: Dictionary) -> void:
+	var json_string: String = JSON.stringify(message)
+	if _log_callback.is_valid():
+		_log_callback.call("DEBUG", "Sending raw message: " + json_string)
+	print(json_string)
+
 ## 队列响应（供外部调用）
 ## @param response: Dictionary - JSON-RPC 响应
 func queue_response(response: Dictionary) -> void:

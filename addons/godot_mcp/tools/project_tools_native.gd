@@ -67,7 +67,8 @@ func _register_get_project_info(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_project_info"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Project")
 
 func _tool_get_project_info(params: Dictionary) -> Dictionary:
 	var project_name: String = ProjectSettings.get_setting("application/config/name", "")
@@ -132,7 +133,8 @@ func _register_get_project_settings(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_project_settings"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Project")
 
 func _tool_get_project_settings(params: Dictionary) -> Dictionary:
 	var filter: String = params.get("filter", "")
@@ -205,7 +207,8 @@ func _register_list_project_resources(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_list_project_resources"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Project")
 
 func _tool_list_project_resources(params: Dictionary) -> Dictionary:
 	# 参数提取
@@ -336,7 +339,8 @@ func _register_create_resource(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_create_resource"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Project")
 
 func _tool_create_resource(params: Dictionary) -> Dictionary:
 	# 参数提取
@@ -426,7 +430,8 @@ func _register_get_project_structure(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_project_structure"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Project")
 
 func _tool_get_project_structure(params: Dictionary) -> Dictionary:
 	var max_depth: int = params.get("max_depth", 3)

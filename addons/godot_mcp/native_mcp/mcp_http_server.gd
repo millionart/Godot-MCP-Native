@@ -496,6 +496,17 @@ func _handle_sse_request(peer: StreamPeerTCP, parsed: Dictionary) -> void:
 	if _log_callback.is_valid():
 		_log_callback.call("INFO", "SSE connection established: " + session_id)
 
+## 发送原始 JSON-RPC 消息（通过 SSE 广播到所有连接）
+## @param message: Dictionary - 完整的 JSON-RPC 消息
+func send_raw_message(message: Dictionary) -> void:
+	var disconnected_peers: Array[StreamPeerTCP] = []
+	for peer in _sse_connections.keys():
+		_send_sse_event(peer, "message", message)
+		if not _sse_connections.has(peer):
+			disconnected_peers.append(peer)
+	if _log_callback.is_valid():
+		_log_callback.call("DEBUG", "Raw message broadcast to " + str(_sse_connections.size()) + " SSE connections")
+
 ## 发送 SSE 事件
 ## @param peer: StreamPeerTCP - 客户端连接
 ## @param event: String - 事件名称

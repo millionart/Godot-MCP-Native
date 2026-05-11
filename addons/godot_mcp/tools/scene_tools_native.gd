@@ -106,7 +106,8 @@ func _register_create_scene(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_create_scene"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Scene")
 
 func _tool_create_scene(params: Dictionary) -> Dictionary:
 	# 参数提取
@@ -194,7 +195,8 @@ func _register_save_scene(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_save_scene"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Scene")
 
 func _tool_save_scene(params: Dictionary) -> Dictionary:
 	if _scene_operation_in_progress:
@@ -286,7 +288,8 @@ func _register_open_scene(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_open_scene"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Scene")
 
 func _tool_open_scene(params: Dictionary) -> Dictionary:
 	if _scene_operation_in_progress:
@@ -369,7 +372,8 @@ func _register_get_current_scene(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_current_scene"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Scene")
 
 func _tool_get_current_scene(params: Dictionary) -> Dictionary:
 	var editor_interface: EditorInterface = _get_editor_interface()
@@ -444,7 +448,8 @@ func _register_get_scene_structure(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema, 
 						  Callable(self, "_tool_get_scene_structure"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Scene")
 
 func _tool_get_scene_structure(params: Dictionary) -> Dictionary:
 	var max_depth: int = params.get("max_depth", -1)
@@ -553,7 +558,8 @@ func _register_list_project_scenes(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_list_project_scenes"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "core", "Scene")
 
 func _tool_list_project_scenes(params: Dictionary) -> Dictionary:
 	# 参数提取

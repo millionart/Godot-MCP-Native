@@ -59,6 +59,10 @@ var _response_queue: Array[Dictionary] = []
 var _tools: Dictionary = {}  # String -> MCPTool
 var _resources: Dictionary = {}  # String -> MCPResource
 var _prompts: Dictionary = {}  # String -> MCPPrompt
+var _tool_list_dirty: bool = false  # 工具列表变更标记
+
+var _classifier = null  # MCPToolClassifier (lazy-loaded for GUT CLI compat)
+var _state_manager = null  # MCPToolStateManager (lazy-loaded for GUT CLI compat)
 
 # 配置
 var _log_level: int = MCPTypes.LogLevel.INFO
@@ -218,6 +222,18 @@ func start() -> bool:
 		_log_error("Failed to start transport layer")
 		return false
 	
+	if _classifier == null:
+		_classifier = load("res://addons/godot_mcp/native_mcp/mcp_tool_classifier.gd").new()
+		_log_info("Tool classifier initialized")
+	
+	if _state_manager == null:
+		_state_manager = load("res://addons/godot_mcp/native_mcp/tool_state_manager.gd").new()
+		_log_info("Tool state manager initialized")
+		var saved_states: Dictionary = _state_manager.load_state()
+		if not saved_states.is_empty():
+			_state_manager.apply_states_to_server(self, saved_states)
+			_log_info("Applied saved tool states: " + str(saved_states.size()) + " tools")
+	
 	_active = true
 	_log_info("MCP Server started successfully (transport: " + str(_transport_type) + ")")
 	
@@ -351,11 +367,11 @@ func _handle_tools_list(message: Dictionary) -> Dictionary:
 	
 	var result: Dictionary = {"tools": tools_list}
 	var response: Dictionary = MCPTypes.create_response(id, result)
-	
+
 	_log_info("Tools list requested. Available tools: " + str(tools_list.size()) + " (registered: " + str(_tools.size()) + ")")
-	
+
 	_log_debug("Tools list response: " + JSON.stringify(response))
-	
+
 	return response
 
 func _handle_tool_call(message: Dictionary) -> Dictionary:
@@ -561,7 +577,9 @@ func _handle_prompt_get(message: Dictionary) -> Dictionary:
 func register_tool(name: String, description: String, 
 				  input_schema: Dictionary, callable: Callable,
 				  output_schema: Dictionary = {}, 
-				  annotations: Dictionary = {}) -> void:
+				  annotations: Dictionary = {},
+				  category: String = "core",
+				  group: String = "") -> void:
 	var tool: MCPTypes.MCPTool = MCPTypes.MCPTool.new()
 	tool.name = name
 	tool.description = description
@@ -569,6 +587,8 @@ func register_tool(name: String, description: String,
 	tool.output_schema = output_schema
 	tool.annotations = annotations
 	tool.callable = callable
+	tool.category = category
+	tool.group = group
 	
 	if not tool.is_valid():
 		var reason: String = "unknown"
@@ -610,13 +630,16 @@ func get_registered_tools() -> Array:
 			tools_info.append({
 				"name": tool.name,
 				"description": tool.description,
-				"enabled": tool.enabled
+				"enabled": tool.enabled,
+				"category": tool.category,
+				"group": tool.group
 			})
 	return tools_info
 
 func set_tool_enabled(tool_name: String, enabled: bool) -> void:
 	if _tools.has(tool_name):
 		_tools[tool_name].enabled = enabled
+		_tool_list_dirty = true
 		if enabled:
 			_log_info("Tool enabled: " + tool_name)
 		else:
@@ -624,6 +647,63 @@ func set_tool_enabled(tool_name: String, enabled: bool) -> void:
 	else:
 		if enabled:
 			_log_warn("Cannot enable unregistered tool: " + tool_name)
+
+func set_group_enabled(group_name: String, enabled: bool) -> int:
+	if _classifier == null:
+		_classifier = load("res://addons/godot_mcp/native_mcp/mcp_tool_classifier.gd").new()
+	var group_tools: Array[String] = _classifier.get_group_tools(group_name)
+	var changed_count: int = 0
+	for tool_name in group_tools:
+		if _tools.has(tool_name) and _tools[tool_name].enabled != enabled:
+			_tools[tool_name].enabled = enabled
+			changed_count += 1
+	if changed_count > 0:
+		_tool_list_dirty = true
+		_log_info("Group '" + group_name + "' " + ("enabled" if enabled else "disabled") + ": " + str(changed_count) + " tools affected")
+	return changed_count
+
+func get_tool_list_dirty() -> bool:
+	return _tool_list_dirty
+
+func clear_tool_list_dirty() -> void:
+	_tool_list_dirty = false
+
+func notify_tool_list_changed() -> void:
+	if not _tool_list_dirty:
+		return
+	var notification: Dictionary = {
+		"jsonrpc": "2.0",
+		"method": "notifications/tools/list_changed",
+		"params": {}
+	}
+	if _transport and _transport.has_method("send_raw_message"):
+		_transport.send_raw_message(notification)
+	_tool_list_dirty = false
+
+func get_classifier():
+	if _classifier == null:
+		_classifier = load("res://addons/godot_mcp/native_mcp/mcp_tool_classifier.gd").new()
+	return _classifier
+
+func get_state_manager():
+	if _state_manager == null:
+		_state_manager = load("res://addons/godot_mcp/native_mcp/tool_state_manager.gd").new()
+	return _state_manager
+
+func load_tool_states() -> int:
+	if _state_manager == null:
+		_state_manager = load("res://addons/godot_mcp/native_mcp/tool_state_manager.gd").new()
+	var saved_states: Dictionary = _state_manager.load_state()
+	if not saved_states.is_empty():
+		_state_manager.apply_states_to_server(self, saved_states)
+		_log_info("Loaded saved tool states: " + str(saved_states.size()) + " tools")
+	return saved_states.size()
+
+func save_tool_states() -> void:
+	if _state_manager == null:
+		_state_manager = load("res://addons/godot_mcp/native_mcp/tool_state_manager.gd").new()
+	var states: Dictionary = _state_manager.capture_states_from_server(self)
+	_state_manager.save_state(states)
 
 func has_tool(name: String) -> bool:
 	return _tools.has(name)

@@ -162,6 +162,11 @@ func _enter_tree() -> void:
 	# 注册所有资源
 	_register_all_resources()
 	
+	# 在UI创建前加载已保存的工具状态（确保UI显示正确的启用状态）
+	if _native_server.has_method("load_tool_states"):
+		_native_server.load_tool_states()
+		_log_info("Loaded saved tool states before UI creation")
+	
 	# 创建UI面板
 	_create_main_screen_panel()
 	

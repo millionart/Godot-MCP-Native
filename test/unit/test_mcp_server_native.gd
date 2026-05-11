@@ -92,3 +92,18 @@ func test_export_variables():
 	assert_true(prop_names.has("http_port"), "Should have http_port export")
 	assert_true(prop_names.has("auth_enabled"), "Should have auth_enabled export")
 	assert_true(prop_names.has("log_level"), "Should have log_level export")
+
+func test_has_load_tool_states_in_enter_tree():
+	var methods: Array = _plugin_script.get_script_method_list()
+	var method_names: Array = methods.map(func(m): return m["name"])
+	assert_true(method_names.has("_enter_tree"), "Should have _enter_tree method")
+	# Verify load_tool_states is called before UI creation (test _enter_tree calls it)
+	var source_code: String = _plugin_script.source_code
+	assert_true(source_code.contains("load_tool_states"), "_enter_tree should call load_tool_states")
+	assert_true(source_code.contains("_create_main_screen_panel"), "Should still create main screen panel")
+	# Verify correct ordering: load_tool_states before _create_main_screen_panel
+	var load_pos: int = source_code.find("load_tool_states")
+	var panel_pos: int = source_code.find("_create_main_screen_panel")
+	assert_true(load_pos >= 0, "load_tool_states should exist in source")
+	assert_true(panel_pos >= 0, "_create_main_screen_panel should exist in source")
+	assert_true(load_pos < panel_pos, "load_tool_states should be called BEFORE _create_main_screen_panel")

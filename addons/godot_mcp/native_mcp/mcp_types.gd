@@ -64,20 +64,22 @@ class MCPTool:
 	var annotations: Dictionary = {}
 	var callable: Callable = Callable()
 	var enabled: bool = true
+	var category: String = "core"
+	var group: String = ""
 	
 	# 转换为Dictionary（用于JSON序列化）
 	func to_dict() -> Dictionary:
 		var result: Dictionary = {
 			"name": name,
 			"description": description,
-			"inputSchema": input_schema
+			"inputSchema": input_schema,
+			"x_category": category,
+			"x_group": group
 		}
 		
-		# 添加outputSchema（根据mcp-builder）
 		if not output_schema.is_empty():
 			result["outputSchema"] = output_schema
 		
-		# 添加annotations（根据mcp-builder）
 		if not annotations.is_empty():
 			result["annotations"] = annotations
 		
