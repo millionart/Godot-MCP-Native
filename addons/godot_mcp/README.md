@@ -95,6 +95,21 @@ With authentication:
 }
 ```
 
+### Connecting with OpenCode
+
+#### HTTP Mode Configuration
+
+```json
+{
+  "mcp": {
+    "godot-mcp": {
+      "type": "remote",
+      "url": "http://localhost:9080/mcp"
+    }
+  }
+}
+```
+
 ## 💬 Example Prompts
 
 Once connected, you can interact with your Godot project through Claude:

@@ -97,6 +97,21 @@
 }
 ```
 
+### 连接 OpenCode
+
+#### HTTP 模式配置
+
+```json
+{
+  "mcp": {
+    "godot-mcp": {
+      "type": "remote",
+      "url": "http://localhost:9080/mcp"
+    }
+  }
+}
+```
+
 ## 💬 示例提示
 
 连接后，您可以通过 Claude 与 Godot 项目交互：
