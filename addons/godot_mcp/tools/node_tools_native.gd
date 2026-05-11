@@ -494,28 +494,28 @@ func _convert_value_for_property(node: Node, property_name: String, value: Varia
 			if value is Dictionary:
 				return Vector2(float(value.get("x", 0.0)), float(value.get("y", 0.0)))
 			if value is String:
-				var parts: PackedStringArray = value.replace("(", "").replace(")", "").replace(" ", "").split(",")
+				var parts: PackedStringArray = _strip_constructor_prefix(value).replace("(", "").replace(")", "").replace(" ", "").split(",")
 				if parts.size() >= 2:
 					return Vector2(float(parts[0]), float(parts[1]))
 		TYPE_VECTOR2I:
 			if value is Dictionary:
 				return Vector2i(int(value.get("x", 0)), int(value.get("y", 0)))
 			if value is String:
-				var parts: PackedStringArray = value.replace("(", "").replace(")", "").replace(" ", "").split(",")
+				var parts: PackedStringArray = _strip_constructor_prefix(value).replace("(", "").replace(")", "").replace(" ", "").split(",")
 				if parts.size() >= 2:
 					return Vector2i(int(parts[0]), int(parts[1]))
 		TYPE_VECTOR3:
 			if value is Dictionary:
 				return Vector3(float(value.get("x", 0.0)), float(value.get("y", 0.0)), float(value.get("z", 0.0)))
 			if value is String:
-				var parts: PackedStringArray = value.replace("(", "").replace(")", "").replace(" ", "").split(",")
+				var parts: PackedStringArray = _strip_constructor_prefix(value).replace("(", "").replace(")", "").replace(" ", "").split(",")
 				if parts.size() >= 3:
 					return Vector3(float(parts[0]), float(parts[1]), float(parts[2]))
 		TYPE_VECTOR3I:
 			if value is Dictionary:
 				return Vector3i(int(value.get("x", 0)), int(value.get("y", 0)), int(value.get("z", 0)))
 			if value is String:
-				var parts: PackedStringArray = value.replace("(", "").replace(")", "").replace(" ", "").split(",")
+				var parts: PackedStringArray = _strip_constructor_prefix(value).replace("(", "").replace(")", "").replace(" ", "").split(",")
 				if parts.size() >= 3:
 					return Vector3i(int(parts[0]), int(parts[1]), int(parts[2]))
 		TYPE_COLOR:
@@ -554,6 +554,16 @@ func _convert_value_for_property(node: Node, property_name: String, value: Varia
 				return t
 	
 	return value
+
+static func _strip_constructor_prefix(value: String) -> String:
+	var trimmed: String = value.strip_edges()
+	var open_index: int = trimmed.find("(")
+	if open_index <= 0:
+		return trimmed
+	var prefix: String = trimmed.substr(0, open_index)
+	if prefix.is_valid_identifier():
+		return trimmed.substr(open_index)
+	return trimmed
 
 static func _serialize_value(value: Variant) -> Variant:
 	if value == null:

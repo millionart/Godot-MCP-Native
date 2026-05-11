@@ -58,3 +58,51 @@ func test_mutex_thread_safety():
 	mutex.lock()
 	mutex.unlock()
 	assert_true(true, "Mutex lock/unlock should not crash")
+
+func test_set_debugger_breakpoint_missing_path():
+	var debug_tools: RefCounted = load("res://addons/godot_mcp/tools/debug_tools_native.gd").new()
+	var result: Dictionary = debug_tools._tool_set_debugger_breakpoint({"line": 1, "enabled": true})
+	assert_has(result, "error", "Should return error for missing path")
+	assert_true(str(result.error).contains("path"), "Error should mention path")
+
+func test_set_debugger_breakpoint_invalid_line():
+	var debug_tools: RefCounted = load("res://addons/godot_mcp/tools/debug_tools_native.gd").new()
+	var result: Dictionary = debug_tools._tool_set_debugger_breakpoint({"path": "res://player.gd", "line": 0, "enabled": true})
+	assert_has(result, "error", "Should return error for invalid line")
+	assert_true(str(result.error).contains("line"), "Error should mention line")
+
+func test_send_debugger_message_missing_message():
+	var debug_tools: RefCounted = load("res://addons/godot_mcp/tools/debug_tools_native.gd").new()
+	var result: Dictionary = debug_tools._tool_send_debugger_message({})
+	assert_has(result, "error", "Should return error for missing message")
+	assert_true(str(result.error).contains("message"), "Error should mention message")
+
+func test_toggle_debugger_profiler_missing_profiler():
+	var debug_tools: RefCounted = load("res://addons/godot_mcp/tools/debug_tools_native.gd").new()
+	var result: Dictionary = debug_tools._tool_toggle_debugger_profiler({"enabled": true})
+	assert_has(result, "error", "Should return error for missing profiler")
+	assert_true(str(result.error).contains("profiler"), "Error should mention profiler")
+
+func test_add_debugger_capture_prefix_missing_prefix():
+	var debug_tools: RefCounted = load("res://addons/godot_mcp/tools/debug_tools_native.gd").new()
+	var result: Dictionary = debug_tools._tool_add_debugger_capture_prefix({})
+	assert_has(result, "error", "Should return error for missing prefix")
+	assert_true(str(result.error).contains("prefix"), "Error should mention prefix")
+
+func test_install_runtime_probe_empty_node_name():
+	var debug_tools: RefCounted = load("res://addons/godot_mcp/tools/debug_tools_native.gd").new()
+	var result: Dictionary = debug_tools._tool_install_runtime_probe({"node_name": ""})
+	assert_has(result, "error", "Should return error for empty node_name before editing scene")
+	assert_true(str(result.error).contains("Editor interface") or str(result.error).contains("node_name"), "Error should be explicit")
+
+func test_send_debug_command_rejects_unknown_command():
+	var debug_tools: RefCounted = load("res://addons/godot_mcp/tools/debug_tools_native.gd").new()
+	var result: Dictionary = debug_tools._tool_send_debug_command({"command": "unsupported"})
+	assert_has(result, "error", "Should return error for unsupported command")
+	assert_true(str(result.error).contains("Unsupported"), "Error should mention unsupported command")
+
+func test_get_debug_stack_variables_rejects_negative_frame():
+	var debug_tools: RefCounted = load("res://addons/godot_mcp/tools/debug_tools_native.gd").new()
+	var result: Dictionary = debug_tools._tool_get_debug_stack_variables({"frame": -1})
+	assert_has(result, "error", "Should return error for invalid frame")
+	assert_true(str(result.error).contains("frame"), "Error should mention frame")

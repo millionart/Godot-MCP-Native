@@ -92,6 +92,7 @@ var _main_panel: Control = null
 var _editor_interface: EditorInterface = null
 var _mcp_server_mode: bool = false
 var _tool_instances: Dictionary = {}
+var _debugger_bridge: MCPDebuggerBridge = null
 
 # ============================================================================
 # 生命周期方法
@@ -112,6 +113,9 @@ func _enter_tree() -> void:
 	if not _native_server:
 		_log_error("Failed to create MCP Server Core instance")
 		return
+
+	_debugger_bridge = MCPDebuggerBridge.new()
+	add_debugger_plugin(_debugger_bridge)
 	
 	# 设置传输方式
 	var type: int = MCPServerCore.TransportType.TRANSPORT_STDIO if transport_mode == "stdio" \
@@ -194,6 +198,10 @@ func _exit_tree() -> void:
 		EditorInterface.get_editor_main_screen().remove_child(_main_panel)
 		_main_panel.queue_free()
 		_main_panel = null
+
+	if _debugger_bridge:
+		remove_debugger_plugin(_debugger_bridge)
+		_debugger_bridge = null
 	
 	_native_server = null
 	
@@ -218,6 +226,9 @@ func _get_plugin_icon() -> Texture2D:
 
 func get_native_server() -> RefCounted:
 	return _native_server
+
+func get_debugger_bridge() -> MCPDebuggerBridge:
+	return _debugger_bridge
 
 func _has_settings() -> bool:
 	return true

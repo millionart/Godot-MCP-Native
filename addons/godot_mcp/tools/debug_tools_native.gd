@@ -23,6 +23,19 @@ func _get_editor_interface() -> EditorInterface:
 			return plugin.get_editor_interface()
 	return null
 
+func _get_user_scene_root() -> Node:
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return null
+	var scene_root: Node = editor_interface.get_edited_scene_root()
+	if scene_root and not scene_root.name.begins_with("@") and scene_root.get_class() != "PanelContainer":
+		return scene_root
+	var open_scenes: Array = editor_interface.get_open_scenes()
+	for scene in open_scenes:
+		if scene and not scene.name.begins_with("@") and scene.get_class() != "PanelContainer":
+			return scene
+	return scene_root
+
 # ============================================================================
 # 工具注册
 # ============================================================================
@@ -38,6 +51,26 @@ func register_tools(server_core: RefCounted) -> void:
 	_register_debug_print(server_core)
 	_register_execute_editor_script(server_core)
 	_register_clear_output(server_core)
+	_register_get_debugger_sessions(server_core)
+	_register_set_debugger_breakpoint(server_core)
+	_register_send_debugger_message(server_core)
+	_register_toggle_debugger_profiler(server_core)
+	_register_get_debugger_messages(server_core)
+	_register_add_debugger_capture_prefix(server_core)
+	_register_get_debug_stack_frames(server_core)
+	_register_get_debug_stack_variables(server_core)
+	_register_install_runtime_probe(server_core)
+	_register_remove_runtime_probe(server_core)
+	_register_request_debug_break(server_core)
+	_register_send_debug_command(server_core)
+	_register_get_runtime_info(server_core)
+	_register_get_runtime_scene_tree(server_core)
+	_register_inspect_runtime_node(server_core)
+	_register_update_runtime_node_property(server_core)
+	_register_call_runtime_node_method(server_core)
+	_register_evaluate_runtime_expression(server_core)
+	_register_await_runtime_condition(server_core)
+	_register_assert_runtime_condition(server_core)
 
 func _on_log_message(level: String, message: String) -> void:
 	var log_entry: String = "[%s] %s" % [level, message]
@@ -123,6 +156,623 @@ func _tool_get_editor_logs(params: Dictionary) -> Dictionary:
 		return _get_runtime_logs(types, count, offset, order)
 
 	return _get_mcp_logs(types, count, offset, order)
+
+func _get_debugger_bridge() -> RefCounted:
+	if Engine.has_meta("GodotMCPPlugin"):
+		var plugin = Engine.get_meta("GodotMCPPlugin")
+		if plugin and plugin.has_method("get_debugger_bridge"):
+			return plugin.get_debugger_bridge()
+	return null
+
+func _register_get_debugger_sessions(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_debugger_sessions",
+		"List Godot editor debugger sessions and their active/break state.",
+		{"type": "object", "properties": {}},
+		Callable(self, "_tool_get_debugger_sessions"),
+		{"type": "object", "properties": {"sessions": {"type": "array"}, "count": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_get_debugger_sessions(params: Dictionary) -> Dictionary:
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	var sessions: Array = bridge.get_sessions_info()
+	return {"sessions": sessions, "count": sessions.size()}
+
+func _register_set_debugger_breakpoint(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"set_debugger_breakpoint",
+		"Enable or disable a breakpoint in active Godot debugger sessions.",
+		{
+			"type": "object",
+			"properties": {
+				"path": {"type": "string", "description": "Script path, e.g. res://player.gd"},
+				"line": {"type": "integer", "description": "1-based line number"},
+				"enabled": {"type": "boolean", "description": "Whether the breakpoint is enabled"},
+				"session_id": {"type": "integer", "description": "Optional debugger session id. Omit or use -1 for all sessions."}
+			},
+			"required": ["path", "line", "enabled"]
+		},
+		Callable(self, "_tool_set_debugger_breakpoint"),
+		{"type": "object", "properties": {"status": {"type": "string"}, "sessions_updated": {"type": "integer"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_set_debugger_breakpoint(params: Dictionary) -> Dictionary:
+	var path: String = params.get("path", "")
+	var line: int = params.get("line", 0)
+	var enabled: bool = params.get("enabled", true)
+	var session_id: int = params.get("session_id", -1)
+	if path.is_empty():
+		return {"error": "Missing required parameter: path"}
+	if line < 1:
+		return {"error": "line must be >= 1"}
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	return bridge.set_breakpoint(path, line, enabled, session_id)
+
+func _register_send_debugger_message(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"send_debugger_message",
+		"Send a custom debugger message to active Godot debugger sessions.",
+		{
+			"type": "object",
+			"properties": {
+				"message": {"type": "string"},
+				"data": {"type": "array"},
+				"session_id": {"type": "integer"}
+			},
+			"required": ["message"]
+		},
+		Callable(self, "_tool_send_debugger_message"),
+		{"type": "object", "properties": {"status": {"type": "string"}, "sessions_updated": {"type": "integer"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_send_debugger_message(params: Dictionary) -> Dictionary:
+	var message: String = params.get("message", "")
+	var data: Array = params.get("data", [])
+	var session_id: int = params.get("session_id", -1)
+	if message.is_empty():
+		return {"error": "Missing required parameter: message"}
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	return bridge.send_debugger_message(message, data, session_id)
+
+func _register_toggle_debugger_profiler(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"toggle_debugger_profiler",
+		"Toggle an EngineProfiler in active Godot debugger sessions.",
+		{
+			"type": "object",
+			"properties": {
+				"profiler": {"type": "string", "description": "Profiler name"},
+				"enabled": {"type": "boolean"},
+				"data": {"type": "array"},
+				"session_id": {"type": "integer"}
+			},
+			"required": ["profiler", "enabled"]
+		},
+		Callable(self, "_tool_toggle_debugger_profiler"),
+		{"type": "object", "properties": {"status": {"type": "string"}, "sessions_updated": {"type": "integer"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_toggle_debugger_profiler(params: Dictionary) -> Dictionary:
+	var profiler: String = params.get("profiler", "")
+	var enabled: bool = params.get("enabled", false)
+	var data: Array = params.get("data", [])
+	var session_id: int = params.get("session_id", -1)
+	if profiler.is_empty():
+		return {"error": "Missing required parameter: profiler"}
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	return bridge.toggle_profiler(profiler, enabled, data, session_id)
+
+func _register_get_debugger_messages(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_debugger_messages",
+		"Read custom messages captured by the Godot debugger bridge.",
+		{
+			"type": "object",
+			"properties": {
+				"count": {"type": "integer", "default": 100},
+				"offset": {"type": "integer", "default": 0},
+				"order": {"type": "string", "enum": ["asc", "desc"], "default": "desc"}
+			}
+		},
+		Callable(self, "_tool_get_debugger_messages"),
+		{"type": "object", "properties": {"messages": {"type": "array"}, "count": {"type": "integer"}, "total_available": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_get_debugger_messages(params: Dictionary) -> Dictionary:
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	return bridge.get_captured_messages(params.get("count", 100), params.get("offset", 0), params.get("order", "desc"))
+
+func _register_add_debugger_capture_prefix(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"add_debugger_capture_prefix",
+		"Allow the debugger bridge to capture custom EngineDebugger messages with the given prefix.",
+		{
+			"type": "object",
+			"properties": {
+				"prefix": {"type": "string", "description": "Message prefix without the trailing colon, or * for all prefixes."}
+			},
+			"required": ["prefix"]
+		},
+		Callable(self, "_tool_add_debugger_capture_prefix"),
+		{"type": "object", "properties": {"status": {"type": "string"}, "prefixes": {"type": "array"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_add_debugger_capture_prefix(params: Dictionary) -> Dictionary:
+	var prefix: String = params.get("prefix", "")
+	if prefix.is_empty():
+		return {"error": "Missing required parameter: prefix"}
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	bridge.add_capture_prefix(prefix)
+	return {"status": "success", "prefixes": bridge.get_capture_prefixes()}
+
+func _register_get_debug_stack_frames(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_debug_stack_frames",
+		"Return the latest captured script stack frames and request a fresh stack dump from breaked sessions.",
+		{
+			"type": "object",
+			"properties": {
+				"refresh": {"type": "boolean", "default": true},
+				"session_id": {"type": "integer", "description": "Optional debugger session id. Omit or use -1 for all active sessions."}
+			}
+		},
+		Callable(self, "_tool_get_debug_stack_frames"),
+		{"type": "object", "properties": {"frames": {"type": "array"}, "count": {"type": "integer"}, "refresh_result": {"type": "object"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_get_debug_stack_frames(params: Dictionary) -> Dictionary:
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	var refresh_result: Dictionary = {}
+	if params.get("refresh", true):
+		refresh_result = bridge.request_stack_dump(params.get("session_id", -1))
+	var frames: Array = bridge.get_latest_stack_dump()
+	return {"frames": frames, "count": frames.size(), "refresh_result": refresh_result}
+
+func _register_get_debug_stack_variables(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_debug_stack_variables",
+		"Return latest captured local/member/global variables for a stack frame and request a fresh variable dump.",
+		{
+			"type": "object",
+			"properties": {
+				"frame": {"type": "integer", "default": 0},
+				"refresh": {"type": "boolean", "default": true},
+				"session_id": {"type": "integer", "description": "Optional debugger session id. Omit or use -1 for all active sessions."}
+			}
+		},
+		Callable(self, "_tool_get_debug_stack_variables"),
+		{"type": "object", "properties": {"frame": {"type": "integer"}, "variables": {"type": "array"}, "count": {"type": "integer"}, "refresh_result": {"type": "object"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_get_debug_stack_variables(params: Dictionary) -> Dictionary:
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	var frame: int = params.get("frame", 0)
+	if frame < 0:
+		return {"error": "frame must be >= 0"}
+	var refresh_result: Dictionary = {}
+	if params.get("refresh", true):
+		refresh_result = bridge.request_stack_frame_vars(frame, params.get("session_id", -1))
+	var variables: Array = bridge.get_latest_stack_variables(frame)
+	return {"frame": frame, "variables": variables, "count": variables.size(), "refresh_result": refresh_result}
+
+func _register_install_runtime_probe(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"install_runtime_probe",
+		"Add the MCP runtime probe node to the current scene so the running game can answer debugger messages.",
+		{
+			"type": "object",
+			"properties": {
+				"node_name": {"type": "string", "default": "MCPRuntimeProbe"},
+				"persistent": {"type": "boolean", "default": true, "description": "Set owner so the probe is saved with the scene."}
+			}
+		},
+		Callable(self, "_tool_install_runtime_probe"),
+		{"type": "object", "properties": {"status": {"type": "string"}, "node_path": {"type": "string"}, "persistent": {"type": "boolean"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_install_runtime_probe(params: Dictionary) -> Dictionary:
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+	var scene_root: Node = _get_user_scene_root()
+	if not scene_root:
+		return {"error": "No scene is currently open"}
+	var node_name: String = params.get("node_name", "MCPRuntimeProbe")
+	if node_name.is_empty():
+		return {"error": "node_name cannot be empty"}
+	var existing: Node = scene_root.get_node_or_null(NodePath(node_name))
+	if existing:
+		return {"status": "already_installed", "node_path": str(existing.get_path()), "persistent": existing.owner != null}
+	var script: Script = load("res://addons/godot_mcp/runtime/mcp_runtime_probe.gd")
+	if not script:
+		return {"error": "Failed to load runtime probe script"}
+	var probe: Node = Node.new()
+	probe.name = node_name
+	probe.set_script(script)
+	scene_root.add_child(probe)
+	var persistent: bool = params.get("persistent", true)
+	if persistent:
+		probe.owner = scene_root
+	editor_interface.mark_scene_as_unsaved()
+	return {"status": "success", "node_path": str(probe.get_path()), "persistent": persistent}
+
+func _register_remove_runtime_probe(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"remove_runtime_probe",
+		"Remove the MCP runtime probe node from the current scene.",
+		{
+			"type": "object",
+			"properties": {
+				"node_name": {"type": "string", "default": "MCPRuntimeProbe"}
+			}
+		},
+		Callable(self, "_tool_remove_runtime_probe"),
+		{"type": "object", "properties": {"status": {"type": "string"}, "removed_node": {"type": "string"}}},
+		{"readOnlyHint": false, "destructiveHint": true, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_remove_runtime_probe(params: Dictionary) -> Dictionary:
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+	var scene_root: Node = _get_user_scene_root()
+	if not scene_root:
+		return {"error": "No scene is currently open"}
+	var node_name: String = params.get("node_name", "MCPRuntimeProbe")
+	var existing: Node = scene_root.get_node_or_null(NodePath(node_name))
+	if not existing:
+		return {"status": "not_installed", "removed_node": ""}
+	var removed_path: String = str(existing.get_path())
+	scene_root.remove_child(existing)
+	existing.queue_free()
+	editor_interface.mark_scene_as_unsaved()
+	return {"status": "success", "removed_node": removed_path}
+
+func _register_request_debug_break(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"request_debug_break",
+		"Ask the MCP runtime probe to enter Godot's script debugger break loop.",
+		{
+			"type": "object",
+			"properties": {
+				"session_id": {"type": "integer", "description": "Optional debugger session id. Omit or use -1 for all active sessions."}
+			}
+		},
+		Callable(self, "_tool_request_debug_break"),
+		{"type": "object", "properties": {"status": {"type": "string"}, "sessions_updated": {"type": "integer"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_request_debug_break(params: Dictionary) -> Dictionary:
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	return bridge.send_debugger_message("mcp:debug_break", [], params.get("session_id", -1))
+
+func _register_send_debug_command(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"send_debug_command",
+		"Send a raw Godot script-debugger command to active breaked sessions. Commands are handled by Godot's debug loop.",
+		{
+			"type": "object",
+			"properties": {
+				"command": {"type": "string", "enum": ["step", "next", "out", "continue", "get_stack_dump", "get_stack_frame_vars"]},
+				"data": {"type": "array", "description": "Command payload, e.g. [0] for get_stack_frame_vars frame 0."},
+				"session_id": {"type": "integer", "description": "Optional debugger session id. Omit or use -1 for all active sessions."}
+			},
+			"required": ["command"]
+		},
+		Callable(self, "_tool_send_debug_command"),
+		{"type": "object", "properties": {"status": {"type": "string"}, "sessions_updated": {"type": "integer"}, "note": {"type": "string"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_send_debug_command(params: Dictionary) -> Dictionary:
+	var command: String = params.get("command", "")
+	var allowed: Array[String] = ["step", "next", "out", "continue", "get_stack_dump", "get_stack_frame_vars"]
+	if not allowed.has(command):
+		return {"error": "Unsupported debug command: " + command}
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	var result: Dictionary = bridge.send_debugger_message(command, params.get("data", []), params.get("session_id", -1))
+	if command.begins_with("get_stack"):
+		result["note"] = "Godot may route stack responses to the built-in ScriptEditorDebugger UI instead of EditorDebuggerPlugin captures."
+	return result
+
+func _register_get_runtime_info(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_runtime_info",
+		"Query the running game instance through the MCP runtime probe and return runtime metrics.",
+		{"type": "object", "properties": {"session_id": {"type": "integer"}, "timeout_ms": {"type": "integer", "default": 1500}}},
+		Callable(self, "_tool_get_runtime_info"),
+		{"type": "object", "properties": {"fps": {"type": "number"}, "physics_frames": {"type": "integer"}, "process_frames": {"type": "integer"}, "debugger_active": {"type": "boolean"}, "current_scene": {"type": "string"}, "node_count": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_get_runtime_info(params: Dictionary) -> Dictionary:
+	var result: Dictionary = _request_runtime_probe("get_runtime_info", [], ["mcp:runtime_info"], params)
+	if result.get("status", "") == "pending":
+		var bridge: RefCounted = _get_debugger_bridge()
+		if bridge:
+			var probe_ready: Variant = bridge.get_latest_message_payload("mcp:probe_ready")
+			if probe_ready is Dictionary:
+				var fallback: Dictionary = probe_ready.duplicate(true)
+				fallback["status"] = "stale"
+				fallback["refresh_result"] = result.get("refresh_result", {})
+				return fallback
+	return result
+
+func _register_get_runtime_scene_tree(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_runtime_scene_tree",
+		"Read the live runtime scene tree from the running game instance.",
+		{"type": "object", "properties": {"max_depth": {"type": "integer", "default": 6}, "session_id": {"type": "integer"}, "timeout_ms": {"type": "integer", "default": 1500}}},
+		Callable(self, "_tool_get_runtime_scene_tree"),
+		{"type": "object", "properties": {"name": {"type": "string"}, "type": {"type": "string"}, "path": {"type": "string"}, "child_count": {"type": "integer"}, "children": {"type": "array"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_get_runtime_scene_tree(params: Dictionary) -> Dictionary:
+	return _request_runtime_probe("get_scene_tree", [params.get("max_depth", 6)], ["mcp:scene_tree"], params)
+
+func _register_inspect_runtime_node(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"inspect_runtime_node",
+		"Inspect a live runtime node and its serializable properties through the runtime probe.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path"]
+		},
+		Callable(self, "_tool_inspect_runtime_node"),
+		{"type": "object", "properties": {"name": {"type": "string"}, "type": {"type": "string"}, "path": {"type": "string"}, "properties": {"type": "object"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_inspect_runtime_node(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	return _request_runtime_probe("inspect_node", [node_path], ["mcp:node"], params, {"path": node_path})
+
+func _register_update_runtime_node_property(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"update_runtime_node_property",
+		"Modify a property on a live runtime node through the runtime probe.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"property_name": {"type": "string"},
+				"property_value": {},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path", "property_name", "property_value"]
+		},
+		Callable(self, "_tool_update_runtime_node_property"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "property_name": {"type": "string"}, "old_value": {}, "new_value": {}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_update_runtime_node_property(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var property_name: String = params.get("property_name", "")
+	if node_path.is_empty() or property_name.is_empty() or not params.has("property_value"):
+		return {"error": "node_path, property_name, and property_value are required"}
+	return _request_runtime_probe("set_node_property", [node_path, property_name, params.get("property_value")], ["mcp:node_property_updated"], params, {"node_path": node_path, "property_name": property_name})
+
+func _register_call_runtime_node_method(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"call_runtime_node_method",
+		"Call a method on a live runtime node and return the serialized result.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"method_name": {"type": "string"},
+				"arguments": {"type": "array"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path", "method_name"]
+		},
+		Callable(self, "_tool_call_runtime_node_method"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "method_name": {"type": "string"}, "arguments": {"type": "array"}, "result": {}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_call_runtime_node_method(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var method_name: String = params.get("method_name", "")
+	if node_path.is_empty() or method_name.is_empty():
+		return {"error": "node_path and method_name are required"}
+	return _request_runtime_probe("call_node_method", [node_path, method_name, params.get("arguments", [])], ["mcp:node_method_result"], params, {"node_path": node_path, "method_name": method_name})
+
+func _register_evaluate_runtime_expression(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"evaluate_runtime_expression",
+		"Evaluate a GDScript Expression in the running game, optionally relative to a target node.",
+		{
+			"type": "object",
+			"properties": {
+				"expression": {"type": "string"},
+				"node_path": {"type": "string"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["expression"]
+		},
+		Callable(self, "_tool_evaluate_runtime_expression"),
+		{"type": "object", "properties": {"expression": {"type": "string"}, "node_path": {"type": "string"}, "value": {}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_evaluate_runtime_expression(params: Dictionary) -> Dictionary:
+	var expression: String = params.get("expression", "")
+	if expression.is_empty():
+		return {"error": "Missing required parameter: expression"}
+	var payload: Array = [expression, params.get("node_path", "")]
+	return _request_runtime_probe("evaluate_expression", payload, ["mcp:expression_result"], params, {"expression": expression})
+
+func _register_await_runtime_condition(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"await_runtime_condition",
+		"Poll a runtime expression until it becomes truthy or the timeout expires.",
+		{
+			"type": "object",
+			"properties": {
+				"expression": {"type": "string"},
+				"node_path": {"type": "string"},
+				"timeout_ms": {"type": "integer", "default": 3000},
+				"poll_interval_ms": {"type": "integer", "default": 100},
+				"session_id": {"type": "integer"}
+			},
+			"required": ["expression"]
+		},
+		Callable(self, "_tool_await_runtime_condition"),
+		{"type": "object", "properties": {"condition_met": {"type": "boolean"}, "attempts": {"type": "integer"}, "elapsed_ms": {"type": "integer"}, "last_value": {}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_await_runtime_condition(params: Dictionary) -> Dictionary:
+	var expression: String = params.get("expression", "")
+	if expression.is_empty():
+		return {"error": "Missing required parameter: expression"}
+	var result: Dictionary = _tool_evaluate_runtime_expression(params)
+	if result.has("error"):
+		return result
+	if result.get("status", "") == "pending":
+		return {
+			"status": "pending",
+			"condition_met": false,
+			"last_value": null,
+			"refresh_result": result.get("refresh_result", {})
+		}
+	var last_value: Variant = result.get("value", null)
+	var condition_met: bool = _is_truthy_runtime_value(last_value)
+	return {
+		"status": "success" if condition_met else "failed",
+		"condition_met": condition_met,
+		"last_value": last_value,
+		"refresh_result": result.get("refresh_result", {})
+	}
+
+func _register_assert_runtime_condition(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"assert_runtime_condition",
+		"Assert that a runtime expression becomes truthy within the timeout window.",
+		{
+			"type": "object",
+			"properties": {
+				"expression": {"type": "string"},
+				"node_path": {"type": "string"},
+				"timeout_ms": {"type": "integer", "default": 3000},
+				"poll_interval_ms": {"type": "integer", "default": 100},
+				"session_id": {"type": "integer"},
+				"description": {"type": "string"}
+			},
+			"required": ["expression"]
+		},
+		Callable(self, "_tool_assert_runtime_condition"),
+		{"type": "object", "properties": {"status": {"type": "string"}, "description": {"type": "string"}, "attempts": {"type": "integer"}, "elapsed_ms": {"type": "integer"}, "last_value": {}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_assert_runtime_condition(params: Dictionary) -> Dictionary:
+	var wait_result: Dictionary = _tool_await_runtime_condition(params)
+	if wait_result.has("error"):
+		return wait_result
+	if wait_result.get("status", "") == "pending":
+		return {
+			"status": "pending",
+			"description": params.get("description", params.get("expression", "")),
+			"last_value": null,
+			"refresh_result": wait_result.get("refresh_result", {})
+		}
+	if not wait_result.get("condition_met", false):
+		return {
+			"error": "Runtime condition was not met within timeout",
+			"description": params.get("description", params.get("expression", "")),
+			"last_value": wait_result.get("last_value", null)
+		}
+	return {
+		"status": "success",
+		"description": params.get("description", params.get("expression", "")),
+		"last_value": wait_result.get("last_value", null),
+		"refresh_result": wait_result.get("refresh_result", {})
+	}
+
+func _request_runtime_probe(command: String, payload: Array, response_messages: Array, params: Dictionary, match_fields: Dictionary = {}) -> Dictionary:
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	var refresh_result: Dictionary = bridge.send_debugger_message(
+		"mcp:" + command,
+		payload,
+		int(params.get("session_id", -1))
+	)
+	if refresh_result.has("error"):
+		return refresh_result
+	if refresh_result.get("status", "") == "no_active_sessions":
+		return {"status": "no_active_sessions", "refresh_result": refresh_result}
+	for message_name in response_messages:
+		var runtime_payload: Variant = bridge.get_latest_message_payload(message_name, match_fields)
+		if runtime_payload is Dictionary:
+			var response: Dictionary = runtime_payload.duplicate(true)
+			response["status"] = "success"
+			response["refresh_result"] = refresh_result
+			return response
+		if runtime_payload != null:
+			return {"status": "success", "value": runtime_payload, "refresh_result": refresh_result}
+	return {"status": "pending", "refresh_result": refresh_result, "response_messages": response_messages}
+
+func _is_truthy_runtime_value(value: Variant) -> bool:
+	match typeof(value):
+		TYPE_NIL:
+			return false
+		TYPE_BOOL:
+			return value
+		TYPE_INT, TYPE_FLOAT:
+			return value != 0
+		TYPE_STRING:
+			return not String(value).is_empty()
+		TYPE_ARRAY:
+			return not value.is_empty()
+		TYPE_DICTIONARY:
+			return not value.is_empty()
+		_:
+			return true
 
 func _get_mcp_logs(types: Array, count: int, offset: int, order: String) -> Dictionary:
 	_log_mutex.lock()

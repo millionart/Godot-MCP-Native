@@ -18,7 +18,7 @@
 
 ## 工具概述
 
-Godot MCP Native 实现了 **50 个工具**，分为 6 大类：
+Godot MCP Native 实现了 **62 个工具**，分为 6 大类：
 
 | 类别 | 工具数量 | 源文件 | 用途 |
 |------|----------|--------|------|
@@ -26,7 +26,7 @@ Godot MCP Native 实现了 **50 个工具**，分为 6 大类：
 | [Script Tools](#script-tools) | 9 | `script_tools_native.gd` | 脚本管理（读取、创建、修改、分析、附加、验证、搜索） |
 | [Scene Tools](#scene-tools) | 6 | `scene_tools_native.gd` | 场景管理（创建、保存、打开） |
 | [Editor Tools](#editor-tools) | 8 | `editor_tools_native.gd` | 编辑器操作（运行、停止、获取状态、截图、信号、重载） |
-| [Debug Tools](#debug-tools) | 6 | `debug_tools_native.gd` | 调试和日志（日志获取、清除、脚本执行、性能监控） |
+| [Debug Tools](#debug-tools) | 18 | `debug_tools_native.gd` | 调试和日志（日志获取、脚本执行、调试会话、断点、栈帧/变量读取、Profiler、运行时探针） |
 | [Project Tools](#project-tools) | 5 | `project_tools_native.gd` | 项目配置（信息、设置、结构） |
 
 ### 工具调用格式
@@ -1275,9 +1275,242 @@ Godot MCP Native 实现了 **50 个工具**，分为 6 大类：
 
 ---
 
+### 46. get_debugger_sessions
+
+列出 Godot 编辑器调试会话及其状态。
+
+**参数**：无
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `sessions` | Array[Dictionary] | 调试会话列表 |
+| `count` | int | 会话数量 |
+
+**每个会话**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `session_id` | int | 会话 ID |
+| `active` | boolean | 是否连接到运行中的实例 |
+| `breaked` | boolean | 是否处于断点暂停状态 |
+| `debuggable` | boolean | 当前实例是否可脚本调试 |
+
+---
+
+### 47. set_debugger_breakpoint
+
+通过 Godot `EditorDebuggerSession` 启用或禁用脚本断点。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `path` | string | 是 | 脚本路径，如 `res://player.gd` |
+| `line` | int | 是 | 1-based 行号 |
+| `enabled` | boolean | 是 | 是否启用断点 |
+| `session_id` | int | 否 | 目标调试会话，默认 `-1` 表示全部会话 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `success`、`no_sessions` 或错误 |
+| `sessions_updated` | int | 更新的会话数量 |
+
+---
+
+### 48. send_debugger_message
+
+向活动调试会话中的运行实例发送自定义 `EngineDebugger` 消息。运行时脚本可通过 `EngineDebugger.register_message_capture()` 接收。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `message` | string | 是 | 消息名，如 `mcp:ping` |
+| `data` | Array | 否 | 附加数据 |
+| `session_id` | int | 否 | 目标调试会话，默认 `-1` 表示全部活动会话 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `success`、`no_active_sessions` 或错误 |
+| `sessions_updated` | int | 接收消息的活动会话数量 |
+
+---
+
+### 49. toggle_debugger_profiler
+
+在活动调试会话中切换运行时 `EngineProfiler`。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `profiler` | string | 是 | Profiler 名称 |
+| `enabled` | boolean | 是 | 是否启用 |
+| `data` | Array | 否 | 传给 profiler 的附加参数 |
+| `session_id` | int | 否 | 目标调试会话，默认 `-1` 表示全部活动会话 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `success`、`no_active_sessions` 或错误 |
+| `sessions_updated` | int | 更新的活动会话数量 |
+
+---
+
+### 50. get_debugger_messages
+
+读取 `MCPDebuggerBridge` 从运行实例捕获的自定义调试消息。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `count` | int | 否 | 最大返回条数（默认 `100`） |
+| `offset` | int | 否 | 跳过条数（默认 `0`） |
+| `order` | string | 否 | `desc` 或 `asc`，默认 `desc` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `messages` | Array[Dictionary] | 捕获消息 |
+| `count` | int | 返回数量 |
+| `total_available` | int | 可用消息总数 |
+
+---
+
+### 51. add_debugger_capture_prefix
+
+允许 debugger bridge 捕获更多 `EngineDebugger` 消息前缀。默认捕获 `mcp`。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `prefix` | string | 是 | 前缀，不包含冒号；`*` 表示捕获全部 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `success` |
+| `prefixes` | Array[string] | 当前捕获前缀列表 |
+
+---
+
+### 52. get_debug_stack_frames
+
+返回最近捕获到的脚本栈帧，并可向已暂停会话请求刷新 `get_stack_dump`。通常先使用 `request_debug_break` 让运行实例进入暂停状态，再调用本工具。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `refresh` | boolean | 否 | 是否先请求刷新栈帧；默认 `true` |
+| `session_id` | int | 否 | 目标调试会话，默认 `-1` 表示全部活动会话 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `frames` | Array[Dictionary] | 栈帧列表，包含 `frame`、`file`、`function`、`line` |
+| `count` | int | 栈帧数量 |
+| `refresh_result` | Dictionary | 刷新请求结果 |
+
+---
+
+### 53. get_debug_stack_variables
+
+返回指定栈帧最近捕获到的局部变量、成员变量和全局变量，并可向已暂停会话请求刷新 `get_stack_frame_vars`。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `frame` | int | 否 | 栈帧索引，默认 `0` |
+| `refresh` | boolean | 否 | 是否先请求刷新变量；默认 `true` |
+| `session_id` | int | 否 | 目标调试会话，默认 `-1` 表示全部活动会话 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `frame` | int | 栈帧索引 |
+| `variables` | Array[Dictionary] | 变量列表，包含 `name`、`scope`、`type`、`value` 和 `raw` |
+| `count` | int | 变量数量 |
+| `refresh_result` | Dictionary | 刷新请求结果 |
+
+---
+
+### 54. install_runtime_probe
+
+向当前场景添加 `MCPRuntimeProbe` 节点。运行项目后，该节点会注册 `EngineDebugger` capture，并响应 `mcp:ping`、`mcp:get_runtime_info`、`mcp:get_scene_tree`、`mcp:inspect_node`。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_name` | string | 否 | 探针节点名，默认 `MCPRuntimeProbe` |
+| `persistent` | boolean | 否 | 是否设置 owner 以便保存到场景；默认 `true` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `success` 或 `already_installed` |
+| `node_path` | string | 探针节点路径 |
+| `persistent` | boolean | 是否为可保存节点 |
+
+---
+
+### 55. remove_runtime_probe
+
+从当前场景移除 `MCPRuntimeProbe` 节点。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_name` | string | 否 | 探针节点名，默认 `MCPRuntimeProbe` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `success` 或 `not_installed` |
+| `removed_node` | string | 被移除的节点路径 |
+
+---
+
+### 56. request_debug_break
+
+请求已安装的 `MCPRuntimeProbe` 调用 `EngineDebugger.debug()`，让运行实例进入 Godot 脚本调试暂停循环。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `session_id` | int | 否 | 目标调试会话，默认 `-1` 表示全部活动会话 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `success`、`no_active_sessions` 或错误 |
+| `sessions_updated` | int | 接收请求的活动会话数量 |
+
+---
+
+### 57. send_debug_command
+
+向已暂停的 Godot 调试循环发送命令。支持 `step`、`next`、`out`、`continue`、`get_stack_dump`、`get_stack_frame_vars`。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `command` | string | 是 | 调试命令 |
+| `data` | Array | 否 | 命令参数，如 `get_stack_frame_vars` 使用 `[0]` 请求第 0 帧变量 |
+| `session_id` | int | 否 | 目标调试会话，默认 `-1` 表示全部活动会话 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `success`、`no_active_sessions` 或错误 |
+| `sessions_updated` | int | 接收命令的活动会话数量 |
+| `note` | string | 对 stack 命令的 Godot API 限制说明 |
+
+**提示**：读取栈帧和变量时优先使用 `get_debug_stack_frames` / `get_debug_stack_variables`；它们会监听内置 `ScriptEditorDebugger` 信号并返回结构化数据。
+
+---
+
 ## Project Tools
 
-### 46. get_project_info
+### 58. get_project_info
 
 获取项目的基本信息。
 
@@ -1296,7 +1529,7 @@ Godot MCP Native 实现了 **50 个工具**，分为 6 大类：
 
 ---
 
-### 47. get_project_settings
+### 59. get_project_settings
 
 获取项目的设置值。
 
@@ -1315,7 +1548,7 @@ Godot MCP Native 实现了 **50 个工具**，分为 6 大类：
 
 ---
 
-### 48. list_project_resources
+### 60. list_project_resources
 
 列出项目中的所有资源文件。
 
@@ -1337,7 +1570,7 @@ Godot MCP Native 实现了 **50 个工具**，分为 6 大类：
 
 ---
 
-### 49. create_resource
+### 61. create_resource
 
 创建新的 Godot 资源文件。
 
@@ -1359,7 +1592,7 @@ Godot MCP Native 实现了 **50 个工具**，分为 6 大类：
 
 ---
 
-### 50. get_project_structure
+### 62. get_project_structure
 
 获取项目的目录结构和文件类型统计。
 
@@ -1489,7 +1722,7 @@ Godot MCP Native 实现了 **50 个工具**，分为 6 大类：
 
 ## 总结
 
-本手册详细说明了 Godot MCP Native 项目的所有 50 个工具。每个工具都有清晰的参数说明、返回值描述和注解信息。
+本手册详细说明了 Godot MCP Native 项目的所有 62 个工具。每个工具都有清晰的参数说明、返回值描述和注解信息。
 
 **提示**：
 - 使用 `tools/list` 方法获取所有工具的实时列表和完整 JSON Schema
@@ -1502,4 +1735,3 @@ Godot MCP Native 实现了 **50 个工具**，分为 6 大类：
 - `set_anchor_preset` 快速设置 Control 节点的布局锚点
 - `execute_editor_script` 适合复杂脚本执行，`execute_script` 适合简单表达式求值
 - 所有文件路径都经过 `PathValidator` 安全验证
-
