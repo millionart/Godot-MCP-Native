@@ -51,7 +51,29 @@ The plugin provides two transport modes:
 - Configuration: Set `transport_mode = "http"` and configure `http_port` (default: 9080)
 - Optional: Enable `auth_enabled` and set `auth_token` for security
 
-### Connecting with Claude Desktop / Cursor / Trae
+### Connecting with Claude Desktop
+
+First, install the `mcp-remote` package:
+```bash
+npm install mcp-remote
+```
+
+#### HTTP Mode Configuration
+```json
+{
+  "mcpServers": {
+    "godot-mcp": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:19080/mcp"
+      ]
+    }
+  }
+}
+```
+
+### Connecting with Cursor / Trae
 
 #### HTTP Mode Configuration
 ```json

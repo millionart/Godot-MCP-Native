@@ -51,7 +51,29 @@
 - 配置：在插件设置中设置 `transport_mode = "http"` 并配置 `http_port`（默认：9080）
 - 可选：启用 `auth_enabled` 并设置 `auth_token` 以保障安全
 
-### 连接 Claude Desktop / Cursor / Trae
+### 连接 Claude Desktop
+
+首先安装 `mcp-remote` 包：
+```bash
+npm install mcp-remote
+```
+
+#### HTTP 模式配置
+```json
+{
+  "mcpServers": {
+    "godot-mcp": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:19080/mcp"
+      ]
+    }
+  }
+}
+```
+
+### 连接 Cursor / Trae
 
 #### HTTP 模式配置
 
