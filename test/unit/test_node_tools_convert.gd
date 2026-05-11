@@ -57,6 +57,12 @@ func test_convert_value_for_property_vector3_from_string():
 	assert_eq(result, Vector3(1, 2, 3), "Should convert string to Vector3")
 	node.free()
 
+func test_convert_value_for_property_vector3_from_constructor_string():
+	var node: Node3D = Node3D.new()
+	var result: Variant = _node_tools._convert_value_for_property(node, "position", "Vector3(1, 2, 3)")
+	assert_eq(result, Vector3(1, 2, 3), "Should convert Vector3 constructor-like string to Vector3")
+	node.free()
+
 func test_convert_value_for_property_vector2_from_dict():
 	var node: Node2D = Node2D.new()
 	var result: Variant = _node_tools._convert_value_for_property(node, "position", {"x": 5.0, "y": 10.0})
