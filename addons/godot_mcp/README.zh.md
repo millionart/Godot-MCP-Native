@@ -51,10 +51,9 @@
 - 配置：在插件设置中设置 `transport_mode = "http"` 并配置 `http_port`（默认：9080）
 - 可选：启用 `auth_enabled` 并设置 `auth_token` 以保障安全
 
-### 连接 Claude Desktop
+### 连接 Claude Desktop / Cursor / Trae
 
 #### HTTP 模式配置
-编辑 Claude Desktop 配置文件（`claude_desktop_config.json`）：
 
 ```json
 {
@@ -75,6 +74,24 @@
       "headers": {
         "Authorization": "Bearer your-secret-token-here"
       }
+    }
+  }
+}
+```
+
+### 连接 Cline
+
+#### HTTP 模式配置
+编辑 Cline 配置文件（`cline_mcp_settings.json`）：
+
+```json
+{
+  "mcpServers": {
+    "godot-mcp": {
+      "url": "http://localhost:9080/mcp",
+      "type": "streamableHttp",
+      "disabled": false,
+      "autoApprove": []
     }
   }
 }

@@ -51,7 +51,7 @@ The plugin provides two transport modes:
 - Configuration: Set `transport_mode = "http"` and configure `http_port` (default: 9080)
 - Optional: Enable `auth_enabled` and set `auth_token` for security
 
-### Connecting with Claude Desktop
+### Connecting with Claude Desktop / Cursor / Trae
 
 #### HTTP Mode Configuration
 ```json
@@ -73,6 +73,23 @@ With authentication:
       "headers": {
         "Authorization": "Bearer your-secret-token-here"
       }
+    }
+  }
+}
+```
+
+### Connecting with Cline
+
+#### HTTP Mode Configuration
+
+```json
+{
+  "mcpServers": {
+    "godot-mcp": {
+      "url": "http://localhost:9080/mcp",
+      "type": "streamableHttp",
+      "disabled": false,
+      "autoApprove": []
     }
   }
 }
