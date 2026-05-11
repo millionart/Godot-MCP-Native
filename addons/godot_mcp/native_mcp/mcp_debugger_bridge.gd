@@ -18,6 +18,7 @@ var _connected_script_debuggers: Array[Object] = []
 var _latest_stack_dump: Array = []
 var _latest_stack_variables: Dictionary = {}
 var _pending_stack_vars_frame: int = 0
+var _message_sequence: int = 0
 
 func _setup_session(session_id: int) -> void:
 	call_deferred("_refresh_script_debugger_connections")
@@ -107,6 +108,54 @@ func get_captured_messages(count: int = 100, offset: int = 0, order: String = "d
 func get_capture_prefixes() -> Array[String]:
 	return _capture_prefixes.duplicate()
 
+func get_latest_message_payload(message: String, match_fields: Dictionary = {}) -> Variant:
+	for index in range(_captured_messages.size() - 1, -1, -1):
+		var entry: Dictionary = _captured_messages[index]
+		if str(entry.get("message", "")) != message:
+			continue
+		var captured_data: Array = entry.get("data", [])
+		var payload: Variant = captured_data[0] if not captured_data.is_empty() else null
+		if _payload_matches(payload, match_fields):
+			return payload
+	return null
+
+func request_runtime_message(message: String, data: Array = [], response_messages: Array = [], error_messages: Array = ["mcp:error"], session_id: int = -1, timeout_ms: int = 1500) -> Dictionary:
+	var baseline_sequence: int = _message_sequence
+	var send_result: Dictionary = send_debugger_message("mcp:" + message, data, session_id)
+	if send_result.has("error"):
+		return send_result
+	if send_result.get("sessions_updated", 0) <= 0:
+		return send_result
+
+	var wait_until: int = Time.get_ticks_msec() + maxi(timeout_ms, 1)
+	while Time.get_ticks_msec() <= wait_until:
+		var captured: Dictionary = _find_captured_message_after_sequence(baseline_sequence, response_messages, error_messages)
+		if not captured.is_empty():
+			var payload: Variant = null
+			var captured_data: Array = captured.get("data", [])
+			if not captured_data.is_empty():
+				payload = captured_data[0]
+			if error_messages.has(captured.get("message", "")):
+				return {
+					"error": _extract_runtime_error(payload),
+					"message": captured.get("message", ""),
+					"payload": payload,
+					"captured": captured
+				}
+			return {
+				"status": "success",
+				"message": captured.get("message", ""),
+				"payload": payload,
+				"captured": captured
+			}
+		OS.delay_msec(10)
+
+	return {
+		"error": "Timed out waiting for runtime response: " + message,
+		"status": "timeout",
+		"response_messages": response_messages
+	}
+
 func _refresh_script_debugger_connections() -> void:
 	var tree: SceneTree = Engine.get_main_loop() as SceneTree
 	if not tree:
@@ -161,7 +210,9 @@ func _decode_stack_variable(data: Array) -> Dictionary:
 	}
 
 func _append_captured_message(session_id: int, message: String, data: Array) -> void:
+	_message_sequence += 1
 	_captured_messages.append({
+		"sequence": _message_sequence,
 		"session_id": session_id,
 		"message": message,
 		"data": data,
@@ -169,6 +220,30 @@ func _append_captured_message(session_id: int, message: String, data: Array) -> 
 	})
 	if _captured_messages.size() > _max_messages:
 		_captured_messages = _captured_messages.slice(_captured_messages.size() - _max_messages)
+
+func _find_captured_message_after_sequence(sequence: int, response_messages: Array, error_messages: Array) -> Dictionary:
+	for entry in _captured_messages:
+		if int(entry.get("sequence", 0)) <= sequence:
+			continue
+		var message: String = str(entry.get("message", ""))
+		if response_messages.has(message) or error_messages.has(message):
+			return entry
+	return {}
+
+func _extract_runtime_error(payload: Variant) -> String:
+	if payload is Dictionary:
+		return str(payload.get("message", payload))
+	return str(payload)
+
+func _payload_matches(payload: Variant, match_fields: Dictionary) -> bool:
+	if match_fields.is_empty():
+		return true
+	if not (payload is Dictionary):
+		return false
+	for key in match_fields:
+		if payload.get(key) != match_fields[key]:
+			return false
+	return true
 
 func _for_each_session(session_id: int, action: Callable, require_active: bool = false) -> Dictionary:
 	var sessions: Array = get_sessions()

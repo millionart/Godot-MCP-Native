@@ -23,6 +23,19 @@ func _get_editor_interface() -> EditorInterface:
 			return plugin.get_editor_interface()
 	return null
 
+func _get_user_scene_root() -> Node:
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return null
+	var scene_root: Node = editor_interface.get_edited_scene_root()
+	if scene_root and not scene_root.name.begins_with("@") and scene_root.get_class() != "PanelContainer":
+		return scene_root
+	var open_scenes: Array = editor_interface.get_open_scenes()
+	for scene in open_scenes:
+		if scene and not scene.name.begins_with("@") and scene.get_class() != "PanelContainer":
+			return scene
+	return scene_root
+
 # ============================================================================
 # 工具注册
 # ============================================================================
@@ -50,6 +63,14 @@ func register_tools(server_core: RefCounted) -> void:
 	_register_remove_runtime_probe(server_core)
 	_register_request_debug_break(server_core)
 	_register_send_debug_command(server_core)
+	_register_get_runtime_info(server_core)
+	_register_get_runtime_scene_tree(server_core)
+	_register_inspect_runtime_node(server_core)
+	_register_update_runtime_node_property(server_core)
+	_register_call_runtime_node_method(server_core)
+	_register_evaluate_runtime_expression(server_core)
+	_register_await_runtime_condition(server_core)
+	_register_assert_runtime_condition(server_core)
 
 func _on_log_message(level: String, message: String) -> void:
 	var log_entry: String = "[%s] %s" % [level, message]
@@ -378,7 +399,7 @@ func _tool_install_runtime_probe(params: Dictionary) -> Dictionary:
 	var editor_interface: EditorInterface = _get_editor_interface()
 	if not editor_interface:
 		return {"error": "Editor interface not available"}
-	var scene_root: Node = editor_interface.get_edited_scene_root()
+	var scene_root: Node = _get_user_scene_root()
 	if not scene_root:
 		return {"error": "No scene is currently open"}
 	var node_name: String = params.get("node_name", "MCPRuntimeProbe")
@@ -419,7 +440,7 @@ func _tool_remove_runtime_probe(params: Dictionary) -> Dictionary:
 	var editor_interface: EditorInterface = _get_editor_interface()
 	if not editor_interface:
 		return {"error": "Editor interface not available"}
-	var scene_root: Node = editor_interface.get_edited_scene_root()
+	var scene_root: Node = _get_user_scene_root()
 	if not scene_root:
 		return {"error": "No scene is currently open"}
 	var node_name: String = params.get("node_name", "MCPRuntimeProbe")
@@ -483,6 +504,275 @@ func _tool_send_debug_command(params: Dictionary) -> Dictionary:
 	if command.begins_with("get_stack"):
 		result["note"] = "Godot may route stack responses to the built-in ScriptEditorDebugger UI instead of EditorDebuggerPlugin captures."
 	return result
+
+func _register_get_runtime_info(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_runtime_info",
+		"Query the running game instance through the MCP runtime probe and return runtime metrics.",
+		{"type": "object", "properties": {"session_id": {"type": "integer"}, "timeout_ms": {"type": "integer", "default": 1500}}},
+		Callable(self, "_tool_get_runtime_info"),
+		{"type": "object", "properties": {"fps": {"type": "number"}, "physics_frames": {"type": "integer"}, "process_frames": {"type": "integer"}, "debugger_active": {"type": "boolean"}, "current_scene": {"type": "string"}, "node_count": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_get_runtime_info(params: Dictionary) -> Dictionary:
+	var result: Dictionary = _request_runtime_probe("get_runtime_info", [], ["mcp:runtime_info"], params)
+	if result.get("status", "") == "pending":
+		var bridge: RefCounted = _get_debugger_bridge()
+		if bridge:
+			var probe_ready: Variant = bridge.get_latest_message_payload("mcp:probe_ready")
+			if probe_ready is Dictionary:
+				var fallback: Dictionary = probe_ready.duplicate(true)
+				fallback["status"] = "stale"
+				fallback["refresh_result"] = result.get("refresh_result", {})
+				return fallback
+	return result
+
+func _register_get_runtime_scene_tree(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_runtime_scene_tree",
+		"Read the live runtime scene tree from the running game instance.",
+		{"type": "object", "properties": {"max_depth": {"type": "integer", "default": 6}, "session_id": {"type": "integer"}, "timeout_ms": {"type": "integer", "default": 1500}}},
+		Callable(self, "_tool_get_runtime_scene_tree"),
+		{"type": "object", "properties": {"name": {"type": "string"}, "type": {"type": "string"}, "path": {"type": "string"}, "child_count": {"type": "integer"}, "children": {"type": "array"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_get_runtime_scene_tree(params: Dictionary) -> Dictionary:
+	return _request_runtime_probe("get_scene_tree", [params.get("max_depth", 6)], ["mcp:scene_tree"], params)
+
+func _register_inspect_runtime_node(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"inspect_runtime_node",
+		"Inspect a live runtime node and its serializable properties through the runtime probe.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path"]
+		},
+		Callable(self, "_tool_inspect_runtime_node"),
+		{"type": "object", "properties": {"name": {"type": "string"}, "type": {"type": "string"}, "path": {"type": "string"}, "properties": {"type": "object"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_inspect_runtime_node(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	return _request_runtime_probe("inspect_node", [node_path], ["mcp:node"], params, {"path": node_path})
+
+func _register_update_runtime_node_property(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"update_runtime_node_property",
+		"Modify a property on a live runtime node through the runtime probe.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"property_name": {"type": "string"},
+				"property_value": {},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path", "property_name", "property_value"]
+		},
+		Callable(self, "_tool_update_runtime_node_property"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "property_name": {"type": "string"}, "old_value": {}, "new_value": {}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_update_runtime_node_property(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var property_name: String = params.get("property_name", "")
+	if node_path.is_empty() or property_name.is_empty() or not params.has("property_value"):
+		return {"error": "node_path, property_name, and property_value are required"}
+	return _request_runtime_probe("set_node_property", [node_path, property_name, params.get("property_value")], ["mcp:node_property_updated"], params, {"node_path": node_path, "property_name": property_name})
+
+func _register_call_runtime_node_method(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"call_runtime_node_method",
+		"Call a method on a live runtime node and return the serialized result.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"method_name": {"type": "string"},
+				"arguments": {"type": "array"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path", "method_name"]
+		},
+		Callable(self, "_tool_call_runtime_node_method"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "method_name": {"type": "string"}, "arguments": {"type": "array"}, "result": {}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_call_runtime_node_method(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var method_name: String = params.get("method_name", "")
+	if node_path.is_empty() or method_name.is_empty():
+		return {"error": "node_path and method_name are required"}
+	return _request_runtime_probe("call_node_method", [node_path, method_name, params.get("arguments", [])], ["mcp:node_method_result"], params, {"node_path": node_path, "method_name": method_name})
+
+func _register_evaluate_runtime_expression(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"evaluate_runtime_expression",
+		"Evaluate a GDScript Expression in the running game, optionally relative to a target node.",
+		{
+			"type": "object",
+			"properties": {
+				"expression": {"type": "string"},
+				"node_path": {"type": "string"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["expression"]
+		},
+		Callable(self, "_tool_evaluate_runtime_expression"),
+		{"type": "object", "properties": {"expression": {"type": "string"}, "node_path": {"type": "string"}, "value": {}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_evaluate_runtime_expression(params: Dictionary) -> Dictionary:
+	var expression: String = params.get("expression", "")
+	if expression.is_empty():
+		return {"error": "Missing required parameter: expression"}
+	var payload: Array = [expression, params.get("node_path", "")]
+	return _request_runtime_probe("evaluate_expression", payload, ["mcp:expression_result"], params, {"expression": expression})
+
+func _register_await_runtime_condition(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"await_runtime_condition",
+		"Poll a runtime expression until it becomes truthy or the timeout expires.",
+		{
+			"type": "object",
+			"properties": {
+				"expression": {"type": "string"},
+				"node_path": {"type": "string"},
+				"timeout_ms": {"type": "integer", "default": 3000},
+				"poll_interval_ms": {"type": "integer", "default": 100},
+				"session_id": {"type": "integer"}
+			},
+			"required": ["expression"]
+		},
+		Callable(self, "_tool_await_runtime_condition"),
+		{"type": "object", "properties": {"condition_met": {"type": "boolean"}, "attempts": {"type": "integer"}, "elapsed_ms": {"type": "integer"}, "last_value": {}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_await_runtime_condition(params: Dictionary) -> Dictionary:
+	var expression: String = params.get("expression", "")
+	if expression.is_empty():
+		return {"error": "Missing required parameter: expression"}
+	var result: Dictionary = _tool_evaluate_runtime_expression(params)
+	if result.has("error"):
+		return result
+	if result.get("status", "") == "pending":
+		return {
+			"status": "pending",
+			"condition_met": false,
+			"last_value": null,
+			"refresh_result": result.get("refresh_result", {})
+		}
+	var last_value: Variant = result.get("value", null)
+	var condition_met: bool = _is_truthy_runtime_value(last_value)
+	return {
+		"status": "success" if condition_met else "failed",
+		"condition_met": condition_met,
+		"last_value": last_value,
+		"refresh_result": result.get("refresh_result", {})
+	}
+
+func _register_assert_runtime_condition(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"assert_runtime_condition",
+		"Assert that a runtime expression becomes truthy within the timeout window.",
+		{
+			"type": "object",
+			"properties": {
+				"expression": {"type": "string"},
+				"node_path": {"type": "string"},
+				"timeout_ms": {"type": "integer", "default": 3000},
+				"poll_interval_ms": {"type": "integer", "default": 100},
+				"session_id": {"type": "integer"},
+				"description": {"type": "string"}
+			},
+			"required": ["expression"]
+		},
+		Callable(self, "_tool_assert_runtime_condition"),
+		{"type": "object", "properties": {"status": {"type": "string"}, "description": {"type": "string"}, "attempts": {"type": "integer"}, "elapsed_ms": {"type": "integer"}, "last_value": {}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_assert_runtime_condition(params: Dictionary) -> Dictionary:
+	var wait_result: Dictionary = _tool_await_runtime_condition(params)
+	if wait_result.has("error"):
+		return wait_result
+	if wait_result.get("status", "") == "pending":
+		return {
+			"status": "pending",
+			"description": params.get("description", params.get("expression", "")),
+			"last_value": null,
+			"refresh_result": wait_result.get("refresh_result", {})
+		}
+	if not wait_result.get("condition_met", false):
+		return {
+			"error": "Runtime condition was not met within timeout",
+			"description": params.get("description", params.get("expression", "")),
+			"last_value": wait_result.get("last_value", null)
+		}
+	return {
+		"status": "success",
+		"description": params.get("description", params.get("expression", "")),
+		"last_value": wait_result.get("last_value", null),
+		"refresh_result": wait_result.get("refresh_result", {})
+	}
+
+func _request_runtime_probe(command: String, payload: Array, response_messages: Array, params: Dictionary, match_fields: Dictionary = {}) -> Dictionary:
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	var refresh_result: Dictionary = bridge.send_debugger_message(
+		"mcp:" + command,
+		payload,
+		int(params.get("session_id", -1))
+	)
+	if refresh_result.has("error"):
+		return refresh_result
+	if refresh_result.get("status", "") == "no_active_sessions":
+		return {"status": "no_active_sessions", "refresh_result": refresh_result}
+	for message_name in response_messages:
+		var runtime_payload: Variant = bridge.get_latest_message_payload(message_name, match_fields)
+		if runtime_payload is Dictionary:
+			var response: Dictionary = runtime_payload.duplicate(true)
+			response["status"] = "success"
+			response["refresh_result"] = refresh_result
+			return response
+		if runtime_payload != null:
+			return {"status": "success", "value": runtime_payload, "refresh_result": refresh_result}
+	return {"status": "pending", "refresh_result": refresh_result, "response_messages": response_messages}
+
+func _is_truthy_runtime_value(value: Variant) -> bool:
+	match typeof(value):
+		TYPE_NIL:
+			return false
+		TYPE_BOOL:
+			return value
+		TYPE_INT, TYPE_FLOAT:
+			return value != 0
+		TYPE_STRING:
+			return not String(value).is_empty()
+		TYPE_ARRAY:
+			return not value.is_empty()
+		TYPE_DICTIONARY:
+			return not value.is_empty()
+		_:
+			return true
 
 func _get_mcp_logs(types: Array, count: int, offset: int, order: String) -> Dictionary:
 	_log_mutex.lock()
