@@ -516,6 +516,7 @@ func _on_auto_start_toggled(button_pressed: bool) -> void:
 func _on_vibe_coding_mode_toggled(button_pressed: bool) -> void:
 	if _plugin:
 		_plugin.vibe_coding_mode = button_pressed
+	_debounce_save()
 
 func _on_log_level_selected(index: int) -> void:
 	if _plugin:

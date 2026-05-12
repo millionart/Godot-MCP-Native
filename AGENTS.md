@@ -91,3 +91,19 @@ Edit `addons/godot_mcp/README.md` and `addons/godot_mcp/README.zh.md`:
 ### Step 5: Verify
 - Run full GUT test suite (command in Step 3)
 - Verify 0 failures before committing
+
+## PR 审查与合并流程
+
+参见完整规范文档：
+- **Skill 文件：** `.cursor/skills/pr-review-merge/SKILL.md`
+- **规范文档：** `docs/development/pr-review-merge-spec.md`
+
+核心步骤：
+1. 创建集成分支 `integration/pr-review`
+2. 合并目标 PR 到集成分支
+3. 逐文件审查代码、测试覆盖、规范
+4. 运行 GUT 全量测试（0 failures 为硬性要求）
+5. 修复问题、记录审查文档
+6. Squash 合并到 `main`
+
+注意：`_debounce_save()` 必须在 UI toggle handler 中调用，否则设置无法持久化。
