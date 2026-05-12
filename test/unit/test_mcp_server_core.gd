@@ -80,17 +80,15 @@ func test_clear_tool_list_dirty():
 	assert_false(_core.get_tool_list_dirty(), "Dirty flag should be false after clear")
 
 func test_set_group_enabled_disables_group():
-	# Use actual classifier group tool names so classifier can find them
 	_core.register_tool("reload_project", "Reload", {"type": "object"}, func(args): return {}, {}, {}, "supplementary", "Editor-Advanced")
 	_core.register_tool("execute_editor_script", "Exec Editor Script", {"type": "object"}, func(args): return {}, {}, {}, "supplementary", "Editor-Advanced")
+	_core.set_group_enabled("Editor-Advanced", true)
 	var changed: int = _core.set_group_enabled("Editor-Advanced", false)
 	assert_true(changed >= 2, "Should change at least 2 tools: %d" % [changed])
 	var tools: Array = _core.get_registered_tools()
 	for t in tools:
 		if t["name"] in ["reload_project", "execute_editor_script"]:
 			assert_false(t["enabled"], "Tool %s should be disabled" % t["name"])
-	# Re-enable for other tests
-	_core.set_group_enabled("Editor-Advanced", true)
 
 func test_set_group_enabled_re_enables_group():
 	_core.register_tool("reload_project", "Reload", {"type": "object"}, func(args): return {}, {}, {}, "supplementary", "Editor-Advanced")
@@ -152,12 +150,19 @@ func test_disabled_tool_call_returns_error():
 	var response: Dictionary = _core._handle_tool_call(msg)
 	assert_true(response.get("result", {}).get("isError", false), "Calling disabled tool should return isError")
 
-func test_tool_enabled_default():
-	_core.register_tool("test_tool", "A test tool", {"type": "object"}, func(args): return {"status": "ok"})
+func test_tool_enabled_default_core():
+	_core.register_tool("test_tool", "A test tool", {"type": "object"}, func(args): return {"status": "ok"}, {}, {}, "core", "Script")
 	var tools: Array = _core.get_registered_tools()
 	for t in tools:
 		if t.get("name") == "test_tool":
-			assert_true(t.get("enabled", false), "Newly registered tool should be enabled by default")
+			assert_true(t.get("enabled", false), "Core tool should be enabled by default")
+
+func test_tool_enabled_default_supplementary():
+	_core.register_tool("test_supp_tool", "A supp tool", {"type": "object"}, func(args): return {"status": "ok"}, {}, {}, "supplementary", "Script-Advanced")
+	var tools: Array = _core.get_registered_tools()
+	for t in tools:
+		if t.get("name") == "test_supp_tool":
+			assert_false(t.get("enabled", true), "Supplementary tool should be disabled by default")
 
 func test_get_tools_count():
 	assert_eq(_core.get_tools_count(), 0, "Should have 0 tools initially")
