@@ -13,6 +13,11 @@ extends EditorPlugin
 		auto_start = value
 		notify_property_list_changed()
 
+@export var vibe_coding_mode: bool = true:
+	set(value):
+		vibe_coding_mode = value
+		notify_property_list_changed()
+
 @export var transport_mode: String = "http":
 	set(value):
 		if value == "stdio" or value == "http":
@@ -311,6 +316,12 @@ func _get_property_list() -> Array:
 	
 	properties.append({
 		"name": "auto_start",
+		"type": TYPE_BOOL,
+		"usage": PROPERTY_USAGE_DEFAULT
+	})
+
+	properties.append({
+		"name": "vibe_coding_mode",
 		"type": TYPE_BOOL,
 		"usage": PROPERTY_USAGE_DEFAULT
 	})

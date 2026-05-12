@@ -5,6 +5,8 @@
 class_name ScriptToolsNative
 extends RefCounted
 
+const VIBE_CODING_POLICY = preload("res://addons/godot_mcp/utils/vibe_coding_policy.gd")
+
 var _editor_interface: EditorInterface = null
 
 func initialize(editor_interface: EditorInterface) -> void:
@@ -18,6 +20,13 @@ func _get_editor_interface() -> EditorInterface:
 		if plugin and plugin.has_method("get_editor_interface"):
 			return plugin.get_editor_interface()
 	return null
+
+func _is_vibe_coding_mode() -> bool:
+	if Engine.has_meta("GodotMCPPlugin"):
+		var plugin = Engine.get_meta("GodotMCPPlugin")
+		if plugin and plugin.get("vibe_coding_mode") != null:
+			return bool(plugin.vibe_coding_mode)
+	return true
 
 # ============================================================================
 # 工具注册
@@ -1700,8 +1709,13 @@ func _register_open_script_at_line(server_core: RefCounted) -> void:
 			},
 			"grab_focus": {
 				"type": "boolean",
-				"description": "Whether the editor should grab focus. Default is true.",
+				"description": "Whether the editor should grab focus. Ignored unless allow_ui_focus=true when Vibe Coding mode is enabled.",
 				"default": true
+			},
+			"allow_ui_focus": {
+				"type": "boolean",
+				"description": "Allow this call to focus the script editor when Vibe Coding mode is enabled.",
+				"default": false
 			}
 		},
 		"required": ["script_path"]
@@ -1754,7 +1768,7 @@ func _tool_open_script_at_line(params: Dictionary) -> Dictionary:
 
 	var line: int = max(1, int(params.get("line", 1)))
 	var column: int = max(0, int(params.get("column", 0)))
-	var grab_focus: bool = params.get("grab_focus", true)
+	var grab_focus: bool = VIBE_CODING_POLICY.should_grab_focus(_is_vibe_coding_mode(), params, true)
 
 	editor_interface.edit_script(script_resource, line - 1, column, grab_focus)
 

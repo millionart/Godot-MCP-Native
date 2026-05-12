@@ -6,6 +6,8 @@
 class_name SceneToolsNative
 extends RefCounted
 
+const VIBE_CODING_POLICY = preload("res://addons/godot_mcp/utils/vibe_coding_policy.gd")
+
 var _editor_interface: EditorInterface = null
 var _scene_operation_in_progress: bool = false
 
@@ -20,6 +22,13 @@ func _get_editor_interface() -> EditorInterface:
 		if plugin and plugin.has_method("get_editor_interface"):
 			return plugin.get_editor_interface()
 	return null
+
+func _is_vibe_coding_mode() -> bool:
+	if Engine.has_meta("GodotMCPPlugin"):
+		var plugin = Engine.get_meta("GodotMCPPlugin")
+		if plugin and plugin.get("vibe_coding_mode") != null:
+			return bool(plugin.vibe_coding_mode)
+	return true
 
 func _get_user_scene_root() -> Node:
 	var editor_interface: EditorInterface = _get_editor_interface()
@@ -265,6 +274,11 @@ func _register_open_scene(server_core: RefCounted) -> void:
 			"scene_path": {
 				"type": "string",
 				"description": "Path to the scene file to open (e.g. 'res://scenes/Main.tscn')"
+			},
+			"allow_ui_focus": {
+				"type": "boolean",
+				"description": "Allow this call to change the active editor scene when Vibe Coding mode is enabled.",
+				"default": false
 			}
 		},
 		"required": ["scene_path"]
@@ -295,6 +309,10 @@ func _register_open_scene(server_core: RefCounted) -> void:
 						  "core", "Scene")
 
 func _tool_open_scene(params: Dictionary) -> Dictionary:
+	var policy_result: Dictionary = VIBE_CODING_POLICY.evaluate_editor_focus(_is_vibe_coding_mode(), params)
+	if policy_result.get("blocked", false):
+		return policy_result
+
 	if _scene_operation_in_progress:
 		return {"error": "Scene operation in progress, please retry"}
 	_scene_operation_in_progress = true
@@ -673,6 +691,11 @@ func _register_close_scene_tab(server_core: RefCounted) -> void:
 			"scene_path": {
 				"type": "string",
 				"description": "Optional scene path to close. If omitted, closes the currently active scene."
+			},
+			"allow_ui_focus": {
+				"type": "boolean",
+				"description": "Allow this call to activate or close editor scene tabs when Vibe Coding mode is enabled.",
+				"default": false
 			}
 		}
 	}
@@ -699,6 +722,10 @@ func _register_close_scene_tab(server_core: RefCounted) -> void:
 						  "supplementary", "Scene-Advanced")
 
 func _tool_close_scene_tab(params: Dictionary) -> Dictionary:
+	var policy_result: Dictionary = VIBE_CODING_POLICY.evaluate_editor_focus(_is_vibe_coding_mode(), params)
+	if policy_result.get("blocked", false):
+		return policy_result
+
 	var editor_interface: EditorInterface = _get_editor_interface()
 	if not editor_interface:
 		return {"error": "Editor interface not available"}
