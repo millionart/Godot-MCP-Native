@@ -68,6 +68,14 @@ git checkout -b integration/pr-review origin/main
 - 错误信息是否包含具体参数名
 - 是否有跨文件重复代码
 
+#### D. 多语言适配（UI 变更必检）
+涉及 UI 新增/修改文本时，必须检查：
+- UI 控件的 `.text` 是否通过 `_tr(key)` 赋值，而非硬编码字符串
+- 翻译文件 `addons/godot_mcp/translations/mcp_panel.csv` 是否新增了对应的 key 行
+- `_refresh_translations()` 方法是否对新增控件做了翻译刷新
+- 英文（en）和中文（zh）两列是否均有翻译内容
+- 若仅面向 MCP 协议层（工具描述、schema）无 UI 面板文本，则无需此检查
+
 ### 3.4 GUT 测试验收
 
 运行全量测试：
@@ -143,7 +151,7 @@ git commit
 | 原有函数修改 | 新增行为有对应断言 |
 | 导出变量 | get_script_property_list() 断言 |
 | Schema 新增参数 | input_schema.properties 包含该参数 |
-| UI 变更 | 信号连接 + handler 存在 |
+| UI 变更 | 信号连接 + handler 存在 + 多语言适配（_tr 赋值 + CSV key + _refresh_translations 刷新） |
 | 错误处理 | 缺参、空值、无效值每种至少一个 |
 
 ---

@@ -1,5 +1,15 @@
 extends "res://addons/gut/test.gd"
 
+var _editor_tools: RefCounted = null
+
+func before_each() -> void:
+	_editor_tools = load("res://addons/godot_mcp/tools/editor_tools_native.gd").new()
+
+func after_each() -> void:
+	_editor_tools = null
+	if Engine.has_meta("GodotMCPPlugin"):
+		Engine.remove_meta("GodotMCPPlugin")
+
 func test_editor_state_format():
 	var result: Dictionary = {
 		"active_scene": "Main",
@@ -62,3 +72,38 @@ func test_execute_script_result_format():
 	var error: Dictionary = {"status": "error", "error": "Parse failed"}
 	assert_has(success, "status", "Should have status")
 	assert_has(error, "error", "Error should have error message")
+
+# --- Vibe Coding policy guard tests ---
+
+func test_run_project_blocked_in_vibe_mode() -> void:
+	var result: Dictionary = _editor_tools._tool_run_project({})
+	assert_true(result.get("blocked", false), "run_project should be blocked in vibe mode")
+	assert_eq(result.get("reason", ""), "vibe_coding_mode", "Block reason should be vibe_coding_mode")
+
+func test_run_project_bypasses_with_allow_window() -> void:
+	var result: Dictionary = _editor_tools._tool_run_project({"allow_window": true})
+	assert_false(result.get("blocked", false), "allow_window should bypass vibe mode")
+
+func test_stop_project_blocked_in_vibe_mode() -> void:
+	var result: Dictionary = _editor_tools._tool_stop_project({})
+	assert_true(result.get("blocked", false), "stop_project should be blocked in vibe mode")
+
+func test_stop_project_bypasses_with_allow_window() -> void:
+	var result: Dictionary = _editor_tools._tool_stop_project({"allow_window": true})
+	assert_false(result.get("blocked", false), "allow_window should bypass vibe mode")
+
+func test_select_node_blocked_in_vibe_mode() -> void:
+	var result: Dictionary = _editor_tools._tool_select_node({"node_path": "/root/Main"})
+	assert_true(result.get("blocked", false), "select_node should be blocked in vibe mode")
+
+func test_select_node_bypasses_with_allow_ui_focus() -> void:
+	var result: Dictionary = _editor_tools._tool_select_node({"node_path": "/root/Main", "allow_ui_focus": true})
+	assert_false(result.get("blocked", false), "allow_ui_focus should bypass vibe mode")
+
+func test_select_file_blocked_in_vibe_mode() -> void:
+	var result: Dictionary = _editor_tools._tool_select_file({"file_path": "res://project.godot"})
+	assert_true(result.get("blocked", false), "select_file should be blocked in vibe mode")
+
+func test_select_file_bypasses_with_allow_ui_focus() -> void:
+	var result: Dictionary = _editor_tools._tool_select_file({"file_path": "res://project.godot", "allow_ui_focus": true})
+	assert_false(result.get("blocked", false), "allow_ui_focus should bypass vibe mode")

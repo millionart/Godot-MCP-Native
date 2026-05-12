@@ -19,6 +19,7 @@ ui.enable_sse,Enable SSE,Enable SSE,启用 SSE
 ui.allow_remote,Allow Remote Access,Allow Remote Access,允许远程访问
 ui.cors_origin,CORS Origin:,CORS Origin:,CORS 源：
 ui.auto_start,Auto Start,Auto Start,自动启动
+ui.vibe_coding_mode,Vibe Coding / Do Not Disturb,Vibe Coding / Do Not Disturb,Vibe Coding / 免打扰模式
 ui.log_level,Log Level:,Log Level:,日志级别：
 ui.security,Security:,Security:,安全级别：
 ui.rate_limit,Rate Limit:,Rate Limit:,速率限制：

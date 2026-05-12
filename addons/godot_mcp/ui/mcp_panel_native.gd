@@ -257,7 +257,7 @@ func _create_settings_tab() -> VBoxContainer:
 	content.add_child(_auto_start_check)
 
 	_vibe_coding_mode_check = CheckBox.new()
-	_vibe_coding_mode_check.text = "Vibe Coding / 免打扰模式"
+	_vibe_coding_mode_check.text = _tr("ui.vibe_coding_mode")
 	_vibe_coding_mode_check.toggled.connect(_on_vibe_coding_mode_toggled)
 	content.add_child(_vibe_coding_mode_check)
 
@@ -705,6 +705,8 @@ func _refresh_translations() -> void:
 		_allow_remote_check.text = _tr("ui.allow_remote")
 	if _auto_start_check:
 		_auto_start_check.text = _tr("ui.auto_start")
+	if _vibe_coding_mode_check:
+		_vibe_coding_mode_check.text = _tr("ui.vibe_coding_mode")
 	if _auth_token_edit:
 		_auth_token_edit.placeholder_text = _tr("ui.token_placeholder")
 	if _transport_title_label:

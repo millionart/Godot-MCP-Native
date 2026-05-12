@@ -42,6 +42,37 @@ func _on_vibe_coding_mode_toggled(button_pressed: bool) -> void:
 
 ---
 
+### 问题 5：Vibe Coding UI 文本硬编码，未适配多语言 ✅
+
+**文件：**
+- `addons/godot_mcp/ui/mcp_panel_native.gd:260`
+- `addons/godot_mcp/translations/mcp_panel.csv`
+
+**症状：** `_vibe_coding_mode_check.text = "Vibe Coding / 免打扰模式"` 硬编码了中英混合字符串，未使用 `_tr()` 翻译系统。翻译文件中缺少对应 key，`_refresh_translations()` 中也缺少该控件的刷新逻辑。切换语言时该复选框文本不会更新。
+
+**修复：**
+
+1. `mcp_panel_native.gd:260` — 改用 `_tr()` 赋值：
+```gdscript
+# 修复前
+_vibe_coding_mode_check.text = "Vibe Coding / 免打扰模式"
+# 修复后
+_vibe_coding_mode_check.text = _tr("ui.vibe_coding_mode")
+```
+
+2. `mcp_panel_native.gd:708-709` — 在 `_refresh_translations()` 中新增刷新：
+```gdscript
+if _vibe_coding_mode_check:
+    _vibe_coding_mode_check.text = _tr("ui.vibe_coding_mode")
+```
+
+3. `mcp_panel.csv` — 新增翻译 key 行：
+```csv
+ui.vibe_coding_mode,Vibe Coding / Do Not Disturb,Vibe Coding / Do Not Disturb,Vibe Coding / 免打扰模式
+```
+
+---
+
 ### 问题 4：缺少 GUT 测试覆盖 ✅
 
 **文件：** 新增以下测试文件
@@ -111,7 +142,7 @@ python test/quiet_mode_static_check.py
 | `editor_tools_native.gd` | 4 个工具策略检查 + schema | `test_editor_tools.gd` (新增) + `quiet_mode_runner.gd` | ✅ |
 | `scene_tools_native.gd` | 2 个工具策略检查 + schema | `test_scene_tools.gd` (新增) + `quiet_mode_runner.gd` | ✅ |
 | `script_tools_native.gd` | `open_script_at_line` 策略检查 | `quiet_mode_runner.gd` | ✅ |
-| `mcp_panel_native.gd` | UI 复选框 + toggle handler | 无（UI 手动测试） | ⚠️ |
+| `mcp_panel_native.gd` | UI 复选框 + toggle handler + 多语言适配 | 无（UI 手动测试），多语言已修复 | ✅ |
 | `tools-reference.md` | 文档更新 | N/A | ✅ |
 | `quiet_mode_static_check.py` (新增) | Python 静态检查 | N/A（测试工具自身） | ✅ |
 | `quiet_mode_runner.gd` (新增) | 独立 SceneTree 运行器 | N/A（测试工具自身） | ✅ |
@@ -125,4 +156,4 @@ python test/quiet_mode_static_check.py
 | 功能完整性 | ⭐⭐⭐⭐⭐ | 策略→工具→UI→文档 全闭环 |
 | 测试覆盖 | ⭐⭐⭐⭐ | 核心逻辑覆盖完整，新增文件覆盖完整 |
 | GUT 通过率 | ⭐⭐⭐⭐⭐ | 0 failures / 0 errors / 0 risky |
-| 代码规范 | ⭐⭐⭐⭐ | 已修复持久化 bug，2 个优化项已记录 |
+| 代码规范 | ⭐⭐⭐⭐⭐ | 已修复持久化 bug + 多语言适配，2 个优化项已记录 |
