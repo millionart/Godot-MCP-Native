@@ -43,6 +43,16 @@ var _debounce_timer: Timer = null
 var _group_widgets: Dictionary = {}
 var _language_option: OptionButton = null
 
+var _log_buffer: Array[String] = []
+var _max_log_lines: int = 100
+var _log_flush_index: int = 0
+var _log_debounce_timer: Timer = null
+var _log_file_path: String = "user://mcp_server.log"
+var _log_file_flush_count: int = 50
+var _log_pending_write: Array[String] = []
+var _log_file_initialized: bool = false
+var _max_log_file_size: int = 5242880
+
 var _translation_manager: MCPTranslationManager = null
 var _settings_manager: MCPSettingsManager = null
 
@@ -354,6 +364,12 @@ func _create_log_tab() -> VBoxContainer:
 	_clear_log_button.size_flags_horizontal = Control.SIZE_SHRINK_END
 	content.add_child(_clear_log_button)
 
+	_log_debounce_timer = Timer.new()
+	_log_debounce_timer.wait_time = 0.1
+	_log_debounce_timer.one_shot = true
+	_log_debounce_timer.timeout.connect(_flush_log_buffer)
+	add_child(_log_debounce_timer)
+
 	return tab
 
 func _create_tools_tab() -> VBoxContainer:
@@ -577,6 +593,9 @@ func _on_clear_log_pressed() -> void:
 	clear_log()
 
 func clear_log() -> void:
+	_log_buffer.clear()
+	_log_flush_index = 0
+	_log_pending_write.clear()
 	if _log_text_edit:
 		_log_text_edit.text = ""
 
@@ -841,7 +860,53 @@ func update_log(message: String) -> void:
 func _append_log(message: String) -> void:
 	if not _log_text_edit:
 		return
-	_log_text_edit.text += message + "\n"
+	_log_buffer.append(message)
+	_log_pending_write.append(message)
+	if _log_buffer.size() > _max_log_lines * 2:
+		_log_buffer = _log_buffer.slice(_log_buffer.size() - _max_log_lines)
+		_log_flush_index = 0
+	if _log_pending_write.size() >= _log_file_flush_count:
+		_flush_log_to_file()
+	if _log_debounce_timer and _log_debounce_timer.is_stopped():
+		_log_debounce_timer.start()
+
+func _flush_log_to_file() -> void:
+	if _log_pending_write.is_empty():
+		return
+	if not _log_file_initialized:
+		if FileAccess.file_exists(_log_file_path):
+			var existing: FileAccess = FileAccess.open(_log_file_path, FileAccess.READ)
+			if existing:
+				var size: int = existing.get_length()
+				existing.close()
+				if size > _max_log_file_size:
+					var old_path: String = _log_file_path + ".1"
+					if FileAccess.file_exists(old_path):
+						DirAccess.remove_absolute(ProjectSettings.globalize_path(old_path))
+					DirAccess.rename_absolute(ProjectSettings.globalize_path(_log_file_path), ProjectSettings.globalize_path(old_path))
+		var file: FileAccess = FileAccess.open(_log_file_path, FileAccess.WRITE)
+		if file:
+			file.close()
+		_log_file_initialized = true
+	var file: FileAccess = FileAccess.open(_log_file_path, FileAccess.READ_WRITE)
+	if file:
+		file.seek_end()
+		for line in _log_pending_write:
+			file.store_line(line)
+		file.close()
+	_log_pending_write.clear()
+	_log_buffer.append("[MCP] Log flushed to %s" % _log_file_path)
+	if _log_debounce_timer and _log_debounce_timer.is_stopped():
+		_log_debounce_timer.start()
+
+func _flush_log_buffer() -> void:
+	if not _log_text_edit:
+		return
+	if _log_flush_index >= _log_buffer.size():
+		return
+	_log_flush_index = _log_buffer.size()
+	var start_index: int = maxi(0, _log_buffer.size() - _max_log_lines)
+	_log_text_edit.text = "\n".join(_log_buffer.slice(start_index))
 	_log_text_edit.scroll_vertical = _log_text_edit.get_line_count()
 
 func refresh() -> void:
