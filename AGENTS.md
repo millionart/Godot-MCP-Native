@@ -18,6 +18,12 @@
 - Add comments for complex logic
 - Error handling: use assertions in GDScript
 
+### 测试规范（强制）
+每次修改代码必须在 `test/` 中更新或创建对应的测试用例：
+- **直接测试**：覆盖本次改动的逻辑（正常路径 + 边界条件 + 错误处理）
+- **影响范围测试**：识别并测试可能被本次改动影响的关联模块（如修改了公共方法签名、导出变量、信号、策略类等，需覆盖所有调用方）
+- 禁止提交仅有代码改动而无测试更新的 commit
+
 ## New Tool Workflow
 
 When creating a new MCP tool, you MUST complete ALL of the following steps:
