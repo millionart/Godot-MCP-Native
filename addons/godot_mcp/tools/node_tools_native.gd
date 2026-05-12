@@ -308,7 +308,8 @@ func _register_batch_update_node_properties(server_core: RefCounted) -> void:
 				"changes": {"type": "array"}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
+		"supplementary", "Node-Advanced"
 	)
 
 func _tool_batch_update_node_properties(params: Dictionary) -> Dictionary:
@@ -422,7 +423,8 @@ func _register_batch_scene_node_edits(server_core: RefCounted) -> void:
 				"operations": {"type": "array"}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": true, "idempotentHint": false, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": true, "idempotentHint": false, "openWorldHint": false},
+		"supplementary", "Node-Advanced"
 	)
 
 func _tool_batch_scene_node_edits(params: Dictionary) -> Dictionary:
@@ -651,7 +653,8 @@ func _register_audit_scene_node_persistence(server_core: RefCounted) -> void:
 				"issues": {"type": "array"}
 			}
 		},
-		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"supplementary", "Node-Advanced"
 	)
 
 func _tool_audit_scene_node_persistence(params: Dictionary) -> Dictionary:
@@ -704,7 +707,8 @@ func _register_audit_scene_inheritance(server_core: RefCounted) -> void:
 				"issues": {"type": "array"}
 			}
 		},
-		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"supplementary", "Node-Advanced"
 	)
 
 func _tool_audit_scene_inheritance(params: Dictionary) -> Dictionary:

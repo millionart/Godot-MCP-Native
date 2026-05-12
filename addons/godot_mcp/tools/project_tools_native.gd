@@ -216,7 +216,8 @@ func _register_list_project_input_actions(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_list_project_input_actions"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_list_project_input_actions(params: Dictionary) -> Dictionary:
 	var action_name: String = str(params.get("action_name", "")).strip_edges()
@@ -263,7 +264,8 @@ func _register_upsert_project_input_action(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_upsert_project_input_action"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_upsert_project_input_action(params: Dictionary) -> Dictionary:
 	var action_name: String = str(params.get("action_name", "")).strip_edges()
@@ -336,7 +338,8 @@ func _register_remove_project_input_action(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_remove_project_input_action"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_remove_project_input_action(params: Dictionary) -> Dictionary:
 	var action_name: String = str(params.get("action_name", "")).strip_edges()
@@ -403,7 +406,8 @@ func _register_list_project_autoloads(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_list_project_autoloads"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_list_project_autoloads(params: Dictionary) -> Dictionary:
 	var filter: String = str(params.get("filter", "")).strip_edges().to_lower()
@@ -466,7 +470,8 @@ func _register_list_project_global_classes(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_list_project_global_classes"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_list_project_global_classes(params: Dictionary) -> Dictionary:
 	var filter: String = str(params.get("filter", "")).strip_edges().to_lower()
@@ -537,7 +542,8 @@ func _register_get_class_api_metadata(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_class_api_metadata"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_get_class_api_metadata(params: Dictionary) -> Dictionary:
 	var target_class_name: String = str(params.get("class_name", "")).strip_edges()
@@ -603,7 +609,8 @@ func _register_list_project_tests(server_core: RefCounted) -> void:
 				"tests": {"type": "array"}
 			}
 		},
-		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
+		"supplementary", "Project-Advanced"
 	)
 
 func _tool_list_project_tests(params: Dictionary) -> Dictionary:
@@ -663,7 +670,8 @@ func _register_run_project_test(server_core: RefCounted) -> void:
 				"output": {"type": "array"}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
+		"supplementary", "Project-Advanced"
 	)
 
 func _tool_run_project_test(params: Dictionary) -> Dictionary:
@@ -715,7 +723,8 @@ func _register_run_project_tests(server_core: RefCounted) -> void:
 				"results": {"type": "array"}
 			}
 		},
-		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
+		"supplementary", "Project-Advanced"
 	)
 
 func _tool_run_project_tests(params: Dictionary) -> Dictionary:
@@ -914,7 +923,8 @@ func _register_inspect_csharp_project_support(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_inspect_csharp_project_support"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_inspect_csharp_project_support(params: Dictionary) -> Dictionary:
 	var search_path: String = str(params.get("search_path", "res://")).strip_edges()
@@ -998,7 +1008,8 @@ func _register_compare_render_screenshots(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_compare_render_screenshots"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_compare_render_screenshots(params: Dictionary) -> Dictionary:
 	var baseline_path: String = str(params.get("baseline_path", "")).strip_edges()
@@ -1117,7 +1128,8 @@ func _register_inspect_tileset_resource(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_inspect_tileset_resource"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_inspect_tileset_resource(params: Dictionary) -> Dictionary:
 	var resource_path: String = str(params.get("resource_path", "")).strip_edges()
@@ -1516,7 +1528,8 @@ func _register_reimport_resources(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_reimport_resources"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_reimport_resources(params: Dictionary) -> Dictionary:
 	var raw_paths: Array = params.get("resource_paths", [])
@@ -1624,7 +1637,8 @@ func _register_get_import_metadata(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_import_metadata"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_get_import_metadata(params: Dictionary) -> Dictionary:
 	var resource_path: String = str(params.get("resource_path", "")).strip_edges()
@@ -1719,7 +1733,8 @@ func _register_get_resource_uid_info(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_resource_uid_info"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_get_resource_uid_info(params: Dictionary) -> Dictionary:
 	var resource_path: String = str(params.get("resource_path", "")).strip_edges()
@@ -1805,7 +1820,8 @@ func _register_fix_resource_uid(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_fix_resource_uid"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_fix_resource_uid(params: Dictionary) -> Dictionary:
 	var resource_path: String = str(params.get("resource_path", "")).strip_edges()
@@ -1884,7 +1900,8 @@ func _register_get_resource_dependencies(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_resource_dependencies"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_get_resource_dependencies(params: Dictionary) -> Dictionary:
 	var resource_path: String = str(params.get("resource_path", "")).strip_edges()
@@ -1949,7 +1966,8 @@ func _register_scan_missing_resource_dependencies(server_core: RefCounted) -> vo
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_scan_missing_resource_dependencies"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_scan_missing_resource_dependencies(params: Dictionary) -> Dictionary:
 	var search_path: String = str(params.get("search_path", "res://")).strip_edges()
@@ -2033,7 +2051,8 @@ func _register_scan_cyclic_resource_dependencies(server_core: RefCounted) -> voi
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_scan_cyclic_resource_dependencies"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_scan_cyclic_resource_dependencies(params: Dictionary) -> Dictionary:
 	var search_path: String = str(params.get("search_path", "res://")).strip_edges()
@@ -2231,7 +2250,8 @@ func _register_detect_broken_scripts(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_detect_broken_scripts"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_detect_broken_scripts(params: Dictionary) -> Dictionary:
 	var search_path: String = str(params.get("search_path", "res://")).strip_edges()
@@ -2338,7 +2358,8 @@ func _register_audit_project_health(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_audit_project_health"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Project-Advanced")
 
 func _tool_audit_project_health(params: Dictionary) -> Dictionary:
 	var search_path: String = str(params.get("search_path", "res://")).strip_edges()

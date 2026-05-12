@@ -622,7 +622,8 @@ func _register_list_open_scenes(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_list_open_scenes"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Scene-Advanced")
 
 func _tool_list_open_scenes(params: Dictionary) -> Dictionary:
 	var editor_interface: EditorInterface = _get_editor_interface()
@@ -694,7 +695,8 @@ func _register_close_scene_tab(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_close_scene_tab"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Scene-Advanced")
 
 func _tool_close_scene_tab(params: Dictionary) -> Dictionary:
 	var editor_interface: EditorInterface = _get_editor_interface()

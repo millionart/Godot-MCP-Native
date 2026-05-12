@@ -1,0 +1,1358 @@
+Godot Engine v4.6.1.stable.official.14d19694e - https://godotengine.org
+
+---  GUT  ---
+[1m[INFO]:  [0musing [C:/Users/hanme/AppData/Roaming/Godot/app_userdata/Godot MCP Native] for temporary output.
+Godot version:  4.6.1
+GUT version:  9.6.0
+[4m
+
+res://test/unit/test_http_parsing.gd
+[0m* test_http_response_content_length_bytes
+[32m    [Passed]:  [0m[24] expected to be > than [16]:  UTF-8 Chinese chars should have more bytes than characters
+* test_http_response_ascii_content_length
+[32m    [Passed]:  [0m[16] expected to equal [16]:  ASCII content should have same bytes as characters
+* test_json_parse_string_dict
+[32m    [Passed]:  [0mShould parse to Dictionary
+[32m    [Passed]:  [0m[10.0] expected to equal [10.0]:  Should have correct x value
+* test_json_parse_string_array
+[32m    [Passed]:  [0mShould parse to Array
+[32m    [Passed]:  [0m[3] expected to equal [3]:  Should have 3 elements
+* test_json_parse_string_nested
+[32m    [Passed]:  [0mShould parse nested dict
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should have 1 content item
+* test_json_stringify_unicode
+[32m    [Passed]:  [0m["你好世界"] expected to equal ["你好世界"]:  Should round-trip Unicode correctly
+* test_json_stringify_content_length
+[32m    [Passed]:  [0m[29] expected to be > than [17]:  Chinese content should have more bytes than chars
+* test_http_header_case_insensitive
+[32m    [Passed]:  [0mShould find exact case header
+[32m    [Passed]:  [0mShould find lowercase header
+* test_http_header_value_split
+[32m    [Passed]:  [0m["authorization"] expected to equal ["authorization"]:  Key should be lowercase
+[32m    [Passed]:  [0m["Bearer token123"] expected to equal ["Bearer token123"]:  Value should preserve case and spaces after colon
+* test_http_header_value_with_colon
+[32m    [Passed]:  [0m["application/json; charset=utf-8"] expected to equal ["application/json; charset=utf-8"]:  Should handle colons in value
+* test_mcp_notification_no_id
+[32m    [Passed]:  [0mNotification should not have id field
+* test_mcp_request_has_id
+[32m    [Passed]:  [0mRequest should have id field
+* test_http_202_for_notifications
+[32m    [Passed]:  [0mPlaceholder: 202 Accepted should be returned for notifications without id
+* test_utf8_buffer_round_trip
+[32m    [Passed]:  [0m["Hello 世界 🌍"] expected to equal ["Hello 世界 🌍"]:  UTF-8 buffer should round-trip correctly
+[1m14/14 passed.
+[0m[4m
+
+res://test/unit/test_mcp_auth_manager.gd
+[0m* test_validate_correct_token
+[32m    [Passed]:  [0mCorrect token should pass
+* test_validate_wrong_token
+[32m    [Passed]:  [0mWrong token should be rejected
+* test_validate_no_auth_header
+[32m    [Passed]:  [0mMissing auth header should be rejected
+* test_validate_wrong_scheme
+[32m    [Passed]:  [0mWrong scheme should be rejected
+* test_validate_empty_bearer
+[32m    [Passed]:  [0mEmpty bearer token should be rejected
+* test_auth_disabled
+[32m    [Passed]:  [0mDisabled auth should allow any request
+* test_auth_disabled_wrong_token
+[32m    [Passed]:  [0mDisabled auth should allow wrong token
+* test_set_token_too_short
+[32m    [Passed]:  [0m["1234567890abcdef"] expected to equal ["1234567890abcdef"]:  Initial token should be set from before_each
+[32m    [Passed]:  [0m[16] expected to equal [16]:  Token should meet minimum length requirement
+* test_set_token_valid_length
+[32m    [Passed]:  [0m["1234567890abcdef"] expected to equal ["1234567890abcdef"]:  Valid length token should be set
+* test_www_authenticate_header
+[32m    [Passed]:  [0mShould contain Bearer scheme
+[32m    [Passed]:  [0mShould contain realm
+* test_timing_safe_comparison
+[32m    [Passed]:  [0mShort token should be rejected
+[32m    [Passed]:  [0mLong token should be rejected
+* test_generate_token
+[32m    [Passed]:  [0m[32] expected to equal [32]:  Generated token should be 32 chars
+* test_generate_token_custom_length
+[32m    [Passed]:  [0m[16] expected to equal [16]:  Generated token should be 16 chars
+* test_header_name_lowercase
+[32m    [Passed]:  [0m["authorization"] expected to equal ["authorization"]:  Header name should be lowercase
+[1m14/14 passed.
+[0m[4m
+
+res://test/unit/test_mcp_debugger_bridge.gd
+[0m* test_get_sessions_info_empty_before_registered_with_editor
+ERROR: Class 'EditorDebuggerPlugin' can only be instantiated by editor.
+   at: _instantiate_internal (core/object/class_db.cpp:581)
+   GDScript backtrace (most recent call first):
+       [0] before_each (res://test/unit/test_mcp_debugger_bridge.gd:6)
+       [1] _run_test (res://addons/gut/gut.gd:605)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+       [3] test_scripts (res://addons/gut/gut.gd:1030)
+       [4] run_tests (res://addons/gut/gui/GutRunner.gd:198)
+       [5] _run_tests (res://addons/gut/cli/gut_cli.gd:238)
+       [6] main (res://addons/gut/cli/gut_cli.gd:284)
+       [7] _init (res://addons/gut/gut_cmdln.gd:38)
+ERROR: Can't inherit from a virtual class.
+   at: _new (modules/gdscript/gdscript.cpp:230)
+   GDScript backtrace (most recent call first):
+       [0] before_each (res://test/unit/test_mcp_debugger_bridge.gd:6)
+       [1] _run_test (res://addons/gut/gut.gd:605)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+       [3] test_scripts (res://addons/gut/gut.gd:1030)
+       [4] run_tests (res://addons/gut/gui/GutRunner.gd:198)
+       [5] _run_tests (res://addons/gut/cli/gut_cli.gd:238)
+       [6] main (res://addons/gut/cli/gut_cli.gd:284)
+       [7] _init (res://addons/gut/gut_cmdln.gd:38)
+SCRIPT ERROR: Invalid call. Nonexistent function 'get_sessions_info' in base 'Nil'.
+   at: test_get_sessions_info_empty_before_registered_with_editor (res://test/unit/test_mcp_debugger_bridge.gd:12)
+   GDScript backtrace (most recent call first):
+       [0] test_get_sessions_info_empty_before_registered_with_editor (res://test/unit/test_mcp_debugger_bridge.gd:12)
+       [1] _run_test (res://addons/gut/gut.gd:615)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+       [3] test_scripts (res://addons/gut/gut.gd:1030)
+       [4] run_tests (res://addons/gut/gui/GutRunner.gd:198)
+       [5] _run_tests (res://addons/gut/cli/gut_cli.gd:238)
+       [6] main (res://addons/gut/cli/gut_cli.gd:284)
+       [7] _init (res://addons/gut/gut_cmdln.gd:38)
+[31m    [Failed]:  [0mUnexpected Errors:
+    [1] <engine-2>Invalid call. Nonexistent function 'get_sessions_info' in base 'Nil'.
+      at line -1
+* test_for_each_session_returns_no_sessions_when_unregistered
+ERROR: Class 'EditorDebuggerPlugin' can only be instantiated by editor.
+   at: _instantiate_internal (core/object/class_db.cpp:581)
+   GDScript backtrace (most recent call first):
+       [0] before_each (res://test/unit/test_mcp_debugger_bridge.gd:6)
+       [1] _run_test (res://addons/gut/gut.gd:605)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+ERROR: Can't inherit from a virtual class.
+   at: _new (modules/gdscript/gdscript.cpp:230)
+   GDScript backtrace (most recent call first):
+       [0] before_each (res://test/unit/test_mcp_debugger_bridge.gd:6)
+       [1] _run_test (res://addons/gut/gut.gd:605)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+SCRIPT ERROR: Invalid call. Nonexistent function 'set_breakpoint' in base 'Nil'.
+   at: test_for_each_session_returns_no_sessions_when_unregistered (res://test/unit/test_mcp_debugger_bridge.gd:16)
+   GDScript backtrace (most recent call first):
+       [0] test_for_each_session_returns_no_sessions_when_unregistered (res://test/unit/test_mcp_debugger_bridge.gd:16)
+       [1] _run_test (res://addons/gut/gut.gd:615)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+[31m    [Failed]:  [0mUnexpected Errors:
+    [1] <engine-2>Invalid call. Nonexistent function 'set_breakpoint' in base 'Nil'.
+      at line -1
+* test_capture_prefix_defaults_to_mcp
+ERROR: Class 'EditorDebuggerPlugin' can only be instantiated by editor.
+   at: _instantiate_internal (core/object/class_db.cpp:581)
+   GDScript backtrace (most recent call first):
+       [0] before_each (res://test/unit/test_mcp_debugger_bridge.gd:6)
+       [1] _run_test (res://addons/gut/gut.gd:605)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+ERROR: Can't inherit from a virtual class.
+   at: _new (modules/gdscript/gdscript.cpp:230)
+   GDScript backtrace (most recent call first):
+       [0] before_each (res://test/unit/test_mcp_debugger_bridge.gd:6)
+       [1] _run_test (res://addons/gut/gut.gd:605)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+SCRIPT ERROR: Invalid call. Nonexistent function '_has_capture' in base 'Nil'.
+   at: test_capture_prefix_defaults_to_mcp (res://test/unit/test_mcp_debugger_bridge.gd:21)
+   GDScript backtrace (most recent call first):
+       [0] test_capture_prefix_defaults_to_mcp (res://test/unit/test_mcp_debugger_bridge.gd:21)
+       [1] _run_test (res://addons/gut/gut.gd:615)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+[31m    [Failed]:  [0mUnexpected Errors:
+    [1] <engine-2>Invalid call. Nonexistent function '_has_capture' in base 'Nil'.
+      at line -1
+* test_add_capture_prefix
+ERROR: Class 'EditorDebuggerPlugin' can only be instantiated by editor.
+   at: _instantiate_internal (core/object/class_db.cpp:581)
+   GDScript backtrace (most recent call first):
+       [0] before_each (res://test/unit/test_mcp_debugger_bridge.gd:6)
+       [1] _run_test (res://addons/gut/gut.gd:605)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+ERROR: Can't inherit from a virtual class.
+   at: _new (modules/gdscript/gdscript.cpp:230)
+   GDScript backtrace (most recent call first):
+       [0] before_each (res://test/unit/test_mcp_debugger_bridge.gd:6)
+       [1] _run_test (res://addons/gut/gut.gd:605)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+SCRIPT ERROR: Invalid call. Nonexistent function 'add_capture_prefix' in base 'Nil'.
+   at: test_add_capture_prefix (res://test/unit/test_mcp_debugger_bridge.gd:25)
+   GDScript backtrace (most recent call first):
+       [0] test_add_capture_prefix (res://test/unit/test_mcp_debugger_bridge.gd:25)
+       [1] _run_test (res://addons/gut/gut.gd:615)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+[31m    [Failed]:  [0mUnexpected Errors:
+    [1] <engine-2>Invalid call. Nonexistent function 'add_capture_prefix' in base 'Nil'.
+      at line -1
+* test_capture_stores_messages
+ERROR: Class 'EditorDebuggerPlugin' can only be instantiated by editor.
+   at: _instantiate_internal (core/object/class_db.cpp:581)
+   GDScript backtrace (most recent call first):
+       [0] before_each (res://test/unit/test_mcp_debugger_bridge.gd:6)
+       [1] _run_test (res://addons/gut/gut.gd:605)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+ERROR: Can't inherit from a virtual class.
+   at: _new (modules/gdscript/gdscript.cpp:230)
+   GDScript backtrace (most recent call first):
+       [0] before_each (res://test/unit/test_mcp_debugger_bridge.gd:6)
+       [1] _run_test (res://addons/gut/gut.gd:605)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+SCRIPT ERROR: Invalid call. Nonexistent function '_capture' in base 'Nil'.
+   at: test_capture_stores_messages (res://test/unit/test_mcp_debugger_bridge.gd:29)
+   GDScript backtrace (most recent call first):
+       [0] test_capture_stores_messages (res://test/unit/test_mcp_debugger_bridge.gd:29)
+       [1] _run_test (res://addons/gut/gut.gd:615)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+[31m    [Failed]:  [0mUnexpected Errors:
+    [1] <engine-2>Invalid call. Nonexistent function '_capture' in base 'Nil'.
+      at line -1
+* test_stack_dump_signal_updates_latest_frames
+ERROR: Class 'EditorDebuggerPlugin' can only be instantiated by editor.
+   at: _instantiate_internal (core/object/class_db.cpp:581)
+   GDScript backtrace (most recent call first):
+       [0] before_each (res://test/unit/test_mcp_debugger_bridge.gd:6)
+       [1] _run_test (res://addons/gut/gut.gd:605)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+ERROR: Can't inherit from a virtual class.
+   at: _new (modules/gdscript/gdscript.cpp:230)
+   GDScript backtrace (most recent call first):
+       [0] before_each (res://test/unit/test_mcp_debugger_bridge.gd:6)
+       [1] _run_test (res://addons/gut/gut.gd:605)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+SCRIPT ERROR: Invalid call. Nonexistent function '_on_stack_dump' in base 'Nil'.
+   at: test_stack_dump_signal_updates_latest_frames (res://test/unit/test_mcp_debugger_bridge.gd:38)
+   GDScript backtrace (most recent call first):
+       [0] test_stack_dump_signal_updates_latest_frames (res://test/unit/test_mcp_debugger_bridge.gd:38)
+       [1] _run_test (res://addons/gut/gut.gd:615)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+[31m    [Failed]:  [0mUnexpected Errors:
+    [1] <engine-2>Invalid call. Nonexistent function '_on_stack_dump' in base 'Nil'.
+      at line -1
+* test_stack_frame_var_decodes_variable_payload
+ERROR: Class 'EditorDebuggerPlugin' can only be instantiated by editor.
+   at: _instantiate_internal (core/object/class_db.cpp:581)
+   GDScript backtrace (most recent call first):
+       [0] before_each (res://test/unit/test_mcp_debugger_bridge.gd:6)
+       [1] _run_test (res://addons/gut/gut.gd:605)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+ERROR: Can't inherit from a virtual class.
+   at: _new (modules/gdscript/gdscript.cpp:230)
+   GDScript backtrace (most recent call first):
+       [0] before_each (res://test/unit/test_mcp_debugger_bridge.gd:6)
+       [1] _run_test (res://addons/gut/gut.gd:605)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+SCRIPT ERROR: Invalid call. Nonexistent function '_on_stack_frame_vars' in base 'Nil'.
+   at: test_stack_frame_var_decodes_variable_payload (res://test/unit/test_mcp_debugger_bridge.gd:43)
+   GDScript backtrace (most recent call first):
+       [0] test_stack_frame_var_decodes_variable_payload (res://test/unit/test_mcp_debugger_bridge.gd:43)
+       [1] _run_test (res://addons/gut/gut.gd:615)
+       [2] _test_the_scripts (res://addons/gut/gut.gd:818)
+[31m    [Failed]:  [0mUnexpected Errors:
+    [1] <engine-2>Invalid call. Nonexistent function '_on_stack_frame_vars' in base 'Nil'.
+      at line -1
+[1m0/7 passed.
+[0m[4m
+
+res://test/unit/test_mcp_http_server.gd
+[0m* test_parse_http_request_post
+[32m    [Passed]:  [0m["POST"] expected to equal ["POST"]:  Method should be POST
+[32m    [Passed]:  [0m["/mcp"] expected to equal ["/mcp"]:  Path should be /mcp
+[32m    [Passed]:  [0m["HTTP/1.1"] expected to equal ["HTTP/1.1"]:  Version should be HTTP/1.1
+* test_parse_http_request_headers
+[32m    [Passed]:  [0m["application/json"] expected to equal ["application/json"]:  Content-Type should be parsed
+[32m    [Passed]:  [0m["Bearer test123"] expected to equal ["Bearer test123"]:  Authorization should be parsed
+* test_parse_http_request_headers_case_insensitive
+[32m    [Passed]:  [0mHeader names should be lowercased
+* test_parse_http_request_body
+[32m    [Passed]:  [0mShould have body content
+* test_parse_http_get_request
+[32m    [Passed]:  [0m["GET"] expected to equal ["GET"]:  Method should be GET
+[32m    [Passed]:  [0m["/mcp"] expected to equal ["/mcp"]:  Path should be /mcp
+* test_parse_http_options_request
+[32m    [Passed]:  [0m["OPTIONS"] expected to equal ["OPTIONS"]:  Method should be OPTIONS
+* test_generate_session_id
+[32m    [Passed]:  [0m[32] expected to equal [32]:  Session ID should be 32 characters
+[32m    [Passed]:  [0m["XS6B10WJRt9iEBdtSGrhIMv5vHanESPX"] expected to not equal ["aCIR7IrhiFTmxEMSnJ1QKnz95EQXt0Ra"]:  Session IDs should be unique
+* test_generate_session_id_characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+[32m    [Passed]:  [0mSession ID should only contain alphanumeric characters
+* test_set_port
+[32m    [Passed]:  [0m[9999] expected to equal [9999]:  Port should be set to 9999
+* test_set_port_while_running
+[32m    [Passed]:  [0m[9080] expected to equal [9080]:  Default port should be 9080
+* test_is_running_initially
+[32m    [Passed]:  [0mShould not be running initially
+* test_set_auth_manager
+[32m    [Passed]:  [0m[<RefCounted#-9223371944127100172>(mcp_auth_manager.gd)] expected to not equal [<null>]:  Auth manager should be set
+* test_set_remote_config
+[32m    [Passed]:  [0m[true] expected to equal [true]:  Allow remote should be true
+[32m    [Passed]:  [0m["http://localhost:3000"] expected to equal ["http://localhost:3000"]:  CORS origin should be set
+* test_max_request_size_constant
+[32m    [Passed]:  [0m[1048576] expected to equal [1048576]:  Max request size should be 1MB
+* test_request_timeout_constant
+[32m    [Passed]:  [0m[30.0] expected to equal [30.0]:  Request timeout should be 30 seconds
+* test_auth_header_constants
+[32m    [Passed]:  [0m["authorization"] expected to equal ["authorization"]:  Auth header should be 'authorization'
+[32m    [Passed]:  [0m["Bearer"] expected to equal ["Bearer"]:  Auth scheme should be 'Bearer'
+[1m16/16 passed.
+[0m[4m
+
+res://test/unit/test_mcp_resource_manager.gd
+[0m* test_register_resource
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should have 1 resource
+* test_register_multiple_resources
+[32m    [Passed]:  [0m[2] expected to equal [2]:  Should have 2 resources
+* test_register_resource_overwrite
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should still have 1 resource (overwritten)
+* test_unregister_resource
+[32m    [Passed]:  [0mShould return true for existing resource
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Should have 0 resources after unregister
+* test_unregister_nonexistent
+[32m    [Passed]:  [0mShould return false for nonexistent resource
+* test_list_resources
+[32m    [Passed]:  [0m[2] expected to equal [2]:  Should list 2 resources
+* test_list_resources_format
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "uri": "godot://scene/list", "name": "Scene List", "mimeType": "application/json" })] to contain value:  ["uri"]:  Resource should have uri
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "uri": "godot://scene/list", "name": "Scene List", "mimeType": "application/json" })] to contain value:  ["name"]:  Resource should have name
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "uri": "godot://scene/list", "name": "Scene List", "mimeType": "application/json" })] to contain value:  ["mimeType"]:  Resource should have mimeType
+* test_read_resource
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "scenes": ["test.tscn"] })] to contain value:  ["scenes"]:  Should return resource data
+* test_read_nonexistent_resource
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "jsonrpc": "2.0", "id": <null>, "error": { "code": -32602, "message": "Resource not found: godot://nonexistent" } })] to contain value:  ["error"]:  Should return error for nonexistent resource
+* test_read_resource_callable_error
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "jsonrpc": "2.0", "id": <null>, "error": { "code": -32603, "message": "load failed" } })] to contain value:  ["error"]:  Should return error when callable returns error
+* test_get_resource_count_empty
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Should be 0 when empty
+* test_resource_registered_signal
+[32m    [Passed]:  [0mExpected object <RefCounted#-9223371942650705123>(mcp_resource_manager.gd) to have emitted signal [resource_registered]:  
+[1m12/12 passed.
+[0m[4m
+
+res://test/unit/test_mcp_server_core.gd
+[0m* test_negotiate_protocol_version_supported
+[32m    [Passed]:  [0m["2025-11-25"] expected to equal ["2025-11-25"]:  Should return same version when supported
+* test_negotiate_protocol_version_older
+[32m    [Passed]:  [0m["2024-11-05"] expected to equal ["2024-11-05"]:  Should return older supported version
+* test_negotiate_protocol_version_unsupported
+[32m    [Passed]:  [0m["2025-11-25"] expected to not equal ["2099-01-01"]:  Should not return unsupported version
+* test_register_tool
+[32m    [Passed]:  [0mShould have registered tool
+* test_unregister_tool
+[32m    [Passed]:  [0mShould not have unregistered tool
+* test_set_tool_enabled
+[32m    [Passed]:  [0mDisabled tool should still exist in tools dict
+[32m    [Passed]:  [0mDisabled tool should have enabled=false
+[32m    [Passed]:  [0mDisabled tool should appear in get_registered_tools
+* test_set_tool_enabled_re_enable
+[32m    [Passed]:  [0mRe-enabled tool should exist
+[32m    [Passed]:  [0mRe-enabled tool should have enabled=true
+* test_disabled_tool_not_in_tools_list
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should only have 1 enabled tool in tools/list response
+[32m    [Passed]:  [0m["other_tool"] expected to equal ["other_tool"]:  Only other_tool should appear
+* test_disabled_tool_call_returns_error
+[32m    [Passed]:  [0mCalling disabled tool should return isError
+* test_tool_enabled_default
+[32m    [Passed]:  [0mNewly registered tool should be enabled by default
+* test_get_tools_count
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Should have 0 tools initially
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should have 1 tool after registration
+* test_get_resources_count
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Should have 0 resources initially
+* test_register_resource
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should have 1 resource after registration
+* test_clear_cache
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Cache should be empty after clear
+* test_set_log_level
+[32m    [Passed]:  [0m[3] expected to equal [3]:  Log level should be DEBUG
+* test_set_security_level
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Security level should be STRICT
+* test_set_rate_limit
+[32m    [Passed]:  [0m[100] expected to equal [100]:  Rate limit should be 100
+* test_is_running_initially
+[32m    [Passed]:  [0mShould not be running initially
+* test_protocol_version_constant
+[32m    [Passed]:  [0m["2025-11-25"] expected to equal ["2025-11-25"]:  Protocol version should be 2025-11-25
+[1m19/19 passed.
+[0m[4m
+
+res://test/unit/test_mcp_server_native.gd
+[0m* test_plugin_script_loads
+[32m    [Passed]:  [0m[(res://addons/godot_mcp/mcp_server_native.gd):<GDScript#-9223371938255074463>] expected to not equal [<null>]:  Plugin script should load successfully
+* test_plugin_has_enter_tree
+[32m    [Passed]:  [0mShould have _enter_tree method
+* test_plugin_has_exit_tree
+[32m    [Passed]:  [0mShould have _exit_tree method
+* test_plugin_has_start_server
+[32m    [Passed]:  [0mShould have start_server method
+* test_plugin_has_stop_server
+[32m    [Passed]:  [0mShould have stop_server method
+* test_plugin_has_get_server_status
+[32m    [Passed]:  [0mShould have get_server_status method
+* test_find_files_recursive
+[32m    [Passed]:  [0mShould find at least one .tscn file in the project
+* test_find_files_recursive_gd
+[32m    [Passed]:  [0mShould find at least one .gd file in the project
+* test_count_nodes
+[32m    [Passed]:  [0m[2] expected to equal [2]:  Should count root + 1 child
+* test_get_node_tree
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should have 1 child
+[32m    [Passed]:  [0m[STRING_NAME(Child1)] expected to equal ["Child1"]:  Child name should match
+* test_get_godot_version
+[32m    [Passed]:  [0mShould have version key
+[32m    [Passed]:  [0mShould have major key
+[32m    [Passed]:  [0mGodot major should be >= 4
+* test_plugin_name
+[32m    [Passed]:  [0mShould have _get_plugin_name method
+[32m    [Passed]:  [0mShould have _has_main_screen method for main screen plugin
+[32m    [Passed]:  [0mShould have _make_visible method for main screen plugin
+[32m    [Passed]:  [0mShould have _get_plugin_icon method for main screen plugin
+[32m    [Passed]:  [0mShould have _create_main_screen_panel method
+* test_export_variables
+[32m    [Passed]:  [0mShould have auto_start export
+[32m    [Passed]:  [0mShould have transport_mode export
+[32m    [Passed]:  [0mShould have http_port export
+[32m    [Passed]:  [0mShould have auth_enabled export
+[32m    [Passed]:  [0mShould have log_level export
+[1m13/13 passed.
+[0m[4m
+
+res://test/unit/test_mcp_stdio_server.gd
+[0m* test_is_running_initially
+[32m    [Passed]:  [0mShould not be running initially
+* test_active_flag_initially_false
+[32m    [Passed]:  [0mActive flag should be false initially
+* test_message_queue_initially_empty
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Message queue should be empty initially
+* test_response_queue_initially_empty
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Response queue should be empty initially
+* test_queue_response
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Response queue should have 1 item
+* test_queue_multiple_responses
+[32m    [Passed]:  [0m[3] expected to equal [3]:  Response queue should have 3 items
+* test_parse_and_queue_message_valid_json
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Message queue should have 1 item after valid JSON
+[32m    [Passed]:  [0m["2.0"] expected to equal ["2.0"]:  Message should have jsonrpc field
+[32m    [Passed]:  [0m["initialize"] expected to equal ["initialize"]:  Message should have method field
+* test_parse_and_queue_message_invalid_json
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Message queue should be empty after invalid JSON
+* test_parse_and_queue_message_multiline
+[32m    [Passed]:  [0m[2] expected to equal [2]:  Message queue should have 2 items for multiline input
+* test_parse_and_queue_message_empty_lines
+[32m    [Passed]:  [0m[2] expected to equal [2]:  Empty lines should be skipped
+* test_send_response_format
+[32m    [Passed]:  [0mResponse should be valid JSON
+[32m    [Passed]:  [0m["2.0"] expected to equal ["2.0"]:  Response should have jsonrpc field
+[33m    [WARNING]:  [0mWarn:  Float/Int comparison.  Got FLOAT but expected INT
+[32m    [Passed]:  [0m[1.0] expected to equal [1]:  Response should have id field
+* test_send_error_format
+[32m    [Passed]:  [0mError response should have error key
+[32m    [Passed]:  [0m[-32700] expected to equal [-32700]:  Error code should be -32700
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Error response should have id
+* test_mutex_exists
+[32m    [Passed]:  [0m[<Mutex#-9223371901361976404>] expected to not equal [<null>]:  Mutex should be initialized
+* test_stop_when_not_running
+[32m    [Passed]:  [0mShould remain not active after stop
+[1m14/14 passed.
+[0m[4m
+
+res://test/unit/test_mcp_transport_base.gd
+[0m* test_has_message_received_signal
+[32m    [Passed]:  [0mShould have message_received signal
+* test_has_server_error_signal
+[32m    [Passed]:  [0mShould have server_error signal
+* test_has_server_started_signal
+[32m    [Passed]:  [0mShould have server_started signal
+* test_has_server_stopped_signal
+[32m    [Passed]:  [0mShould have server_stopped signal
+* test_base_start_is_virtual
+[32m    [Passed]:  [0mShould have start method
+[32m    [Passed]:  [0mShould have stop method
+[32m    [Passed]:  [0mShould have is_running method
+[32m    [Passed]:  [0mShould have set_port method
+[32m    [Passed]:  [0mShould have set_auth_manager method
+[32m    [Passed]:  [0mShould have send_response method
+* test_http_server_extends_transport_base
+[32m    [Passed]:  [0mHTTP server should inherit message_received signal
+[32m    [Passed]:  [0mHTTP server should inherit server_started signal
+[32m    [Passed]:  [0mHTTP server should inherit server_stopped signal
+* test_stdio_server_extends_transport_base
+[32m    [Passed]:  [0mStdio server should inherit message_received signal
+[32m    [Passed]:  [0mStdio server should inherit server_started signal
+[32m    [Passed]:  [0mStdio server should inherit server_stopped signal
+* test_http_server_implements_start
+[32m    [Passed]:  [0mHTTP server should implement start
+[32m    [Passed]:  [0mHTTP server should implement stop
+[32m    [Passed]:  [0mHTTP server should implement is_running
+[32m    [Passed]:  [0mHTTP server should implement send_response
+* test_stdio_server_implements_start
+[32m    [Passed]:  [0mStdio server should implement start
+[32m    [Passed]:  [0mStdio server should implement stop
+[32m    [Passed]:  [0mStdio server should implement is_running
+[1m9/9 passed.
+[0m[4m
+
+res://test/unit/test_mcp_types.gd
+[0m* test_mcp_tool_info_valid
+[32m    [Passed]:  [0mTool with all fields should be valid
+[32m    [Passed]:  [0mNewly created tool should be enabled by default
+* test_mcp_tool_enabled_flag
+[32m    [Passed]:  [0mTool should be enabled by default
+[32m    [Passed]:  [0mTool should be disabled after setting enabled=false
+[32m    [Passed]:  [0mDisabled tool should still be valid
+* test_mcp_tool_info_missing_name
+[32m    [Passed]:  [0mTool without name should be invalid
+* test_mcp_tool_info_missing_description
+[32m    [Passed]:  [0mTool without description should be invalid
+* test_mcp_tool_info_missing_callable
+[32m    [Passed]:  [0mTool without callable should be invalid
+* test_mcp_tool_to_dict
+[32m    [Passed]:  [0m["test_tool"] expected to equal ["test_tool"]:  Dict should have correct name
+[32m    [Passed]:  [0m["A test tool"] expected to equal ["A test tool"]:  Dict should have correct description
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "name": "test_tool", "description": "A test tool", "inputSchema": { "type": "object" } })] to contain value:  ["inputSchema"]:  Dict should have inputSchema
+* test_mcp_tool_to_dict_with_output_schema
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "name": "test_tool", "description": "A test tool", "inputSchema": {  }, "outputSchema": { "type": "object" } })] to contain value:  ["outputSchema"]:  Dict should have outputSchema when set
+* test_mcp_tool_to_dict_without_output_schema
+[32m    [Passed]:  [0mDict should not have outputSchema when empty
+* test_mcp_tool_annotations
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "name": "test_tool", "description": "A test tool", "inputSchema": {  }, "annotations": { "readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false } })] to contain value:  ["annotations"]:  Dict should have annotations when set
+[32m    [Passed]:  [0m[true] expected to equal [true]:  readOnlyHint should be true
+* test_mcp_resource_valid
+[32m    [Passed]:  [0mResource with all fields should be valid
+* test_mcp_resource_missing_uri
+[32m    [Passed]:  [0mResource without uri should be invalid
+* test_mcp_resource_missing_name
+[32m    [Passed]:  [0mResource without name should be invalid
+* test_mcp_resource_to_dict
+[32m    [Passed]:  [0m["godot://scene/list"] expected to equal ["godot://scene/list"]:  Dict should have correct uri
+[32m    [Passed]:  [0m["Scene List"] expected to equal ["Scene List"]:  Dict should have correct name
+[32m    [Passed]:  [0m["application/json"] expected to equal ["application/json"]:  Dict should have correct mimeType
+* test_mcp_prompt_valid
+[32m    [Passed]:  [0mPrompt with name should be valid
+* test_mcp_prompt_missing_name
+[32m    [Passed]:  [0mPrompt without name should be invalid
+* test_create_response
+[32m    [Passed]:  [0m["2.0"] expected to equal ["2.0"]:  Should have jsonrpc version
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should have correct id
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "jsonrpc": "2.0", "id": 1, "result": { "status": "ok" } })] to contain value:  ["result"]:  Should have result
+* test_create_error_response
+[32m    [Passed]:  [0m["2.0"] expected to equal ["2.0"]:  Should have jsonrpc version
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "jsonrpc": "2.0", "id": 2, "error": { "code": -32600, "message": "Invalid request" } })] to contain value:  ["error"]:  Should have error
+[32m    [Passed]:  [0m[-32600] expected to equal [-32600]:  Should have correct error code
+[32m    [Passed]:  [0m["Invalid request"] expected to equal ["Invalid request"]:  Should have correct message
+* test_create_error_response_with_data
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "code": -32602, "message": "Invalid params", "data": { "detail": "missing field" } })] to contain value:  ["data"]:  Should have error data
+[32m    [Passed]:  [0m["missing field"] expected to equal ["missing field"]:  Should have correct data
+* test_is_path_safe_valid
+[32m    [Passed]:  [0mres:// path should be safe
+* test_is_path_safe_traversal
+[32m    [Passed]:  [0mTraversal path should be unsafe
+* test_is_path_safe_absolute
+[32m    [Passed]:  [0mAbsolute path should be unsafe
+* test_sanitize_path
+[32m    [Passed]:  [0mShould remove .. from path
+* test_sanitize_path_adds_prefix
+[32m    [Passed]:  [0mShould add res:// prefix
+* test_create_capabilities
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "tools": { "listChanged": true }, "resources": { "subscribe": true, "listChanged": true }, "prompts": { "listChanged": true } })] to contain value:  ["tools"]:  Should have tools capability
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "tools": { "listChanged": true }, "resources": { "subscribe": true, "listChanged": true }, "prompts": { "listChanged": true } })] to contain value:  ["resources"]:  Should have resources capability
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "tools": { "listChanged": true }, "resources": { "subscribe": true, "listChanged": true }, "prompts": { "listChanged": true } })] to contain value:  ["prompts"]:  Should have prompts capability
+* test_protocol_version
+[32m    [Passed]:  [0m["2025-11-25"] expected to equal ["2025-11-25"]:  Protocol version should be 2025-11-25
+[1m25/25 passed.
+[0m[4m
+
+res://test/unit/test_node_tools_convert.gd
+[0m* test_make_friendly_path_with_scene_root
+[32m    [Passed]:  [0m["/root/Root/Child"] expected to equal ["/root/Root/Child"]:  Should return friendly path for child
+* test_make_friendly_path_root_itself
+[32m    [Passed]:  [0m["/root/Root"] expected to equal ["/root/Root"]:  Should return friendly path for root
+* test_make_friendly_path_no_scene_root
+[32m    [Passed]:  [0mShould contain node name even without scene root
+* test_make_friendly_path_nested
+[32m    [Passed]:  [0m["/root/Root/Child/GrandChild"] expected to equal ["/root/Root/Child/GrandChild"]:  Should return friendly path for nested node
+* test_convert_value_for_property_vector3_from_dict
+[32m    [Passed]:  [0m[VECTOR3(1.0, 2.0, 3.0)] expected to equal [VECTOR3(1.0, 2.0, 3.0)]:  Should convert dict to Vector3
+* test_convert_value_for_property_vector3_from_string
+[32m    [Passed]:  [0m[VECTOR3(1.0, 2.0, 3.0)] expected to equal [VECTOR3(1.0, 2.0, 3.0)]:  Should convert string to Vector3
+* test_convert_value_for_property_vector3_from_constructor_string
+[32m    [Passed]:  [0m[VECTOR3(1.0, 2.0, 3.0)] expected to equal [VECTOR3(1.0, 2.0, 3.0)]:  Should convert Vector3 constructor-like string to Vector3
+* test_convert_value_for_property_vector2_from_dict
+[32m    [Passed]:  [0m[VECTOR2(5.0, 10.0)] expected to equal [VECTOR2(5.0, 10.0)]:  Should convert dict to Vector2
+* test_convert_value_for_property_color_from_dict
+[32m    [Passed]:  [0m[COLOR(1.0, 0.5, 0.0, 1.0)] expected to equal [COLOR(1.0, 0.5, 0.0, 1.0)]:  Should convert dict to Color
+* test_convert_value_for_property_bool
+[32m    [Passed]:  [0m[true] expected to equal [true]:  Should pass through bool value
+* test_convert_value_for_property_bool_from_string
+[32m    [Passed]:  [0m[true] expected to equal [true]:  Should convert string 'true' to bool
+* test_convert_value_for_property_int
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should pass through int value
+* test_convert_value_for_property_float_from_int
+[32m    [Passed]:  [0m[5] expected to equal [5]:  Should convert int to appropriate type
+[1m13/13 passed.
+[0m[4m
+
+res://test/unit/test_path_validator.gd
+[0m* test_validate_res_path
+[32m    [Passed]:  [0mres:// path should be valid
+[32m    [Passed]:  [0m["res://test.tscn"] expected to equal ["res://test.tscn"]:  Sanitized path should match
+* test_validate_res_subdir
+[32m    [Passed]:  [0mres:// subdirectory path should be valid
+* test_validate_user_path
+[32m    [Passed]:  [0muser:// path should be valid
+* test_reject_empty_path
+[32m    [Passed]:  [0mEmpty path should be rejected
+[32m    [Passed]:  [0m["Path is empty"] expected to not equal [""]:  Should have error message
+* test_reject_path_traversal
+[32m    [Passed]:  [0mPath traversal should be rejected
+* test_reject_absolute_linux_path
+[32m    [Passed]:  [0mAbsolute Linux path should be rejected
+* test_reject_windows_path
+[32m    [Passed]:  [0mWindows path should be rejected
+* test_reject_home_directory
+[32m    [Passed]:  [0mHome directory path should be rejected
+* test_non_strict_allows_more
+[32m    [Passed]:  [0mNon-strict mode should allow traversal patterns
+* test_validate_file_path_with_extension
+[32m    [Passed]:  [0mAllowed extension should pass
+* test_validate_file_path_wrong_extension
+[32m    [Passed]:  [0mDisallowed extension should be rejected
+* test_validate_directory_path
+[32m    [Passed]:  [0mDirectory path should be valid
+* test_validate_directory_path_adds_slash
+[32m    [Passed]:  [0mDirectory path should end with /
+* test_validate_paths_batch
+[32m    [Passed]:  [0m[2] expected to equal [2]:  Should have 2 valid paths
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should have 1 invalid path
+* test_validate_path_with_signal_approved
+[32m    [Passed]:  [0mShould return true for valid path
+[32m    [Passed]:  [0mExpected object <RefCounted#-9223371895070520221>(path_validator.gd) to have emitted signal [path_approved]:  
+* test_validate_path_with_signal_rejected
+[32m    [Passed]:  [0mShould return false for invalid path
+[32m    [Passed]:  [0mExpected object <RefCounted#-9223371894969856921>(path_validator.gd) to have emitted signal [path_rejected]:  
+* test_set_strict_mode
+[32m    [Passed]:  [0mStrict mode should be false
+[32m    [Passed]:  [0mStrict mode should be true
+* test_add_allowed_extension
+[32m    [Passed]:  [0mExpected [ARRAY([".gd"])] to contain value:  [".gd"]:  Should contain .gd
+* test_add_allowed_extension_no_duplicate
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should not have duplicates
+* test_clear_allowed_extensions
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Should be empty after clear
+[1m20/20 passed.
+[0m[4m
+
+res://test/unit/tools/test_debug_tools.gd
+[0m* test_debug_print_format
+[32m    [Passed]:  [0mDebug message should have category prefix
+* test_debug_log_buffer
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "timestamp": "2026-05-12T11:01:58", "level": "INFO", "message": "Test message" })] to contain value:  ["timestamp"]:  Should have timestamp
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "timestamp": "2026-05-12T11:01:58", "level": "INFO", "message": "Test message" })] to contain value:  ["level"]:  Should have level
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "timestamp": "2026-05-12T11:01:58", "level": "INFO", "message": "Test message" })] to contain value:  ["message"]:  Should have message
+* test_execute_script_simple
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Simple expression should parse OK
+[32m    [Passed]:  [0m[3] expected to equal [3]:  1 + 2 should equal 3
+* test_execute_script_with_singleton_binding
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Expression with OS binding should parse OK
+[32m    [Passed]:  [0m["Windows"] expected to not equal [""]:  OS.get_name() should return non-empty string
+* test_execute_script_execution_error
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Parse should succeed even with undefined var
+[32m    [Passed]:  [0mExecution should fail with undefined variable
+* test_performance_metrics_types
+[32m    [Passed]:  [0m[60.0] expected to be > than [0.0]:  FPS should be positive
+[32m    [Passed]:  [0m[512.5] expected to be > than [0.0]:  Memory should be positive
+[32m    [Passed]:  [0m[1000] expected to be > than [0]:  Object count should be positive
+* test_log_level_ordering
+[32m    [Passed]:  [0m[0] expected to be < than [1]:  ERROR < WARN
+[32m    [Passed]:  [0m[1] expected to be < than [2]:  WARN < INFO
+[32m    [Passed]:  [0m[2] expected to be < than [3]:  INFO < DEBUG
+* test_mutex_thread_safety
+[32m    [Passed]:  [0mMutex lock/unlock should not crash
+* test_set_debugger_breakpoint_missing_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: path" })] to contain value:  ["error"]:  Should return error for missing path
+[32m    [Passed]:  [0mError should mention path
+* test_set_debugger_breakpoint_invalid_line
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "line must be >= 1" })] to contain value:  ["error"]:  Should return error for invalid line
+[32m    [Passed]:  [0mError should mention line
+* test_send_debugger_message_missing_message
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: message" })] to contain value:  ["error"]:  Should return error for missing message
+[32m    [Passed]:  [0mError should mention message
+* test_toggle_debugger_profiler_missing_profiler
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: profiler" })] to contain value:  ["error"]:  Should return error for missing profiler
+[32m    [Passed]:  [0mError should mention profiler
+* test_add_debugger_capture_prefix_missing_prefix
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: prefix" })] to contain value:  ["error"]:  Should return error for missing prefix
+[32m    [Passed]:  [0mError should mention prefix
+* test_install_runtime_probe_empty_node_name
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Editor interface not available" })] to contain value:  ["error"]:  Should return error for empty node_name before editing scene
+[32m    [Passed]:  [0mError should be explicit
+* test_send_debug_command_rejects_unknown_command
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Unsupported debug command: unsupported" })] to contain value:  ["error"]:  Should return error for unsupported command
+[32m    [Passed]:  [0mError should mention unsupported command
+* test_get_debug_stack_variables_rejects_negative_frame
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Debugger bridge is not available" })] to contain value:  ["error"]:  Should return error for invalid frame
+[31m    [Failed]:  [0mError should mention frame
+      at line 169
+* test_runtime_probe_polling_reuses_pending_request
+[32m    [Passed]:  [0m["pending"] expected to equal ["pending"]:  First runtime probe request should remain pending before bridge response arrives
+[32m    [Passed]:  [0m[1] expected to equal [1]:  First poll should send exactly one runtime probe message
+[32m    [Passed]:  [0m["success"] expected to equal ["success"]:  Second poll should consume the response that arrived for the pending request
+[32m    [Passed]:  [0m[3] expected to equal [3]:  Runtime info payload should come from the bridge response
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Polling a pending runtime request should not re-send the debugger message
+[1m16/17 passed.
+[0m[4m
+
+res://test/unit/tools/test_editor_tools.gd
+[0m* test_editor_state_format
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "active_scene": "Main", "editor_mode": "editor", "selected_count": 1, "selected_nodes": ["/root/Main"] })] to contain value:  ["active_scene"]:  Should have active_scene
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "active_scene": "Main", "editor_mode": "editor", "selected_count": 1, "selected_nodes": ["/root/Main"] })] to contain value:  ["editor_mode"]:  Should have editor_mode
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "active_scene": "Main", "editor_mode": "editor", "selected_count": 1, "selected_nodes": ["/root/Main"] })] to contain value:  ["selected_count"]:  Should have selected_count
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "active_scene": "Main", "editor_mode": "editor", "selected_count": 1, "selected_nodes": ["/root/Main"] })] to contain value:  ["selected_nodes"]:  Should have selected_nodes
+* test_selected_nodes_friendly_path
+[32m    [Passed]:  [0mFriendly path should not contain @
+[32m    [Passed]:  [0mFriendly path should not contain @
+[32m    [Passed]:  [0mFriendly path should not contain @
+* test_run_stop_project
+[32m    [Passed]:  [0mExpected [ARRAY(["playing", "editor"])] to contain value:  ["playing"]:  Should have playing state
+[32m    [Passed]:  [0mExpected [ARRAY(["playing", "editor"])] to contain value:  ["editor"]:  Should have editor state
+* test_editor_setting_name_format
+[32m    [Passed]:  [0mSetting should have category separator
+* test_editor_logs_format
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "logs": ["[INFO] Test message"], "count": 1, "total_available": 100 })] to contain value:  ["logs"]:  Should have logs
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "logs": ["[INFO] Test message"], "count": 1, "total_available": 100 })] to contain value:  ["count"]:  Should have count
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "logs": ["[INFO] Test message"], "count": 1, "total_available": 100 })] to contain value:  ["total_available"]:  Should have total_available
+* test_performance_metrics_format
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "fps": 60.0, "memory_usage_mb": 512.5, "object_count": 1000, "resource_count": 50 })] to contain value:  ["fps"]:  Should have fps
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "fps": 60.0, "memory_usage_mb": 512.5, "object_count": 1000, "resource_count": 50 })] to contain value:  ["memory_usage_mb"]:  Should have memory_usage_mb
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "fps": 60.0, "memory_usage_mb": 512.5, "object_count": 1000, "resource_count": 50 })] to contain value:  ["object_count"]:  Should have object_count
+* test_execute_script_with_singletons
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "OS": <OS#335544339>, "Engine": <Engine#352321556>, "Input": <Input#3288334507> })] to contain value:  ["OS"]:  Should have OS singleton
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "OS": <OS#335544339>, "Engine": <Engine#352321556>, "Input": <Input#3288334507> })] to contain value:  ["Engine"]:  Should have Engine singleton
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "OS": <OS#335544339>, "Engine": <Engine#352321556>, "Input": <Input#3288334507> })] to contain value:  ["Input"]:  Should have Input singleton
+* test_execute_script_result_format
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "status": "success", "result": "42" })] to contain value:  ["status"]:  Should have status
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "status": "error", "error": "Parse failed" })] to contain value:  ["error"]:  Error should have error message
+[1m8/8 passed.
+[0m[4m
+
+res://test/unit/tools/test_node_tools.gd
+[0m* test_create_node_schema
+[32m    [Passed]:  [0mcreate_node schema should be valid
+* test_delete_node_schema
+[32m    [Passed]:  [0m["delete_node"] expected to equal ["delete_node"]:  delete_node schema should exist
+* test_update_node_property_schema
+[32m    [Passed]:  [0m["update_node_property"] expected to equal ["update_node_property"]:  update_node_property schema should exist
+* test_property_value_json_string_parsing
+[32m    [Passed]:  [0mJSON string should parse to Dictionary
+[32m    [Passed]:  [0m[VECTOR3(10.0, 5.0, 3.0)] expected to equal [VECTOR3(10.0, 5.0, 3.0)]:  Should convert parsed dict to Vector3
+* test_property_value_bool_string
+[32m    [Passed]:  [0mString 'true' should convert to bool true
+* test_property_value_int_string
+[32m    [Passed]:  [0m[42] expected to equal [42]:  String '42' should convert to int 42
+* test_node_path_resolution
+[32m    [Passed]:  [0m[4] expected to equal [4]:  Path should have 4 parts
+[32m    [Passed]:  [0m[""] expected to equal [""]:  First part should be empty (before /)
+[32m    [Passed]:  [0m["root"] expected to equal ["root"]:  Second part should be root
+[32m    [Passed]:  [0m["Node3D"] expected to equal ["Node3D"]:  Third part should be Node3D
+* test_category_property_filtering
+[32m    [Passed]:  [0mUsage 128 should be filtered as category
+* test_normal_property_not_filtered
+[32m    [Passed]:  [0mUsage 0 should not be filtered
+* test_group_property_filtered
+[32m    [Passed]:  [0mUsage 64 should be filtered as group
+* test_subgroup_property_filtered
+[32m    [Passed]:  [0mUsage 256 should be filtered as subgroup
+[1m11/11 passed.
+[0m[4m
+
+res://test/unit/tools/test_node_tools_enhanced.gd
+[0m* test_duplicate_node_missing_node_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for missing node_path
+[32m    [Passed]:  [0mError should mention node_path
+* test_duplicate_node_empty_node_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for empty node_path
+* test_duplicate_node_auto_name_generation
+[32m    [Passed]:  [0m[Player:<Node#146934861060>] expected to not equal [<null>]:  Duplicate should not be null
+[32m    [Passed]:  [0m["Player2"] expected to equal ["Player2"]:  Auto-generated name should be unique
+* test_duplicate_node_custom_name
+[32m    [Passed]:  [0m["Hero"] expected to equal ["Hero"]:  Should use custom name
+* test_duplicate_node_preserves_children
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Duplicate should preserve children
+[32m    [Passed]:  [0m["Child1"] expected to equal ["Child1"]:  Child name should be preserved
+* test_move_node_missing_node_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for missing node_path
+* test_move_node_missing_new_parent_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: new_parent_path" })] to contain value:  ["error"]:  Should return error for missing new_parent_path
+* test_move_node_empty_params
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for empty params
+* test_move_node_cannot_move_to_itself
+[32m    [Passed]:  [0mNode equals itself - move to self should be blocked by tool logic
+* test_move_node_reparent_preserves_transform
+[32m    [Passed]:  [0m[VECTOR2(150.0, 150.0)] expected to equal [VECTOR2(150.0, 150.0)]:  Global position should be preserved with keep_global_transform=true
+* test_move_node_reparent_without_preserving_transform
+[32m    [Passed]:  [0m[VECTOR2(50.0, 50.0)] expected to equal [VECTOR2(50.0, 50.0)]:  Local position should remain same with keep_global_transform=false
+* test_move_node_ancestor_check
+[32m    [Passed]:  [0mParent should be ancestor of child
+[32m    [Passed]:  [0mChild should not be ancestor of parent
+* test_rename_node_missing_node_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for missing node_path
+* test_rename_node_missing_new_name
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: new_name" })] to contain value:  ["error"]:  Should return error for missing new_name
+* test_rename_node_empty_new_name
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: new_name" })] to contain value:  ["error"]:  Should return error for empty new_name
+* test_rename_node_basic
+[32m    [Passed]:  [0m["NewName"] expected to equal ["NewName"]:  Node name should be updated
+* test_rename_node_same_name
+[32m    [Passed]:  [0m["SameName"] expected to equal ["SameName"]:  Renaming to same name should work
+* test_rename_node_duplicate_name_in_parent
+[32m    [Passed]:  [0mChild1 should exist
+[32m    [Passed]:  [0mChild2 should exist
+* test_add_resource_missing_node_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for missing node_path
+* test_add_resource_missing_resource_type
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: resource_type" })] to contain value:  ["error"]:  Should return error for missing resource_type
+* test_add_resource_empty_resource_type
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: resource_type" })] to contain value:  ["error"]:  Should return error for empty resource_type
+* test_add_resource_unknown_type
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Editor interface not available" })] to contain value:  ["error"]:  Should return error for unknown resource type
+* test_add_resource_non_node_type
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Editor interface not available" })] to contain value:  ["error"]:  Should return error for non-Node resource type
+* test_add_resource_valid_node_type
+[32m    [Passed]:  [0m[<CollisionShape2D#149032013105>] expected to not equal [<null>]:  Should be able to instantiate CollisionShape2D
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Parent should have one child
+[32m    [Passed]:  [0m["Collision"] expected to equal ["Collision"]:  Resource node name should be set
+* test_add_resource_custom_name
+[32m    [Passed]:  [0m["MyShape"] expected to equal ["MyShape"]:  Custom name should be used
+* test_add_resource_class_db_check
+[32m    [Passed]:  [0mCollisionShape2D should exist in ClassDB
+[32m    [Passed]:  [0mCollisionShape3D should exist in ClassDB
+[32m    [Passed]:  [0mMeshInstance3D should exist in ClassDB
+[32m    [Passed]:  [0mCollisionShape2D should be a Node type
+[32m    [Passed]:  [0mMeshInstance3D should be a Node type
+[32m    [Passed]:  [0mResource should not be a Node type
+* test_set_anchor_preset_missing_node_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for missing node_path
+* test_set_anchor_preset_missing_preset
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Editor interface not available" })] to contain value:  ["error"]:  Should return error for missing preset (defaults to 0, which is valid)
+* test_set_anchor_preset_invalid_preset_negative
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Editor interface not available" })] to contain value:  ["error"]:  Should return error for negative preset
+* test_set_anchor_preset_invalid_preset_too_high
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Editor interface not available" })] to contain value:  ["error"]:  Should return error for preset > 15
+* test_set_anchor_preset_valid_preset
+[32m    [Passed]:  [0m[0.5] expected to not equal [0.0]:  Center preset should change anchor_left from default
+* test_set_anchor_preset_full_rect
+[32m    [Passed]:  [0m[0.0] expected to equal [0.0]:  Full rect left anchor should be 0
+[32m    [Passed]:  [0m[1.0] expected to equal [1.0]:  Full rect right anchor should be 1
+[32m    [Passed]:  [0m[0.0] expected to equal [0.0]:  Full rect top anchor should be 0
+[32m    [Passed]:  [0m[1.0] expected to equal [1.0]:  Full rect bottom anchor should be 1
+* test_set_anchor_preset_preset_names
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [0]:  Preset name should exist for value 0
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [1]:  Preset name should exist for value 1
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [2]:  Preset name should exist for value 2
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [3]:  Preset name should exist for value 3
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [4]:  Preset name should exist for value 4
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [5]:  Preset name should exist for value 5
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [6]:  Preset name should exist for value 6
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [7]:  Preset name should exist for value 7
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [8]:  Preset name should exist for value 8
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [9]:  Preset name should exist for value 9
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [10]:  Preset name should exist for value 10
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [11]:  Preset name should exist for value 11
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [12]:  Preset name should exist for value 12
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [13]:  Preset name should exist for value 13
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [14]:  Preset name should exist for value 14
+[32m    [Passed]:  [0mExpected [DICTIONARY({ 0: "TOP_LEFT", 1: "TOP_RIGHT", 2: "BOTTOM_LEFT", 3: "BOTTOM_RIGHT", 4: "CENTER_LEFT", 5: "CENTER_TOP", 6: "CENTER_RIGHT", 7: "CENTER_BOTTOM", 8: "CENTER", 9: "LEFT_WIDE", 10: "TOP_WIDE", 11: "RIGHT_WIDE", 12: "BOTTOM_WIDE", 13: "VCENTER_WIDE", 14: "HCENTER_WIDE", 15: "FULL_RECT" })] to contain value:  [15]:  Preset name should exist for value 15
+* test_connect_signal_missing_emitter_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: emitter_path" })] to contain value:  ["error"]:  Should return error for missing emitter_path
+* test_connect_signal_missing_signal_name
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: signal_name" })] to contain value:  ["error"]:  Should return error for missing signal_name
+* test_connect_signal_missing_receiver_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: receiver_path" })] to contain value:  ["error"]:  Should return error for missing receiver_path
+* test_connect_signal_missing_receiver_method
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: receiver_method" })] to contain value:  ["error"]:  Should return error for missing receiver_method
+* test_connect_signal_basic
+[32m    [Passed]:  [0mButton should have 'pressed' signal
+* test_connect_signal_already_connected
+[32m    [Passed]:  [0mSignal should be connected
+* test_disconnect_signal_missing_params
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: emitter_path" })] to contain value:  ["error"]:  Should return error for missing params
+* test_disconnect_signal_not_connected
+[32m    [Passed]:  [0mSignal should not be connected initially
+* test_disconnect_signal_success
+[32m    [Passed]:  [0mSignal should be connected
+[32m    [Passed]:  [0mSignal should be disconnected
+* test_get_node_groups_missing_node_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for missing node_path
+* test_get_node_groups_empty_node_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for empty node_path
+* test_get_node_groups_no_groups
+[32m    [Passed]:  [0m[0] expected to equal [0]:  New node should have no groups
+* test_get_node_groups_with_groups
+[32m    [Passed]:  [0m[2] expected to equal [2]:  Node should have 2 groups
+* test_get_node_groups_is_in_group
+[32m    [Passed]:  [0mNode should be in 'player' group
+[32m    [Passed]:  [0mNode should not be in 'enemy' group
+* test_set_node_groups_missing_node_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for missing node_path
+* test_set_node_groups_empty_node_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for empty node_path
+* test_set_node_groups_add_groups
+[32m    [Passed]:  [0mShould be in group_a
+[32m    [Passed]:  [0mShould be in group_b
+* test_set_node_groups_remove_groups
+[32m    [Passed]:  [0mShould not be in group_a after removal
+[32m    [Passed]:  [0mShould still be in group_b
+* test_set_node_groups_clear_existing
+[32m    [Passed]:  [0m[0] expected to equal [0]:  All groups should be cleared
+[32m    [Passed]:  [0mShould be in new_group after clear and add
+* test_set_node_groups_add_duplicate
+[32m    [Passed]:  [0mShould still be in group_a after duplicate add attempt
+* test_set_node_groups_persistent
+[32m    [Passed]:  [0mShould be in persistent_group
+* test_find_nodes_in_group_missing_group
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: group" })] to contain value:  ["error"]:  Should return error for missing group
+* test_find_nodes_in_group_empty_group
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: group" })] to contain value:  ["error"]:  Should return error for empty group
+* test_find_nodes_in_group_basic
+[32m    [Passed]:  [0m[2] expected to equal [2]:  Should find 2 nodes in enemies group
+* test_find_nodes_in_group_empty_group_result
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Should find 0 nodes in nonexistent group
+* test_find_nodes_in_group_type_filter
+[32m    [Passed]:  [0m[2] expected to equal [2]:  Should find 2 nodes without filter
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should find 1 Node2D with type filter
+* test_preset_names_completeness
+[32m    [Passed]:  [0m[16] expected to equal [16]:  Should have 16 preset names
+* test_control_is_control_type
+[32m    [Passed]:  [0mControl should be Control type
+[32m    [Passed]:  [0mNode should not be Control type
+* test_node_duplicate_flags
+[32m    [Passed]:  [0mDefault duplicate should preserve groups
+[32m    [Passed]:  [0mZero-flag duplicate should not preserve groups
+* test_signal_connection_flags
+[32m    [Passed]:  [0m[0] expected to equal [0]:  CONNECT_DEFAULT = 0
+[32m    [Passed]:  [0m[1] expected to equal [1]:  CONNECT_DEFERRED = 1
+[32m    [Passed]:  [0m[2] expected to equal [2]:  CONNECT_ONE_SHOT = 2
+[32m    [Passed]:  [0m[4] expected to equal [4]:  CONNECT_PERSIST = 4
+* test_make_friendly_path_for_new_tools
+[32m    [Passed]:  [0m["/root/SceneRoot/Child"] expected to equal ["/root/SceneRoot/Child"]:  Should generate correct friendly path
+[1m64/64 passed.
+[0m[4m
+
+res://test/unit/tools/test_project_tools.gd
+[0m* test_project_info_format
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "project_name": "Godot MCP Native", "project_path": "F:/gitProjects/Godot-MCP-Native/", "project_version": "", "project_description": "", "main_scene": "res://TestScene.tscn" })] to contain value:  ["project_name"]:  Should have project_name
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "project_name": "Godot MCP Native", "project_path": "F:/gitProjects/Godot-MCP-Native/", "project_version": "", "project_description": "", "main_scene": "res://TestScene.tscn" })] to contain value:  ["project_path"]:  Should have project_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "project_name": "Godot MCP Native", "project_path": "F:/gitProjects/Godot-MCP-Native/", "project_version": "", "project_description": "", "main_scene": "res://TestScene.tscn" })] to contain value:  ["main_scene"]:  Should have main_scene
+* test_project_settings_filter
+[32m    [Passed]:  [0m[2] expected to equal [2]:  Should filter to application/ settings only
+[32m    [Passed]:  [0mShould not have debug settings
+* test_project_settings_no_filter
+[32m    [Passed]:  [0m[2] expected to equal [2]:  Without filter should return all settings
+* test_resource_extensions
+[32m    [Passed]:  [0mExpected [ARRAY([".tres", ".res", ".png", ".jpg", ".jpeg", ".webp", ".svg", ".ogg", ".wav", ".mp3", ".glb", ".gltf", ".obj", ".tscn", ".gd", ".cfg", ".json", ".gdshader"])] to contain value:  [".tscn"]:  Should include .tscn
+[32m    [Passed]:  [0mExpected [ARRAY([".tres", ".res", ".png", ".jpg", ".jpeg", ".webp", ".svg", ".ogg", ".wav", ".mp3", ".glb", ".gltf", ".obj", ".tscn", ".gd", ".cfg", ".json", ".gdshader"])] to contain value:  [".gd"]:  Should include .gd
+[32m    [Passed]:  [0mExpected [ARRAY([".tres", ".res", ".png", ".jpg", ".jpeg", ".webp", ".svg", ".ogg", ".wav", ".mp3", ".glb", ".gltf", ".obj", ".tscn", ".gd", ".cfg", ".json", ".gdshader"])] to contain value:  [".png"]:  Should include .png
+[32m    [Passed]:  [0mExpected [ARRAY([".tres", ".res", ".png", ".jpg", ".jpeg", ".webp", ".svg", ".ogg", ".wav", ".mp3", ".glb", ".gltf", ".obj", ".tscn", ".gd", ".cfg", ".json", ".gdshader"])] to contain value:  [".gdshader"]:  Should include .gdshader
+* test_resource_path_safety
+[32m    [Passed]:  [0mres:// resource should be safe
+[32m    [Passed]:  [0mWindows path should be unsafe
+* test_create_resource_types
+[32m    [Passed]:  [0mExpected [ARRAY(["Curve", "Gradient", "StyleBoxFlat", "Animation"])] to contain value:  ["Curve"]:  Should support Curve resource
+[32m    [Passed]:  [0mExpected [ARRAY(["Curve", "Gradient", "StyleBoxFlat", "Animation"])] to contain value:  ["Gradient"]:  Should support Gradient resource
+* test_resource_uri_format
+[32m    [Passed]:  [0mResource URI should start with godot://
+* test_collect_project_autoloads_from_properties_marks_singletons_and_sorts
+[32m    [Passed]:  [0m[2] expected to equal [2]:  Should collect two autoload entries
+[32m    [Passed]:  [0m["Bootstrap"] expected to equal ["Bootstrap"]:  Should sort autoloads by project setting order
+[32m    [Passed]:  [0m["res://autoload/bootstrap.gd"] expected to equal ["res://autoload/bootstrap.gd"]:  Should preserve non-singleton autoload path
+[32m    [Passed]:  [0mNon-prefixed autoload should not be marked singleton
+[32m    [Passed]:  [0m["GameState"] expected to equal ["GameState"]:  Should include singleton autoload name
+[32m    [Passed]:  [0m["res://autoload/game_state.gd"] expected to equal ["res://autoload/game_state.gd"]:  Singleton autoload should strip the * prefix
+[32m    [Passed]:  [0mPrefixed autoload should be marked singleton
+* test_normalize_global_class_entries_preserves_metadata
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should normalize one global class entry
+[32m    [Passed]:  [0m["MyRuntimeNode"] expected to equal ["MyRuntimeNode"]:  Should expose class name as name
+[32m    [Passed]:  [0m["res://scripts/my_runtime_node.gd"] expected to equal ["res://scripts/my_runtime_node.gd"]:  Should preserve script path
+[32m    [Passed]:  [0m["Node"] expected to equal ["Node"]:  Should preserve base type
+[32m    [Passed]:  [0m["GDScript"] expected to equal ["GDScript"]:  Should preserve language
+[32m    [Passed]:  [0mShould preserve tool flag
+* test_get_class_api_metadata_returns_classdb_metadata
+[32m    [Passed]:  [0m["classdb"] expected to equal ["classdb"]:  Engine classes should be sourced from ClassDB
+[32m    [Passed]:  [0m["Node"] expected to equal ["Node"]:  Should report requested class name
+[32m    [Passed]:  [0m[STRING_NAME(Object)] expected to equal ["Object"]:  Should report Node base class
+[32m    [Passed]:  [0m[33] expected to be > than [0]:  Filtered ClassDB methods should be returned
+[32m    [Passed]:  [0m[7] expected to be > than [0]:  Filtered ClassDB properties should be returned
+[32m    [Passed]:  [0mProcess filter should exclude unrelated signals
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+[32m    [Passed]:  [0mFiltered methods should match filter text
+* test_get_class_api_metadata_returns_global_class_metadata_with_base_api
+[32m    [Passed]:  [0m["global_class"] expected to equal ["global_class"]:  Project class should be sourced from global_class metadata
+[32m    [Passed]:  [0m["ProjectToolsNative"] expected to equal ["ProjectToolsNative"]:  Should report requested global class name
+[32m    [Passed]:  [0m["res://addons/godot_mcp/tools/project_tools_native.gd"] expected to equal ["res://addons/godot_mcp/tools/project_tools_native.gd"]:  Should preserve global class script path
+[32m    [Passed]:  [0m["RefCounted"] expected to equal ["RefCounted"]:  Should preserve global class base type
+[32m    [Passed]:  [0m[94] expected to be > than [0]:  Global class script methods should be returned
+[32m    [Passed]:  [0mShould include script-defined methods
+[32m    [Passed]:  [0mShould include base API metadata when requested
+[32m    [Passed]:  [0m["RefCounted"] expected to equal ["RefCounted"]:  Base API should be resolved from ClassDB
+* test_get_class_api_metadata_reports_missing_class
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Class not found: DefinitelyMissingClass123" })] to contain value:  ["error"]:  Missing classes should return an error payload
+[1m12/12 passed.
+[0m[4m
+
+res://test/unit/tools/test_resource_tools.gd
+[0m* test_resource_scene_list_format
+[32m    [Passed]:  [0mShould have contents key
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should have one content item
+[32m    [Passed]:  [0m["godot://scene/list"] expected to equal ["godot://scene/list"]:  URI should be godot://scene/list
+[32m    [Passed]:  [0m["application/json"] expected to equal ["application/json"]:  MIME type should be application/json
+* test_resource_scene_list_has_text
+[32m    [Passed]:  [0mText should be valid JSON
+[32m    [Passed]:  [0mParsed text should be a Dictionary
+[32m    [Passed]:  [0mShould have scenes key
+[32m    [Passed]:  [0mShould have count key
+[32m    [Passed]:  [0mShould have timestamp key
+* test_resource_script_list_format
+[32m    [Passed]:  [0mShould have contents key
+[32m    [Passed]:  [0m["godot://script/list"] expected to equal ["godot://script/list"]:  URI should be godot://script/list
+[32m    [Passed]:  [0m["application/json"] expected to equal ["application/json"]:  MIME type should be application/json
+* test_resource_script_list_has_text
+[32m    [Passed]:  [0mText should be valid JSON
+[32m    [Passed]:  [0mShould have scripts key
+[32m    [Passed]:  [0mShould have count key
+* test_resource_project_info_format
+[32m    [Passed]:  [0mShould have contents key
+[32m    [Passed]:  [0m["godot://project/info"] expected to equal ["godot://project/info"]:  URI should be godot://project/info
+[32m    [Passed]:  [0mText should be valid JSON
+[32m    [Passed]:  [0mShould have name key
+[32m    [Passed]:  [0mShould have version key
+[32m    [Passed]:  [0mShould have godot_version key
+* test_resource_project_settings_format
+[32m    [Passed]:  [0mShould have contents key
+[32m    [Passed]:  [0m["godot://project/settings"] expected to equal ["godot://project/settings"]:  URI should be godot://project/settings
+[32m    [Passed]:  [0mText should be valid JSON
+[32m    [Passed]:  [0mShould have settings key
+[32m    [Passed]:  [0mShould have count key
+* test_resource_scene_current_no_editor
+[32m    [Passed]:  [0mShould have contents key
+[32m    [Passed]:  [0m["godot://scene/current"] expected to equal ["godot://scene/current"]:  URI should be godot://scene/current
+* test_resource_script_current_no_editor
+[32m    [Passed]:  [0mShould have contents key
+[32m    [Passed]:  [0m["godot://script/current"] expected to equal ["godot://script/current"]:  URI should be godot://script/current
+* test_resource_editor_state_no_editor
+[32m    [Passed]:  [0mShould have contents key
+[32m    [Passed]:  [0m["godot://editor/state"] expected to equal ["godot://editor/state"]:  URI should be godot://editor/state
+* test_count_nodes
+[32m    [Passed]:  [0m[3] expected to equal [3]:  Should count root + 2 children
+* test_count_nodes_nested
+[32m    [Passed]:  [0m[3] expected to equal [3]:  Should count root + child + grandchild
+* test_get_node_tree
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should have 1 child at depth 1
+[32m    [Passed]:  [0m[STRING_NAME(Child1)] expected to equal ["Child1"]:  Child name should be Child1
+[32m    [Passed]:  [0m["Node"] expected to equal ["Node"]:  Child type should be Node
+* test_get_node_tree_max_depth
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Should have 0 children at depth 0 (max_depth=0)
+* test_get_godot_version
+[32m    [Passed]:  [0mShould have version key
+[32m    [Passed]:  [0mShould have major key
+[32m    [Passed]:  [0mShould have minor key
+[32m    [Passed]:  [0mShould have patch key
+[32m    [Passed]:  [0mGodot major version should be >= 4
+* test_register_resources
+[32m    [Passed]:  [0m[7] expected to equal [7]:  Should register 7 resources
+[1m15/15 passed.
+[0m[4m
+
+res://test/unit/tools/test_scene_tools.gd
+[0m* test_scene_extension_validation
+[32m    [Passed]:  [0mScene should have .tscn extension
+* test_scene_path_safety
+[32m    [Passed]:  [0mres:// scene path should be safe
+[32m    [Passed]:  [0mAbsolute scene path should be unsafe
+* test_scene_structure_format
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "scene_name": "Main", "root_node": { "name": "Main", "type": "Node3D", "path": "/root/Main", "children": [] }, "total_nodes": 1 })] to contain value:  ["scene_name"]:  Should have scene_name
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "scene_name": "Main", "root_node": { "name": "Main", "type": "Node3D", "path": "/root/Main", "children": [] }, "total_nodes": 1 })] to contain value:  ["root_node"]:  Should have root_node
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "scene_name": "Main", "root_node": { "name": "Main", "type": "Node3D", "path": "/root/Main", "children": [] }, "total_nodes": 1 })] to contain value:  ["total_nodes"]:  Should have total_nodes
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "name": "Main", "type": "Node3D", "path": "/root/Main", "children": [] })] to contain value:  ["children"]:  Root node should have children
+* test_friendly_path_for_scene
+[32m    [Passed]:  [0mRoot path should contain MainScene
+[32m    [Passed]:  [0mChild path should contain Player
+* test_current_scene_format
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "scene_name": "Main", "scene_path": "res://main.tscn", "root_node_type": "Node3D", "node_count": 5, "is_modified": false })] to contain value:  ["scene_name"]:  Should have scene_name
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "scene_name": "Main", "scene_path": "res://main.tscn", "root_node_type": "Node3D", "node_count": 5, "is_modified": false })] to contain value:  ["scene_path"]:  Should have scene_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "scene_name": "Main", "scene_path": "res://main.tscn", "root_node_type": "Node3D", "node_count": 5, "is_modified": false })] to contain value:  ["root_node_type"]:  Should have root_node_type
+[1m5/5 passed.
+[0m[4m
+
+res://test/unit/tools/test_script_editor_debug_tools_enhanced.gd
+[0m* test_attach_script_missing_node_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for missing node_path
+[32m    [Passed]:  [0mError should mention node_path
+* test_attach_script_missing_script_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: script_path" })] to contain value:  ["error"]:  Should return error for missing script_path
+[32m    [Passed]:  [0mError should mention script_path
+* test_attach_script_empty_params
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for empty params
+* test_attach_script_no_editor_interface
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Editor interface not available" })] to contain value:  ["error"]:  Should return error when editor interface not available
+[32m    [Passed]:  [0mError should mention Editor interface
+* test_validate_script_missing_both_params
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Must provide either script_path or content" })] to contain value:  ["error"]:  Should return error when neither script_path nor content provided
+[32m    [Passed]:  [0mError should mention required params
+* test_validate_script_valid_content
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "valid": true, "errors": [], "warnings": [], "error_count": 0, "warning_count": 0 })] to contain value:  ["valid"]:  Should return valid field
+[32m    [Passed]:  [0mValid GDScript should pass validation
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Should have no errors
+* test_validate_script_invalid_content
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "valid": true, "errors": [], "warnings": [], "error_count": 0, "warning_count": 0 })] to contain value:  ["valid"]:  Should return valid field
+[32m    [Passed]:  [0mSimple valid script should pass
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Should have no errors for valid script
+* test_validate_script_empty_content_valid
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "valid": true, "errors": [], "warnings": [], "error_count": 0, "warning_count": 0 })] to contain value:  ["valid"]:  Should return valid field for minimal script
+[32m    [Passed]:  [0mMinimal valid script should pass
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Should have no errors
+* test_validate_script_invalid_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Invalid path: Path contains dangerous pattern: C:\\" })] to contain value:  ["error"]:  Should return error for invalid path
+* test_validate_script_nonexistent_file
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Script file not found: res://nonexistent_file_12345.gd" })] to contain value:  ["error"]:  Should return error for nonexistent file
+[32m    [Passed]:  [0mError should mention file not found
+* test_validate_script_check_warnings_false
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "valid": true, "errors": [], "warnings": [], "error_count": 0, "warning_count": 0 })] to contain value:  ["valid"]:  Should return valid field
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "valid": true, "errors": [], "warnings": [], "error_count": 0, "warning_count": 0 })] to contain value:  ["warnings"]:  Should return warnings field
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Should have no warnings when check_warnings is false
+* test_validate_script_valid_returns_structure
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "valid": true, "errors": [], "warnings": [], "error_count": 0, "warning_count": 0 })] to contain value:  ["valid"]:  Should have valid field
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "valid": true, "errors": [], "warnings": [], "error_count": 0, "warning_count": 0 })] to contain value:  ["errors"]:  Should have errors array
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "valid": true, "errors": [], "warnings": [], "error_count": 0, "warning_count": 0 })] to contain value:  ["warnings"]:  Should have warnings array
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "valid": true, "errors": [], "warnings": [], "error_count": 0, "warning_count": 0 })] to contain value:  ["error_count"]:  Should have error_count
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "valid": true, "errors": [], "warnings": [], "error_count": 0, "warning_count": 0 })] to contain value:  ["warning_count"]:  Should have warning_count
+* test_search_in_files_missing_pattern
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: pattern" })] to contain value:  ["error"]:  Should return error for missing pattern
+[32m    [Passed]:  [0mError should mention pattern
+* test_search_in_files_empty_pattern
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: pattern" })] to contain value:  ["error"]:  Should return error for empty pattern
+* test_search_in_files_invalid_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Invalid path: Path contains dangerous pattern: C:\\" })] to contain value:  ["error"]:  Should return error for invalid path
+* test_search_in_files_invalid_regex
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "pattern": "func_\\w+", "results": [{ "file": "res://addons/godot_mcp/tools/script_tools_native.gd", "matches": [{ "line": 680, "text": "func_name" }, { "line": 681, "text": "func_name" }, { "line": 682, "text": "func_name" }, { "line": 1576, "text": "func_name" }, { "line": 1577, "text": "func_name" }], "match_count": 5 }], "total_matches": 5, "files_searched": 8 })] to contain value:  ["pattern"]:  Should return pattern for valid regex
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "pattern": "func_\\w+", "results": [{ "file": "res://addons/godot_mcp/tools/script_tools_native.gd", "matches": [{ "line": 680, "text": "func_name" }, { "line": 681, "text": "func_name" }, { "line": 682, "text": "func_name" }, { "line": 1576, "text": "func_name" }, { "line": 1577, "text": "func_name" }], "match_count": 5 }], "total_matches": 5, "files_searched": 8 })] to contain value:  ["results"]:  Should return results for valid regex
+* test_search_in_files_regex_no_match
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Should find no matches for non-matching regex
+* test_search_in_files_returns_structure
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "pattern": "extends", "results": [{ "file": "res://addons/godot_mcp/tools/debug_tools_native.gd", "matches": [{ "line": 5, "text": "extends RefCounted" }, { "line": 3128, "text": "var wrapped_code: String = \"extends RefCounted\\n\\nvar _output: Array = []\\nvar edited_scene: Node = null\\n\\nfunc _custom_print(msg) -> void:\\n\\t_output.append(str(msg))\\n\\nfunc execute() -> Array:\\n\"" }], "match_count": 2 }, { "file": "res://addons/godot_mcp/tools/editor_tools_native.gd", "matches": [{ "line": 6, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/node_tools_native.gd", "matches": [{ "line": 5, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/project_tools_native.gd", "matches": [{ "line": 5, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/resource_tools_native.gd", "matches": [{ "line": 9, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/scene_tools_native.gd", "matches": [{ "line": 7, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/script_tools_native.gd", "matches": [{ "line": 6, "text": "extends RefCounted" }, { "line": 117, "text": "var description: String = \"Index script symbols across project GDScript and C# files. Returns class, extends, functions, signals, properties, and constants.\"" }, { "line": 664, "text": "var extends_from: String = \"\"" }, { "line": 677, "text": "elif trimmed.begins_with(\"extends \") and extends_from.is_empty():" }, { "line": 678, "text": "extends_from = trimmed.trim_prefix(\"extends \").split(\" \")[0].strip_edges()" }, { "line": 701, "text": "\"extends_from\": extends_from," }, { "line": 713, "text": "var extends_from: String = \"\"" }, { "line": 744, "text": "extends_from = class_match.get_string(2)" }, { "line": 773, "text": "\"extends_from\": extends_from," }, { "line": 817, "text": "var extends_from: String = str(filtered.get(\"extends_from\", \"\")).to_lower()" }, { "line": 818, "text": "if class_name_value.contains(name_filter) or extends_from.contains(name_filter):" }, { "line": 860, "text": "var extends_from: String = \"\"" }, { "line": 873, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"class\", class_name_value, i + 1, raw_line.strip_edges()))" }, { "line": 876, "text": "if trimmed.begins_with(\"extends \") and extends_from.is_empty():" }, { "line": 877, "text": "extends_from = trimmed.trim_prefix(\"extends \").split(\" \")[0].strip_edges()" }, { "line": 883, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"signal\", signal_name, i + 1, raw_line.strip_edges()))" }, { "line": 889, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"constant\", const_name, i + 1, raw_line.strip_edges()))" }, { "line": 895, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"property\", property_name, i + 1, raw_line.strip_edges()))" }, { "line": 901, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"function\", function_name, i + 1, raw_line.strip_edges()))" }, { "line": 908, "text": "var extends_from: String = \"\"" }, { "line": 938, "text": "extends_from = class_match.get_string(2)" }, { "line": 940, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"class\", class_name_value, i + 1, raw_line.strip_edges()))" }, { "line": 946, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"constant\", symbol_name, i + 1, raw_line.strip_edges()))" }, { "line": 954, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"signal\", delegate_name, i + 1, raw_line.strip_edges()))" }, { "line": 963, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"property\", property_name, i + 1, raw_line.strip_edges()))" }, { "line": 971, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"function\", function_name, i + 1, raw_line.strip_edges()))" }, { "line": 975, "text": "func _build_symbol_definition(script_path: String, language: String, class_name_value: String, extends_from: String, symbol_kind: String, symbol_name: String, line: int, context_line: String) -> Dictionary:" }, { "line": 980, "text": "\"extends_from\": extends_from," }, { "line": 1347, "text": "extends Node" }, { "line": 1359, "text": "extends CharacterBody2D" }, { "line": 1366, "text": "extends CharacterBody3D" }, { "line": 1513, "text": "\"extends_from\": {\"type\": \"string\"}," }, { "line": 1553, "text": "var extends_from: String = \"\"" }, { "line": 1572, "text": "elif trimmed.begins_with(\"extends \") and extends_from.is_empty():" }, { "line": 1573, "text": "extends_from = trimmed.split(\" \")[1]" }, { "line": 1591, "text": "\"extends_from\": extends_from," }], "match_count": 36 }], "total_matches": 43, "files_searched": 8 })] to contain value:  ["pattern"]:  Should have pattern field
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "pattern": "extends", "results": [{ "file": "res://addons/godot_mcp/tools/debug_tools_native.gd", "matches": [{ "line": 5, "text": "extends RefCounted" }, { "line": 3128, "text": "var wrapped_code: String = \"extends RefCounted\\n\\nvar _output: Array = []\\nvar edited_scene: Node = null\\n\\nfunc _custom_print(msg) -> void:\\n\\t_output.append(str(msg))\\n\\nfunc execute() -> Array:\\n\"" }], "match_count": 2 }, { "file": "res://addons/godot_mcp/tools/editor_tools_native.gd", "matches": [{ "line": 6, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/node_tools_native.gd", "matches": [{ "line": 5, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/project_tools_native.gd", "matches": [{ "line": 5, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/resource_tools_native.gd", "matches": [{ "line": 9, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/scene_tools_native.gd", "matches": [{ "line": 7, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/script_tools_native.gd", "matches": [{ "line": 6, "text": "extends RefCounted" }, { "line": 117, "text": "var description: String = \"Index script symbols across project GDScript and C# files. Returns class, extends, functions, signals, properties, and constants.\"" }, { "line": 664, "text": "var extends_from: String = \"\"" }, { "line": 677, "text": "elif trimmed.begins_with(\"extends \") and extends_from.is_empty():" }, { "line": 678, "text": "extends_from = trimmed.trim_prefix(\"extends \").split(\" \")[0].strip_edges()" }, { "line": 701, "text": "\"extends_from\": extends_from," }, { "line": 713, "text": "var extends_from: String = \"\"" }, { "line": 744, "text": "extends_from = class_match.get_string(2)" }, { "line": 773, "text": "\"extends_from\": extends_from," }, { "line": 817, "text": "var extends_from: String = str(filtered.get(\"extends_from\", \"\")).to_lower()" }, { "line": 818, "text": "if class_name_value.contains(name_filter) or extends_from.contains(name_filter):" }, { "line": 860, "text": "var extends_from: String = \"\"" }, { "line": 873, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"class\", class_name_value, i + 1, raw_line.strip_edges()))" }, { "line": 876, "text": "if trimmed.begins_with(\"extends \") and extends_from.is_empty():" }, { "line": 877, "text": "extends_from = trimmed.trim_prefix(\"extends \").split(\" \")[0].strip_edges()" }, { "line": 883, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"signal\", signal_name, i + 1, raw_line.strip_edges()))" }, { "line": 889, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"constant\", const_name, i + 1, raw_line.strip_edges()))" }, { "line": 895, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"property\", property_name, i + 1, raw_line.strip_edges()))" }, { "line": 901, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"function\", function_name, i + 1, raw_line.strip_edges()))" }, { "line": 908, "text": "var extends_from: String = \"\"" }, { "line": 938, "text": "extends_from = class_match.get_string(2)" }, { "line": 940, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"class\", class_name_value, i + 1, raw_line.strip_edges()))" }, { "line": 946, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"constant\", symbol_name, i + 1, raw_line.strip_edges()))" }, { "line": 954, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"signal\", delegate_name, i + 1, raw_line.strip_edges()))" }, { "line": 963, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"property\", property_name, i + 1, raw_line.strip_edges()))" }, { "line": 971, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"function\", function_name, i + 1, raw_line.strip_edges()))" }, { "line": 975, "text": "func _build_symbol_definition(script_path: String, language: String, class_name_value: String, extends_from: String, symbol_kind: String, symbol_name: String, line: int, context_line: String) -> Dictionary:" }, { "line": 980, "text": "\"extends_from\": extends_from," }, { "line": 1347, "text": "extends Node" }, { "line": 1359, "text": "extends CharacterBody2D" }, { "line": 1366, "text": "extends CharacterBody3D" }, { "line": 1513, "text": "\"extends_from\": {\"type\": \"string\"}," }, { "line": 1553, "text": "var extends_from: String = \"\"" }, { "line": 1572, "text": "elif trimmed.begins_with(\"extends \") and extends_from.is_empty():" }, { "line": 1573, "text": "extends_from = trimmed.split(\" \")[1]" }, { "line": 1591, "text": "\"extends_from\": extends_from," }], "match_count": 36 }], "total_matches": 43, "files_searched": 8 })] to contain value:  ["results"]:  Should have results array
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "pattern": "extends", "results": [{ "file": "res://addons/godot_mcp/tools/debug_tools_native.gd", "matches": [{ "line": 5, "text": "extends RefCounted" }, { "line": 3128, "text": "var wrapped_code: String = \"extends RefCounted\\n\\nvar _output: Array = []\\nvar edited_scene: Node = null\\n\\nfunc _custom_print(msg) -> void:\\n\\t_output.append(str(msg))\\n\\nfunc execute() -> Array:\\n\"" }], "match_count": 2 }, { "file": "res://addons/godot_mcp/tools/editor_tools_native.gd", "matches": [{ "line": 6, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/node_tools_native.gd", "matches": [{ "line": 5, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/project_tools_native.gd", "matches": [{ "line": 5, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/resource_tools_native.gd", "matches": [{ "line": 9, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/scene_tools_native.gd", "matches": [{ "line": 7, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/script_tools_native.gd", "matches": [{ "line": 6, "text": "extends RefCounted" }, { "line": 117, "text": "var description: String = \"Index script symbols across project GDScript and C# files. Returns class, extends, functions, signals, properties, and constants.\"" }, { "line": 664, "text": "var extends_from: String = \"\"" }, { "line": 677, "text": "elif trimmed.begins_with(\"extends \") and extends_from.is_empty():" }, { "line": 678, "text": "extends_from = trimmed.trim_prefix(\"extends \").split(\" \")[0].strip_edges()" }, { "line": 701, "text": "\"extends_from\": extends_from," }, { "line": 713, "text": "var extends_from: String = \"\"" }, { "line": 744, "text": "extends_from = class_match.get_string(2)" }, { "line": 773, "text": "\"extends_from\": extends_from," }, { "line": 817, "text": "var extends_from: String = str(filtered.get(\"extends_from\", \"\")).to_lower()" }, { "line": 818, "text": "if class_name_value.contains(name_filter) or extends_from.contains(name_filter):" }, { "line": 860, "text": "var extends_from: String = \"\"" }, { "line": 873, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"class\", class_name_value, i + 1, raw_line.strip_edges()))" }, { "line": 876, "text": "if trimmed.begins_with(\"extends \") and extends_from.is_empty():" }, { "line": 877, "text": "extends_from = trimmed.trim_prefix(\"extends \").split(\" \")[0].strip_edges()" }, { "line": 883, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"signal\", signal_name, i + 1, raw_line.strip_edges()))" }, { "line": 889, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"constant\", const_name, i + 1, raw_line.strip_edges()))" }, { "line": 895, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"property\", property_name, i + 1, raw_line.strip_edges()))" }, { "line": 901, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"function\", function_name, i + 1, raw_line.strip_edges()))" }, { "line": 908, "text": "var extends_from: String = \"\"" }, { "line": 938, "text": "extends_from = class_match.get_string(2)" }, { "line": 940, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"class\", class_name_value, i + 1, raw_line.strip_edges()))" }, { "line": 946, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"constant\", symbol_name, i + 1, raw_line.strip_edges()))" }, { "line": 954, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"signal\", delegate_name, i + 1, raw_line.strip_edges()))" }, { "line": 963, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"property\", property_name, i + 1, raw_line.strip_edges()))" }, { "line": 971, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"function\", function_name, i + 1, raw_line.strip_edges()))" }, { "line": 975, "text": "func _build_symbol_definition(script_path: String, language: String, class_name_value: String, extends_from: String, symbol_kind: String, symbol_name: String, line: int, context_line: String) -> Dictionary:" }, { "line": 980, "text": "\"extends_from\": extends_from," }, { "line": 1347, "text": "extends Node" }, { "line": 1359, "text": "extends CharacterBody2D" }, { "line": 1366, "text": "extends CharacterBody3D" }, { "line": 1513, "text": "\"extends_from\": {\"type\": \"string\"}," }, { "line": 1553, "text": "var extends_from: String = \"\"" }, { "line": 1572, "text": "elif trimmed.begins_with(\"extends \") and extends_from.is_empty():" }, { "line": 1573, "text": "extends_from = trimmed.split(\" \")[1]" }, { "line": 1591, "text": "\"extends_from\": extends_from," }], "match_count": 36 }], "total_matches": 43, "files_searched": 8 })] to contain value:  ["total_matches"]:  Should have total_matches
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "pattern": "extends", "results": [{ "file": "res://addons/godot_mcp/tools/debug_tools_native.gd", "matches": [{ "line": 5, "text": "extends RefCounted" }, { "line": 3128, "text": "var wrapped_code: String = \"extends RefCounted\\n\\nvar _output: Array = []\\nvar edited_scene: Node = null\\n\\nfunc _custom_print(msg) -> void:\\n\\t_output.append(str(msg))\\n\\nfunc execute() -> Array:\\n\"" }], "match_count": 2 }, { "file": "res://addons/godot_mcp/tools/editor_tools_native.gd", "matches": [{ "line": 6, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/node_tools_native.gd", "matches": [{ "line": 5, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/project_tools_native.gd", "matches": [{ "line": 5, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/resource_tools_native.gd", "matches": [{ "line": 9, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/scene_tools_native.gd", "matches": [{ "line": 7, "text": "extends RefCounted" }], "match_count": 1 }, { "file": "res://addons/godot_mcp/tools/script_tools_native.gd", "matches": [{ "line": 6, "text": "extends RefCounted" }, { "line": 117, "text": "var description: String = \"Index script symbols across project GDScript and C# files. Returns class, extends, functions, signals, properties, and constants.\"" }, { "line": 664, "text": "var extends_from: String = \"\"" }, { "line": 677, "text": "elif trimmed.begins_with(\"extends \") and extends_from.is_empty():" }, { "line": 678, "text": "extends_from = trimmed.trim_prefix(\"extends \").split(\" \")[0].strip_edges()" }, { "line": 701, "text": "\"extends_from\": extends_from," }, { "line": 713, "text": "var extends_from: String = \"\"" }, { "line": 744, "text": "extends_from = class_match.get_string(2)" }, { "line": 773, "text": "\"extends_from\": extends_from," }, { "line": 817, "text": "var extends_from: String = str(filtered.get(\"extends_from\", \"\")).to_lower()" }, { "line": 818, "text": "if class_name_value.contains(name_filter) or extends_from.contains(name_filter):" }, { "line": 860, "text": "var extends_from: String = \"\"" }, { "line": 873, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"class\", class_name_value, i + 1, raw_line.strip_edges()))" }, { "line": 876, "text": "if trimmed.begins_with(\"extends \") and extends_from.is_empty():" }, { "line": 877, "text": "extends_from = trimmed.trim_prefix(\"extends \").split(\" \")[0].strip_edges()" }, { "line": 883, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"signal\", signal_name, i + 1, raw_line.strip_edges()))" }, { "line": 889, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"constant\", const_name, i + 1, raw_line.strip_edges()))" }, { "line": 895, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"property\", property_name, i + 1, raw_line.strip_edges()))" }, { "line": 901, "text": "definitions.append(_build_symbol_definition(script_path, \"gdscript\", class_name_value, extends_from, \"function\", function_name, i + 1, raw_line.strip_edges()))" }, { "line": 908, "text": "var extends_from: String = \"\"" }, { "line": 938, "text": "extends_from = class_match.get_string(2)" }, { "line": 940, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"class\", class_name_value, i + 1, raw_line.strip_edges()))" }, { "line": 946, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"constant\", symbol_name, i + 1, raw_line.strip_edges()))" }, { "line": 954, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"signal\", delegate_name, i + 1, raw_line.strip_edges()))" }, { "line": 963, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"property\", property_name, i + 1, raw_line.strip_edges()))" }, { "line": 971, "text": "definitions.append(_build_symbol_definition(script_path, \"csharp\", class_name_value, extends_from, \"function\", function_name, i + 1, raw_line.strip_edges()))" }, { "line": 975, "text": "func _build_symbol_definition(script_path: String, language: String, class_name_value: String, extends_from: String, symbol_kind: String, symbol_name: String, line: int, context_line: String) -> Dictionary:" }, { "line": 980, "text": "\"extends_from\": extends_from," }, { "line": 1347, "text": "extends Node" }, { "line": 1359, "text": "extends CharacterBody2D" }, { "line": 1366, "text": "extends CharacterBody3D" }, { "line": 1513, "text": "\"extends_from\": {\"type\": \"string\"}," }, { "line": 1553, "text": "var extends_from: String = \"\"" }, { "line": 1572, "text": "elif trimmed.begins_with(\"extends \") and extends_from.is_empty():" }, { "line": 1573, "text": "extends_from = trimmed.split(\" \")[1]" }, { "line": 1591, "text": "\"extends_from\": extends_from," }], "match_count": 36 }], "total_matches": 43, "files_searched": 8 })] to contain value:  ["files_searched"]:  Should have files_searched
+[32m    [Passed]:  [0m["extends"] expected to equal ["extends"]:  Pattern should match input
+* test_search_in_files_finds_matches
+[32m    [Passed]:  [0mShould search at least one file
+[32m    [Passed]:  [0mShould find at least one match for 'extends'
+* test_search_in_files_case_insensitive
+[32m    [Passed]:  [0mCase insensitive should find matches
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Case sensitive should find no matches for uppercase
+* test_search_in_files_regex_mode
+[32m    [Passed]:  [0mRegex should find function registrations
+* test_search_in_files_max_results
+[32m    [Passed]:  [0mShould respect max_results limit
+* test_search_in_files_file_extension_filter
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Should not search .gd files when filtering .tscn
+* test_search_in_files_no_match
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Should find no matches for nonsense pattern
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Results should be empty
+* test_get_editor_screenshot_no_editor_interface
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Editor interface not available" })] to contain value:  ["error"]:  Should return error when editor interface not available
+[32m    [Passed]:  [0mError should mention Editor interface
+* test_get_editor_screenshot_invalid_save_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Editor interface not available" })] to contain value:  ["error"]:  Should return error for invalid save path
+* test_get_signals_missing_node_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for missing node_path
+[32m    [Passed]:  [0mError should mention node_path
+* test_get_signals_empty_node_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Missing required parameter: node_path" })] to contain value:  ["error"]:  Should return error for empty node_path
+* test_get_signals_no_editor_interface
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Editor interface not available" })] to contain value:  ["error"]:  Should return error when editor interface not available
+* test_get_signals_node_signal_list
+[32m    [Passed]:  [0mNode should have built-in signals
+[32m    [Passed]:  [0mNode should have 'ready' signal
+[32m    [Passed]:  [0mNode should have 'tree_entered' signal
+* test_get_signals_signal_connection_list
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Should have one connection for 'ready'
+* test_reload_project_no_editor_interface
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Editor interface not available" })] to contain value:  ["error"]:  Should return error when editor interface not available
+[32m    [Passed]:  [0mError should mention Editor interface
+* test_reload_project_default_params
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "error": "Editor interface not available" })] to contain value:  ["error"]:  Should return error when editor interface not available
+* test_clear_output_default_params
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "status": "success", "mcp_buffer_cleared": true, "mcp_panel_cleared": false, "editor_panel_cleared": false })] to contain value:  ["status"]:  Should return status
+[32m    [Passed]:  [0m["success"] expected to equal ["success"]:  Status should be success
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "status": "success", "mcp_buffer_cleared": true, "mcp_panel_cleared": false, "editor_panel_cleared": false })] to contain value:  ["mcp_buffer_cleared"]:  Should have mcp_buffer_cleared
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "status": "success", "mcp_buffer_cleared": true, "mcp_panel_cleared": false, "editor_panel_cleared": false })] to contain value:  ["editor_panel_cleared"]:  Should have editor_panel_cleared
+[32m    [Passed]:  [0mMCP buffer should be cleared by default
+* test_clear_output_mcp_buffer_only
+[32m    [Passed]:  [0m[2] expected to equal [2]:  Should have 2 log entries before clear
+[32m    [Passed]:  [0m["success"] expected to equal ["success"]:  Status should be success
+[32m    [Passed]:  [0mMCP buffer should be cleared
+[32m    [Passed]:  [0mEditor panel should not be cleared
+[32m    [Passed]:  [0m[0] expected to equal [0]:  Log buffer should be empty after clear
+* test_clear_output_no_clear
+[32m    [Passed]:  [0m["success"] expected to equal ["success"]:  Status should be success
+[32m    [Passed]:  [0mMCP buffer should not be cleared
+[32m    [Passed]:  [0mEditor panel should not be cleared
+[32m    [Passed]:  [0m[1] expected to equal [1]:  Log buffer should still have entries
+* test_clear_output_clears_all_log_types
+[32m    [Passed]:  [0m[4] expected to equal [4]:  Should have 4 log entries
+[32m    [Passed]:  [0mMCP buffer should be cleared
+[32m    [Passed]:  [0m[0] expected to equal [0]:  All log entries should be cleared
+* test_clear_output_idempotent
+[32m    [Passed]:  [0m["success"] expected to equal ["success"]:  Clearing empty buffer should still succeed
+[32m    [Passed]:  [0mShould report cleared even when already empty
+* test_find_node_by_class
+[32m    [Passed]:  [0m[RichChild:<RichTextLabel#704173313762>] expected to not equal [<null>]:  Should find a RichTextLabel in the tree
+* test_find_node_by_class_not_found
+[32m    [Passed]:  [0m[<null>] expected to equal [<null>]:  Should return null when no RichTextLabel exists
+[1m40/40 passed.
+[0m[4m
+
+res://test/unit/tools/test_script_tools.gd
+[0m* test_script_path_validation
+[32m    [Passed]:  [0mres://test.gd should be safe
+[32m    [Passed]:  [0mres://scripts/player.gd should be safe
+[32m    [Passed]:  [0mres://addons/my_addon/main.gd should be safe
+* test_script_path_traversal
+[32m    [Passed]:  [0mres://../secret.gd should be unsafe
+[32m    [Passed]:  [0mres://scripts/../../etc/passwd should be unsafe
+* test_script_extension_check
+[32m    [Passed]:  [0m["gd"] expected to equal ["gd"]:  Should extract gd extension
+* test_script_extension_tscn
+[32m    [Passed]:  [0m["tscn"] expected to equal ["tscn"]:  Should extract tscn extension
+* test_script_base_name
+[32m    [Passed]:  [0m["player.gd"] expected to equal ["player.gd"]:  Should extract file name
+* test_json_parse_string_to_dict
+[32m    [Passed]:  [0mShould parse to Dictionary
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "extends_from": "Node", "functions": ["_ready", "_process"] })] to contain value:  ["functions"]:  Should have functions key
+* test_analyze_script_output_format
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "script_path": "res://test.gd", "extends_from": "Node", "functions": ["_ready", "_process"], "properties": [], "signals": [], "line_count": 50 })] to contain value:  ["script_path"]:  Should have script_path
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "script_path": "res://test.gd", "extends_from": "Node", "functions": ["_ready", "_process"], "properties": [], "signals": [], "line_count": 50 })] to contain value:  ["extends_from"]:  Should have extends_from
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "script_path": "res://test.gd", "extends_from": "Node", "functions": ["_ready", "_process"], "properties": [], "signals": [], "line_count": 50 })] to contain value:  ["functions"]:  Should have functions
+[32m    [Passed]:  [0mExpected [DICTIONARY({ "script_path": "res://test.gd", "extends_from": "Node", "functions": ["_ready", "_process"], "properties": [], "signals": [], "line_count": 50 })] to contain value:  ["line_count"]:  Should have line_count
+* test_modify_script_line_number
+[32m    [Passed]:  [0m[3] expected to equal [3]:  Should have 3 lines
+[32m    [Passed]:  [0m["line2"] expected to equal ["line2"]:  Line 2 should be 'line2'
+* test_create_script_template
+[32m    [Passed]:  [0m[5] expected to be > than [0]:  Template should have lines
+[1m9/9 passed.
+[0m
+
+
+
+[33m==============================================
+[0m[33m= Run Summary
+[0m[33m==============================================
+[0m[4m
+res://test/unit/test_mcp_debugger_bridge.gd
+[0m- test_get_sessions_info_empty_before_registered_with_editor
+[31m    [Failed]:  [0mUnexpected Errors:
+    [1] <engine-2>Invalid call. Nonexistent function 'get_sessions_info' in base 'Nil'.
+          at line -1
+- test_for_each_session_returns_no_sessions_when_unregistered
+[31m    [Failed]:  [0mUnexpected Errors:
+    [1] <engine-2>Invalid call. Nonexistent function 'set_breakpoint' in base 'Nil'.
+          at line -1
+- test_capture_prefix_defaults_to_mcp
+[31m    [Failed]:  [0mUnexpected Errors:
+    [1] <engine-2>Invalid call. Nonexistent function '_has_capture' in base 'Nil'.
+          at line -1
+- test_add_capture_prefix
+[31m    [Failed]:  [0mUnexpected Errors:
+    [1] <engine-2>Invalid call. Nonexistent function 'add_capture_prefix' in base 'Nil'.
+          at line -1
+- test_capture_stores_messages
+[31m    [Failed]:  [0mUnexpected Errors:
+    [1] <engine-2>Invalid call. Nonexistent function '_capture' in base 'Nil'.
+          at line -1
+- test_stack_dump_signal_updates_latest_frames
+[31m    [Failed]:  [0mUnexpected Errors:
+    [1] <engine-2>Invalid call. Nonexistent function '_on_stack_dump' in base 'Nil'.
+          at line -1
+- test_stack_frame_var_decodes_variable_payload
+[31m    [Failed]:  [0mUnexpected Errors:
+    [1] <engine-2>Invalid call. Nonexistent function '_on_stack_frame_vars' in base 'Nil'.
+          at line -1
+[4m
+res://test/unit/tools/test_debug_tools.gd
+[0m- test_get_debug_stack_variables_rejects_negative_frame
+[31m    [Failed]:  [0mError should mention frame
+          at line 169
+
+Totals
+------
+Warnings              1
+
+Scripts              21
+Tests               357
+Passing Tests       349
+Failing Tests         8
+Asserts           688/696
+Time              5.993s
+
+
+[31m---- 8 failing tests ----
+[0m
+[1m[INFO]:  [0mExiting with code 1

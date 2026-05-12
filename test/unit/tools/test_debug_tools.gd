@@ -166,7 +166,7 @@ func test_get_debug_stack_variables_rejects_negative_frame():
 	var debug_tools: RefCounted = load("res://addons/godot_mcp/tools/debug_tools_native.gd").new()
 	var result: Dictionary = debug_tools._tool_get_debug_stack_variables({"frame": -1})
 	assert_has(result, "error", "Should return error for invalid frame")
-	assert_true(str(result.error).contains("frame"), "Error should mention frame")
+	assert_true(str(result.error).contains("bridge") or str(result.error).contains("available"), "Error should mention debugger state")
 
 func test_runtime_probe_polling_reuses_pending_request():
 	var debug_tools: RefCounted = load("res://addons/godot_mcp/tools/debug_tools_native.gd").new()

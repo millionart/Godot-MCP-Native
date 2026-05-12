@@ -160,7 +160,8 @@ func _register_list_project_script_symbols(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_list_project_script_symbols"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Script-Advanced")
 
 func _tool_list_project_script_symbols(params: Dictionary) -> Dictionary:
 	var search_path: String = str(params.get("search_path", "res://")).strip_edges()
@@ -256,7 +257,8 @@ func _register_find_script_symbol_definition(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_find_script_symbol_definition"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Script-Advanced")
 
 func _tool_find_script_symbol_definition(params: Dictionary) -> Dictionary:
 	var symbol_name: String = str(params.get("symbol_name", "")).strip_edges()
@@ -366,7 +368,8 @@ func _register_find_script_symbol_references(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_find_script_symbol_references"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Script-Advanced")
 
 func _tool_find_script_symbol_references(params: Dictionary) -> Dictionary:
 	var symbol_name: String = str(params.get("symbol_name", "")).strip_edges()
@@ -484,7 +487,8 @@ func _register_rename_script_symbol(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_rename_script_symbol"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Script-Advanced")
 
 func _tool_rename_script_symbol(params: Dictionary) -> Dictionary:
 	var symbol_name: String = str(params.get("symbol_name", "")).strip_edges()
@@ -1724,7 +1728,8 @@ func _register_open_script_at_line(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_open_script_at_line"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Script-Advanced")
 
 func _tool_open_script_at_line(params: Dictionary) -> Dictionary:
 	var script_path: String = str(params.get("script_path", "")).strip_edges()

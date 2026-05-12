@@ -18,16 +18,16 @@
 
 ## 工具概述
 
-Godot MCP Native 实现了 **70 个工具**，分为 6 大类：
+Godot MCP Native 实现了 **154 个工具**，分为 6 大类（含核心和补充工具）：
 
-| 类别 | 工具数量 | 源文件 | 用途 |
-|------|----------|--------|------|
-| [Node Tools](#node-tools) | 16 | `node_tools_native.gd` | 节点管理（创建、删除、修改属性、复制、移动、重命名、信号、组） |
-| [Script Tools](#script-tools) | 9 | `script_tools_native.gd` | 脚本管理（读取、创建、修改、分析、附加、验证、搜索） |
-| [Scene Tools](#scene-tools) | 6 | `scene_tools_native.gd` | 场景管理（创建、保存、打开） |
-| [Editor Tools](#editor-tools) | 8 | `editor_tools_native.gd` | 编辑器操作（运行、停止、获取状态、截图、信号、重载） |
-| [Debug Tools](#debug-tools) | 26 | `debug_tools_native.gd` | 调试和日志（日志获取、脚本执行、调试会话、断点、栈帧/变量读取、Profiler、运行时探针） |
-| [Project Tools](#project-tools) | 5 | `project_tools_native.gd` | 项目配置（信息、设置、结构） |
+| 类别 | 核心工具 | 补充工具 | 总计 | 源文件 | 用途 |
+|------|----------|----------|------|--------|------|
+| [Node Tools](#node-tools) | 16 | 4 | 20 | `node_tools_native.gd` | 节点管理（创建、删除、修改属性、复制、移动、重命名、信号、组） |
+| [Script Tools](#script-tools) | 9 | 5 | 14 | `script_tools_native.gd` | 脚本管理（读取、创建、修改、分析、附加、验证、搜索、符号索引） |
+| [Scene Tools](#scene-tools) | 6 | 2 | 8 | `scene_tools_native.gd` | 场景管理（创建、保存、打开、列出） |
+| [Editor Tools](#editor-tools) | 7 | 9 | 16 | `editor_tools_native.gd` | 编辑器操作（运行、停止、状态、截图、信号、导出、选择） |
+| [Debug Tools](#debug-tools) | 3 | 67 | 70 | `debug_tools_native.gd` | 调试和运行时（日志、断点、栈帧、Profiler、运行时探针、动画、音频、着色器、瓦片地图） |
+| [Project Tools](#project-tools) | 5 | 21 | 26 | `project_tools_native.gd` | 项目配置（信息、设置、测试、输入映射、自动加载、全局类、资源诊断） |
 
 ### 工具调用格式
 
@@ -1806,6 +1806,1936 @@ Godot MCP Native 实现了 **70 个工具**，分为 6 大类：
 
 ---
 
+## Node-Advanced（补充工具）
+
+这些工具扩展了节点管理功能，支持批量操作和场景审计。需在工具管理面板中启用 `Node-Advanced` 分组后使用。
+
+### 71. batch_update_node_properties
+
+在一个 UndoRedo 动作中批量更新多个节点属性。适用于需要一步撤销的场景事务式编辑。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `label` | string | 否 | UndoRedo 动作标签（默认 `"Batch Update Node Properties"`） |
+| `changes` | array | 是 | 属性更新列表，每项包含 `node_path`、`property_name`、`property_value` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `label` | string | UndoRedo 标签 |
+| `change_count` | int | 更新的属性数量 |
+| `changes` | array | 每项更新的结果 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=false`
+
+---
+
+### 72. batch_scene_node_edits
+
+在一个 UndoRedo 动作中批量执行创建/删除场景节点编辑，使完整的结构变更可一步撤销。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `label` | string | 否 | UndoRedo 动作标签 |
+| `operations` | array | 是 | 有序的创建/删除操作列表，每项需指定 `type`（`create`/`delete`/`move`）及相关参数 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `label` | string | UndoRedo 标签 |
+| `operation_count` | int | 操作数量 |
+| `operations` | array | 每项操作的结果 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=true`, `idempotentHint=false`, `openWorldHint=false`
+
+---
+
+### 73. audit_scene_node_persistence
+
+审计当前编辑场景的节点 owner 和持久化状态。报告影响场景保存和继承的缺失或无效 owner 关系。
+
+**参数**：无
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `scene_path` | string | 场景文件路径 |
+| `scene_root_path` | string | 场景根节点路径 |
+| `total_nodes` | int | 节点总数 |
+| `persistent_node_count` | int | 可持久化的节点数 |
+| `issue_count` | int | 问题数量 |
+| `nodes` | array | 节点详细信息 |
+| `issues` | array | 发现的问题列表 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 74. audit_scene_inheritance
+
+审计当前场景的继承/实例化结构。分类本地节点、实例根节点、继承实例内容和实例化子树中的本地新增。
+
+**参数**：无
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `scene_path` | string | 场景文件路径 |
+| `scene_root_path` | string | 场景根节点路径 |
+| `node_count` | int | 节点总数 |
+| `instance_root_count` | int | 实例根节点数 |
+| `issue_count` | int | 问题数量 |
+| `instance_roots` | array | 实例根节点信息 |
+| `nodes` | array | 节点详细信息 |
+| `issues` | array | 发现的问题列表 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+## Script-Advanced（补充工具）
+
+这些工具扩展了脚本管理功能，支持符号索引、定义查找和引用搜索。需在工具管理面板中启用 `Script-Advanced` 分组后使用。
+
+### 75. list_project_script_symbols
+
+索引项目 GDScript 和 C# 文件中的脚本符号。返回类、继承、函数、信号、属性和常量。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `search_path` | string | 否 | 搜索子路径，默认 `res://` |
+| `include_extensions` | array | 否 | 脚本文件扩展名，默认 `[".gd", ".cs"]` |
+| `symbol_kinds` | array | 否 | 符号种类过滤：`function`、`signal`、`property`、`constant` |
+| `name_filter` | string | 否 | 符号名称的大小写不敏感子串过滤 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `scripts` | array | 脚本符号信息数组 |
+| `count` | int | 脚本数量 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 76. find_script_symbol_definition
+
+跨项目 GDScript 和 C# 文件查找脚本符号的定义位置。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `symbol_name` | string | 是 | 要查找的符号名称 |
+| `search_path` | string | 否 | 搜索子路径，默认 `res://` |
+| `include_extensions` | array | 否 | 脚本文件扩展名，默认 `[".gd", ".cs"]` |
+| `symbol_kinds` | array | 否 | 符号种类过滤：`class`、`function`、`signal`、`property`、`constant` |
+| `preferred_script_path` | string | 否 | 优先排名靠前的脚本路径 |
+| `max_results` | int | 否 | 最大返回定义数，默认 `20` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `symbol_name` | string | 搜索的符号名称 |
+| `definitions` | array | 定义位置数组 |
+| `count` | int | 定义数量 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 77. find_script_symbol_references
+
+跨 GDScript、C# 和场景文件查找脚本符号的文本引用。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `symbol_name` | string | 是 | 要搜索的符号名称 |
+| `search_path` | string | 否 | 搜索子路径，默认 `res://` |
+| `include_extensions` | array | 否 | 文件扩展名，默认 `[".gd", ".cs", ".tscn"]` |
+| `include_definitions` | boolean | 否 | 是否包含定义行，默认 `false` |
+| `case_sensitive` | boolean | 否 | 是否区分大小写，默认 `true` |
+| `preferred_script_path` | string | 否 | 优先排名靠前的脚本路径 |
+| `max_results` | int | 否 | 最大返回引用数，默认 `100` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `symbol_name` | string | 搜索的符号名称 |
+| `references` | array | 引用位置数组 |
+| `count` | int | 引用数量 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 78. rename_script_symbol
+
+跨项目文件使用标识符边界文本替换重命名脚本符号。支持 dry-run 预览。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `symbol_name` | string | 是 | 现有符号名称 |
+| `new_name` | string | 是 | 新符号名称 |
+| `search_path` | string | 否 | 搜索子路径，默认 `res://` |
+| `include_extensions` | array | 否 | 文件扩展名，默认 `[".gd", ".cs"]` |
+| `case_sensitive` | boolean | 否 | 是否区分大小写，默认 `true` |
+| `dry_run` | boolean | 否 | 预览模式不修改文件，默认 `true` |
+| `max_results` | int | 否 | 最大替换匹配数，默认 `200` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `symbol_name` | string | 原始符号名称 |
+| `new_name` | string | 新符号名称 |
+| `dry_run` | boolean | 是否为预览模式 |
+| `changed_files` | array | 修改的文件列表 |
+| `replacement_count` | int | 替换数量 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=true`, `idempotentHint=false`, `openWorldHint=false`
+
+---
+
+### 79. open_script_at_line
+
+在 Godot 脚本编辑器中打开脚本文件并将光标移动到指定行和列。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `script_path` | string | 是 | 脚本文件路径 |
+| `line` | int | 否 | 1-based 行号，默认 `1` |
+| `column` | int | 否 | 0-based 列号，默认 `0` |
+| `grab_focus` | boolean | 否 | 是否获取焦点，默认 `true` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `script_path` | string | 脚本路径 |
+| `line` | int | 打开的行号 |
+| `column` | int | 打开的列号 |
+| `caret_line` | int | 实际光标行号 |
+| `caret_column` | int | 实际光标列号 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+## Scene-Advanced（补充工具）
+
+这些工具扩展了场景管理功能，支持列出和关闭场景标签页。需在工具管理面板中启用 `Scene-Advanced` 分组后使用。
+
+### 80. list_open_scenes
+
+列出 Godot 编辑器中当前打开的场景标签页。
+
+**参数**：无
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `active_scene` | string | 当前活动场景路径 |
+| `open_scenes` | array | 所有打开的场景路径 |
+| `count` | int | 打开的场景数量 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 81. close_scene_tab
+
+关闭当前活动场景标签页，或关闭指定路径的场景标签页。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `scene_path` | string | 否 | 要关闭的场景路径。不提供则关闭当前活动场景 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `closed_scene` | string | 已关闭的场景路径 |
+| `remaining_count` | int | 剩余打开的场景数 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=true`, `idempotentHint=false`, `openWorldHint=false`
+
+---
+
+## Editor-Advanced（补充工具）
+
+这些工具扩展了编辑器操作功能，支持节点/文件选择、属性检查、导出管理。需在工具管理面板中启用 `Editor-Advanced` 分组后使用。
+
+### 82. select_node
+
+在当前编辑的场景中选择一个节点并在检查器中聚焦显示。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径（如 `/root/MainScene/Player`） |
+| `clear_existing` | boolean | 否 | 是否清除现有选择，默认 `true` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `node_path` | string | 选择的节点路径 |
+| `node_type` | string | 节点类型 |
+| `selected_count` | int | 选中节点数量 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 83. select_file
+
+在 Godot 文件系统停靠面板中选择一个项目文件。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `file_path` | string | 是 | 项目文件路径（如 `res://scenes/Main.tscn`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `file_path` | string | 选择的文件路径 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 84. get_inspector_properties
+
+检查节点或资源并返回类似检查器的属性元数据和序列化值。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 否 | 节点路径（与 `resource_path` 二选一） |
+| `resource_path` | string | 否 | 资源路径（与 `node_path` 二选一） |
+| `property_filter` | string | 否 | 属性名称子串过滤 |
+| `include_values` | boolean | 否 | 是否包含属性值，默认 `true` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `target_kind` | string | 目标类型：`node` 或 `resource` |
+| `target_path` | string | 目标路径 |
+| `class_name` | string | 类名 |
+| `property_count` | int | 属性数量 |
+| `properties` | array | 属性信息数组 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 85. list_export_presets
+
+从 `export_presets.cfg` 列出导出预设。
+
+**参数**：无
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `config_path` | string | 配置文件路径 |
+| `presets` | array | 导出预设数组 |
+| `count` | int | 预设数量 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 86. inspect_export_templates
+
+检查本地已安装的 Godot 导出模板。
+
+**参数**：无
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `templates_root` | string | 模板根目录 |
+| `current_version` | string | 当前编辑器版本 |
+| `matching_version_installed` | boolean | 是否已安装匹配的模板版本 |
+| `installed_versions` | array | 已安装的版本列表 |
+| `detected_files` | array | 检测到的模板文件 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 87. validate_export_preset
+
+根据 `export_presets.cfg` 和本地模板可用性验证导出预设。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `preset` | string | 是 | 预设名称或节名（如 `"Windows Desktop"` 或 `"preset.0"`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `valid` | boolean | 预设是否有效 |
+| `preset` | object | 预设详情 |
+| `errors` | array | 错误列表 |
+| `warnings` | array | 警告列表 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 88. run_export
+
+运行 Godot CLI 导出指定预设。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `preset` | string | 是 | 预设名称或节名 |
+| `output_path` | string | 否 | 输出路径覆盖 |
+| `mode` | string | 否 | 导出模式：`release`、`debug`、`pack`、`patch`（默认 `release`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `success` | boolean | 导出是否成功 |
+| `exit_code` | int | Godot CLI 退出码 |
+| `command` | array | 执行的命令 |
+| `output_path` | string | 输出文件路径 |
+| `logs` | array | 日志输出 |
+| `errors` | array | 错误输出 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=false`
+
+---
+
+## Debug-Advanced（补充工具）
+
+这些工具扩展了调试功能，包括调试器线程/变量操作、执行控制、运行时场景管理、动画/音频/着色器等运行时操作。需在工具管理面板中启用 `Debug-Advanced` 分组后使用。
+
+### 89. get_debug_threads
+
+返回活动 Godot 调试会话中的 DAP 样式调试器线程。
+
+**参数**：无
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `threads` | array | 线程信息数组 |
+| `count` | int | 线程数量 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 90. get_debug_state_events
+
+从 bridge 读取记录的调试器断点/恢复/停止状态转换记录。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `count` | int | 否 | 最大返回条数，默认 `100` |
+| `offset` | int | 否 | 跳过条数，默认 `0` |
+| `order` | string | 否 | `desc`（最新优先）或 `asc`，默认 `desc` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `events` | array | 状态事件数组 |
+| `count` | int | 返回数量 |
+| `total_available` | int | 可用事件总数 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 91. get_debug_output
+
+读取编辑器 bridge 捕获的分类运行时调试器输出。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `count` | int | 否 | 最大返回条数，默认 `100` |
+| `offset` | int | 否 | 跳过条数，默认 `0` |
+| `order` | string | 否 | `desc` 或 `asc`，默认 `desc` |
+| `category` | string | 否 | 分类过滤：`""`（全部）、`stdout`、`stderr`、`stdout_rich` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `events` | array | 输出事件数组 |
+| `count` | int | 返回数量 |
+| `total_available` | int | 可用事件总数 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 92. get_debug_scopes
+
+将捕获的栈变量分组为 DAP 风格的 scope（局部/成员/全局/常量）。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `frame` | int | 否 | 栈帧索引，默认 `0` |
+| `refresh` | boolean | 否 | 是否先请求刷新，默认 `true` |
+| `session_id` | int | 否 | 目标调试会话 ID，`-1` 表示全部 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `frame` | int | 栈帧索引 |
+| `scopes` | array | scope 数组 |
+| `count` | int | scope 数量 |
+| `refresh_result` | object | 刷新请求结果 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 93. get_debug_variables
+
+通过 DAP 风格 `variablesReference` 解析子变量，支持大型数组和字典的分页。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `variables_reference` | int | 是 | 变量引用 ID |
+| `offset` | int | 否 | 偏移量，默认 `0` |
+| `count` | int | 否 | 最大返回数，默认 `100` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `variables_reference` | int | 变量引用 ID |
+| `variables` | array | 变量数组 |
+| `count` | int | 返回数量 |
+| `total_available` | int | 可用变量总数 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 94. expand_debug_variable
+
+通过 scope 和路径展开捕获的调试变量或评估表达式值，支持数组和字典分页。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `frame` | int | 否 | 栈帧索引，默认 `0` |
+| `scope` | string | 是 | scope 名称：`local`、`member`、`global`、`constant`、`evaluation` |
+| `variable_path` | array | 是 | 路径片段，从顶层变量名开始 |
+| `offset` | int | 否 | 偏移量，默认 `0` |
+| `count` | int | 否 | 最大返回数，默认 `100` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `frame` | int | 栈帧索引 |
+| `scope` | string | scope 名称 |
+| `variable_path` | array | 展开路径 |
+| `entries` | array | 子项数组 |
+| `count` | int | 返回数量 |
+| `total_available` | int | 可用项总数 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 95. evaluate_debug_expression
+
+在暂停的脚本调试器上下文中为指定帧评估表达式。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `expression` | string | 是 | GDScript 表达式 |
+| `frame` | int | 否 | 栈帧索引，默认 `0` |
+| `session_id` | int | 否 | 目标调试会话 ID |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` 或 `"pending"` |
+| `expression` | string | 原始表达式 |
+| `frame` | int | 栈帧索引 |
+| `type` | string | 结果类型 |
+| `value` | variant | 计算结果 |
+| `has_children` | boolean | 是否有子变量 |
+| `refresh_result` | object | 刷新请求结果 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 96. debug_step_into
+
+Step Into：进入下一行语句。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `session_id` | int | 否 | 目标调试会话 ID，`-1` 表示全部 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"`、`"no_active_sessions"` 或错误 |
+| `sessions_updated` | int | 更新的会话数 |
+| `command` | string | 执行的命令 |
+| `target_state` | string | 目标状态：`breaked` |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 97. debug_step_over
+
+Step Over：跳过下一行语句。
+
+**参数**：同 `debug_step_into`（仅 `session_id`）
+
+**返回值**：同 `debug_step_into`
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 98. debug_step_out
+
+Step Out：跳出当前函数帧。
+
+**参数**：同 `debug_step_into`
+
+**返回值**：同 `debug_step_into`
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 99. debug_continue
+
+Continue：恢复执行。
+
+**参数**：同 `debug_step_into`
+
+**返回值**：同 `debug_step_into`
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 100. debug_step_into_and_wait
+
+发送 step-into 命令并等待调试器报告暂停状态。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间（毫秒），默认 `3000` |
+| `poll_interval_ms` | int | 否 | 轮询间隔，默认 `100` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"matched"`、`"timeout"` 或错误 |
+| `command` | string | 执行的命令 |
+| `target_state` | string | 目标状态 |
+| `matched_state` | object | 匹配到的状态 |
+| `sessions` | array | 会话状态 |
+| `state_events` | array | 状态事件记录 |
+| `attempts` | int | 轮询次数 |
+| `elapsed_ms` | int | 总耗时（毫秒） |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 101. debug_step_over_and_wait
+
+发送 step-over 命令并等待调试器报告暂停状态。参数和返回值同 `debug_step_into_and_wait`。
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 102. debug_step_out_and_wait
+
+发送 step-out 命令并等待调试器报告暂停状态。参数和返回值同 `debug_step_into_and_wait`。
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 103. debug_continue_and_wait
+
+发送 continue 命令并等待调试器报告运行状态。参数和返回值同 `debug_step_into_and_wait`。
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 104. await_debugger_state
+
+使用最新的 bridge 快照检查调试器会话是否达到目标执行状态。客户端在 continue/step 操作后重复调用。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `target_state` | string | 否 | 目标状态：`breaked`、`running`、`stopped`，默认 `breaked` |
+| `session_id` | int | 否 | 会话 ID，`-1` 表示任意 |
+| `timeout_ms` | int | 否 | 超时时间，默认 `3000` |
+| `poll_interval_ms` | int | 否 | 轮询间隔，默认 `100` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"matched"`、`"timeout"` 或 `"no_sessions"` |
+| `target_state` | string | 目标状态 |
+| `matched_state` | object | 匹配到的状态 |
+| `sessions` | array | 会话列表 |
+| `state_events` | array | 状态事件记录 |
+| `attempts` | int | 轮询次数 |
+| `elapsed_ms` | int | 总耗时（毫秒） |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=false`
+
+---
+
+### 105. get_runtime_performance_snapshot
+
+从运行中的游戏实例捕获运行时性能快照，包括帧时间、对象计数和内存使用。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `fps` | number | 当前帧率 |
+| `frame_time_sec` | number | 帧耗时 |
+| `physics_frame_time_sec` | number | 物理帧耗时 |
+| `object_count` | int | 对象总数 |
+| `resource_count` | int | 资源总数 |
+| `rendered_objects_in_frame` | int | 帧内渲染对象数 |
+| `memory_static_bytes` | int | 静态内存（字节） |
+| `memory_static_mb` | number | 静态内存（MB） |
+| `current_scene` | string | 当前场景路径 |
+| `node_count` | int | 节点总数 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 106. get_runtime_memory_trend
+
+从运行中的游戏捕获短时内存和对象计数趋势（多次采样）。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `sample_count` | int | 否 | 采样次数，默认 `5` |
+| `sample_interval_ms` | int | 否 | 采样间隔，默认 `100` |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `3000` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `sample_count` | int | 采样次数 |
+| `sample_interval_ms` | int | 采样间隔 |
+| `memory_static_delta_bytes` | int | 内存变化（字节） |
+| `object_count_delta` | int | 对象数变化 |
+| `resource_count_delta` | int | 资源数变化 |
+| `current_scene` | string | 当前场景路径 |
+| `samples` | array | 采样数据数组 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 107. create_runtime_node
+
+在运行中游戏的父节点下创建新节点。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `parent_path` | string | 是 | 父节点路径 |
+| `node_type` | string | 是 | 节点类型（如 `Node2D`、`Sprite2D`） |
+| `node_name` | string | 是 | 新节点名称 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `parent_path` | string | 父节点路径 |
+| `node_path` | string | 新节点路径 |
+| `node_type` | string | 节点类型 |
+| `node_name` | string | 节点名称 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 108. delete_runtime_node
+
+删除运行中的游戏节点。运行时场景根节点和 MCPRuntimeProbe 节点受保护。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 要删除的节点路径 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 已删除节点路径 |
+| `node_type` | string | 节点类型 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=true`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 109. simulate_runtime_input_event
+
+通过 `Input.parse_input_event()` 向运行中的游戏注入结构化 InputEvent。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `event` | object | 是 | 结构化输入事件，支持类型：`action`、`key`、`mouse_button`、`mouse_motion` |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `type` | string | 事件类型 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 110. simulate_runtime_input_action
+
+通过 `Input.parse_input_event()` 向运行中的游戏注入 InputEventAction。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `action_name` | string | 是 | 动作名称 |
+| `pressed` | boolean | 否 | 是否按下，默认 `true` |
+| `strength` | number | 否 | 强度值，默认 `1.0` |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `action_name` | string | 动作名称 |
+| `action_exists` | boolean | 动作是否存在于 InputMap |
+| `pressed` | boolean | 按下状态 |
+| `strength` | number | 强度值 |
+| `runtime_pressed` | boolean | 运行时的实际 pressed 状态 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 111. list_runtime_input_actions
+
+列出运行中的游戏可用的 InputMap 动作，包含序列化的输入事件。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `action_name` | string | 否 | 精确动作名称过滤 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `actions` | array | 动作数组 |
+| `count` | int | 动作数量 |
+| `filter` | string | 过滤条件 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 112. upsert_runtime_input_action
+
+在运行中的游戏创建或更新 InputMap 动作。支持替换现有事件。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `action_name` | string | 是 | 动作名称 |
+| `deadzone` | number | 否 | 死区值，默认 `0.5` |
+| `erase_existing` | boolean | 否 | 是否清除现有事件，默认 `false` |
+| `events` | array | 否 | 要添加的结构化输入事件 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `action_name` | string | 动作名称 |
+| `existed_before` | boolean | 之前是否存在 |
+| `deadzone` | number | 死区值 |
+| `event_count` | int | 事件总数 |
+| `events` | array | 当前事件列表 |
+| `added_events` | array | 新添加的事件 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 113. remove_runtime_input_action
+
+从运行中的游戏移除 InputMap 动作。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `action_name` | string | 是 | 动作名称 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `action_name` | string | 动作名称 |
+| `removed` | boolean | 是否已移除 |
+| `event_count` | int | 移除前的事件数 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=true`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 114. list_runtime_animations
+
+列出运行时 AnimationPlayer 节点上的可用动画。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `animations` | array | 动画名称列表 |
+| `count` | int | 动画数量 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 115. play_runtime_animation
+
+播放运行时 AnimationPlayer 节点上的动画。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `animation_name` | string | 是 | 动画名称 |
+| `custom_blend` | number | 否 | 自定义混合时间，`-1.0` 表示默认 |
+| `custom_speed` | number | 否 | 播放速度倍率，默认 `1.0` |
+| `from_end` | boolean | 否 | 是否从末尾开始，默认 `false` |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `current_animation` | string | 当前动画名称 |
+| `is_playing` | boolean | 是否正在播放 |
+| `current_position` | number | 当前播放位置 |
+| `current_length` | number | 动画总长度 |
+| `speed_scale` | number | 速度缩放 |
+| `playing_speed` | number | 实际播放速度 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 116. stop_runtime_animation
+
+停止运行时 AnimationPlayer 节点的播放。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `keep_state` | boolean | 否 | 是否保持当前状态，默认 `false` |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `current_animation` | string | 当前动画名称 |
+| `is_playing` | boolean | 是否停止播放 |
+| `current_position` | number | 停止时的位置 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 117. get_runtime_animation_state
+
+返回运行时 AnimationPlayer 节点的当前播放状态。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：同 `play_runtime_animation` 的返回值（不含 `playing_speed`）
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 118. get_runtime_animation_tree_state
+
+返回运行时 AnimationTree 节点的当前状态。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `active` | boolean | 是否激活 |
+| `anim_player` | string | 关联的 AnimationPlayer 路径 |
+| `tree_root_type` | string | 树根节点类型 |
+| `has_playback` | boolean | 是否有 playback 对象 |
+| `current_node` | string | 当前状态机节点 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 119. set_runtime_animation_tree_active
+
+启用或禁用运行时 AnimationTree 节点。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `active` | boolean | 是 | 是否激活 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `active` | boolean | 当前激活状态 |
+| `tree_root_type` | string | 树根节点类型 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 120. travel_runtime_animation_tree
+
+将运行时 AnimationTree 状态机播放转移到目标节点。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `state_name` | string | 是 | 目标状态节点名称 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `current_node` | string | 当前状态节点 |
+| `travel_path` | array | 转移路径 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 121. get_runtime_material_state
+
+解析运行时节点的材质绑定并返回材质元数据。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `material_target` | string | 否 | 材质目标：`auto`、`material`、`material_override`、`surface_override`，默认 `auto` |
+| `surface_index` | int | 否 | 表面索引，默认 `0` |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `material_class` | string | 材质类名 |
+| `material_target` | string | 材质目标 |
+| `is_shader_material` | boolean | 是否为 ShaderMaterial |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 122. get_runtime_theme_item
+
+解析一个运行时 Control 主题项并报告其当前值和覆盖状态。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `item_type` | string | 是 | 类型：`color`、`constant`、`font`、`font_size`、`stylebox`、`icon` |
+| `item_name` | string | 是 | 主题项名称 |
+| `theme_type` | string | 否 | 主题类型 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `item_type` | string | 项类型 |
+| `item_name` | string | 项名称 |
+| `has_override` | boolean | 是否有覆盖 |
+| `has_item` | boolean | 是否存在该项 |
+| `value` | variant | 当前值 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 123. set_runtime_theme_override
+
+应用一个运行时 Control 主题覆盖（color/constant/font/font_size/stylebox/icon）。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `item_type` | string | 是 | 项类型 |
+| `item_name` | string | 是 | 项名称 |
+| `value` | variant | 是 | 覆盖值 |
+| `theme_type` | string | 否 | 主题类型 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `item_type` | string | 项类型 |
+| `item_name` | string | 项名称 |
+| `has_override` | boolean | 是否有覆盖 |
+| `value` | variant | 当前值 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 124. clear_runtime_theme_override
+
+移除一个运行时 Control 主题覆盖并返回清除后的值。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `item_type` | string | 是 | 项类型 |
+| `item_name` | string | 是 | 项名称 |
+| `theme_type` | string | 否 | 主题类型 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `item_type` | string | 项类型 |
+| `item_name` | string | 项名称 |
+| `has_override` | boolean | 是否仍有覆盖 |
+| `value` | variant | 清除后的值 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 125. get_runtime_shader_parameters
+
+列出运行时 ShaderMaterial 绑定的着色器 uniform 和当前值。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `material_target` | string | 否 | 材质目标，默认 `auto` |
+| `surface_index` | int | 否 | 表面索引，默认 `0` |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `parameters` | array | 着色器参数数组 |
+| `count` | int | 参数数量 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 126. set_runtime_shader_parameter
+
+更新运行时 ShaderMaterial 绑定的一个着色器 uniform。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `parameter_name` | string | 是 | 参数名称 |
+| `value` | variant | 是 | 新值 |
+| `material_target` | string | 否 | 材质目标，默认 `auto` |
+| `surface_index` | int | 否 | 表面索引，默认 `0` |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `parameter_name` | string | 参数名称 |
+| `old_value` | variant | 旧值 |
+| `new_value` | variant | 新值 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 127. list_runtime_tilemap_layers
+
+列出运行时 TileMap 节点的层和使用中的 tile 计数。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `layers` | array | 层信息数组 |
+| `count` | int | 层数量 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 128. get_runtime_tilemap_cell
+
+返回指定 TileMap 层坐标处的运行时单元格数据。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `layer` | int | 是 | 层索引 |
+| `coords` | object | 是 | 坐标 `{"x": int, "y": int}` |
+| `use_proxies` | boolean | 否 | 是否使用代理 tile，默认 `false` |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `layer` | int | 层索引 |
+| `coords` | object | 坐标 |
+| `source_id` | int | 源 ID |
+| `atlas_coords` | object | 图集坐标 |
+| `alternative_tile` | int | 替代 tile ID |
+| `is_empty` | boolean | 是否为空 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 129. set_runtime_tilemap_cell
+
+写入或擦除指定 TileMap 层坐标处的运行时单元格。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径 |
+| `layer` | int | 是 | 层索引 |
+| `coords` | object | 是 | 坐标 |
+| `source_id` | int | 否 | 源 ID |
+| `atlas_coords` | object | 否 | 图集坐标 |
+| `alternative_tile` | int | 否 | 替代 tile ID，默认 `0` |
+| `erase` | boolean | 否 | 是否擦除，默认 `false` |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `node_path` | string | 节点路径 |
+| `layer` | int | 层索引 |
+| `coords` | object | 坐标 |
+| `source_id` | int | 源 ID |
+| `atlas_coords` | object | 图集坐标 |
+| `alternative_tile` | int | 替代 tile ID |
+| `is_empty` | boolean | 是否为空 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 130. list_runtime_audio_buses
+
+列出运行中的游戏可用的 AudioServer 总线。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `buses` | array | 总线信息数组 |
+| `count` | int | 总线数量 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 131. get_runtime_audio_bus
+
+返回运行中的游戏内一个 AudioServer 总线的当前状态。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `bus_name` | string | 是 | 总线名称 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `index` | int | 总线索引 |
+| `name` | string | 总线名称 |
+| `volume_db` | number | 音量（dB） |
+| `mute` | boolean | 是否静音 |
+| `solo` | boolean | 是否独奏 |
+| `bypass_effects` | boolean | 是否旁路效果 |
+| `send` | string | 发送目标 |
+| `effect_count` | int | 效果器数量 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=true`
+
+---
+
+### 132. update_runtime_audio_bus
+
+更新运行中的游戏内一个 AudioServer 总线的 mute 和/或 volume_db。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `bus_name` | string | 是 | 总线名称 |
+| `volume_db` | number | 否 | 音量（dB） |
+| `mute` | boolean | 否 | 是否静音 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `index` | int | 总线索引 |
+| `name` | string | 总线名称 |
+| `volume_db` | number | 音量（dB） |
+| `mute` | boolean | 是否静音 |
+| `solo` | boolean | 是否独奏 |
+| `bypass_effects` | boolean | 是否旁路效果 |
+| `send` | string | 发送目标 |
+| `effect_count` | int | 效果器数量 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+### 133. get_runtime_screenshot
+
+从运行中的游戏捕获当前运行时视口（或指定 Viewport/SubViewport）截图并保存到文件。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `save_path` | string | 否 | 输出路径，必须使用 `res://` 或 `user://`，默认 `user://mcp_runtime_capture.png` |
+| `format` | string | 否 | 图片格式：`png` 或 `jpg`，默认 `png` |
+| `viewport_path` | string | 否 | 可选的运行时视口节点路径 |
+| `session_id` | int | 否 | 目标调试会话 ID |
+| `timeout_ms` | int | 否 | 超时时间，默认 `1500` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `save_path` | string | 保存路径 |
+| `format` | string | 图片格式 |
+| `viewport_path` | string | 视口路径 |
+| `width` | int | 图片宽度 |
+| `height` | int | 图片高度 |
+| `size` | string | 图片尺寸描述 |
+| `current_scene` | string | 当前场景路径 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=true`
+
+---
+
+## Project-Advanced（补充工具）
+
+这些工具扩展了项目配置管理功能，包括测试运行、输入映射管理、自动加载/全局类查询、资源诊断。需在工具管理面板中启用 `Project-Advanced` 分组后使用。
+
+### 134. list_project_tests
+
+发现 Godot 项目测试目录下的可运行测试。报告 Python 集成测试和 GUT 单元测试，包括每个测试当前是否可运行。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `search_path` | string | 否 | 搜索子路径 |
+| `framework` | string | 否 | 框架过滤：`python` 或 `gut` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `tests` | array | 测试信息数组 |
+| `count` | int | 测试数量 |
+| `search_path` | string | 搜索路径 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 135. run_project_test
+
+运行单个项目测试脚本。Python 集成测试使用 python 执行，GUT 单元测试通过 Godot headless 执行。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `test_path` | string | 是 | `res://` 下的测试文件路径 |
+| `timeout_ms` | int | 否 | 超时时间（毫秒） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"`、`"skipped"` 或 `"error"` |
+| `framework` | string | 测试框架：`python` 或 `gut` |
+| `test_path` | string | 测试文件路径 |
+| `exit_code` | int | 退出码 |
+| `command` | array | 执行的命令 |
+| `output` | array | 输出内容 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=false`
+
+---
+
+### 136. run_project_tests
+
+从目录中发现并运行多个项目测试，聚合通过/失败计数。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `search_path` | string | 否 | 搜索路径，默认 `res://test` |
+| `framework` | string | 否 | 框架过滤：`python` 或 `gut` |
+| `only_runnable` | boolean | 否 | 是否只运行可运行的测试，默认 `true` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` 或 `"partial"` |
+| `search_path` | string | 搜索路径 |
+| `framework` | string | 框架 |
+| `total_count` | int | 总测试数 |
+| `passed_count` | int | 通过数 |
+| `failed_count` | int | 失败数 |
+| `skipped_count` | int | 跳过数 |
+| `results` | array | 每个测试的结果 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=false`
+
+---
+
+### 137. list_project_input_actions
+
+列出 ProjectSettings 中存储的项目 InputMap 动作，包含序列化的输入事件。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `action_name` | string | 否 | 精确动作名称过滤 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `actions` | array | 动作数组 |
+| `count` | int | 动作数量 |
+| `filter` | string | 过滤条件 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 138. upsert_project_input_action
+
+在 ProjectSettings 中创建或更新项目 InputMap 动作并保存 `project.godot`。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `action_name` | string | 是 | 动作名称 |
+| `deadzone` | number | 否 | 死区值，默认 `0.5` |
+| `erase_existing` | boolean | 否 | 是否清除现有事件，默认 `false` |
+| `events` | array | 否 | 要存储的结构化输入事件 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `action_name` | string | 动作名称 |
+| `existed_before` | boolean | 之前是否存在 |
+| `deadzone` | number | 死区值 |
+| `event_count` | int | 事件总数 |
+| `events` | array | 当前事件 |
+| `added_events` | array | 新添加的事件 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=false`
+
+---
+
+### 139. remove_project_input_action
+
+从 ProjectSettings 中移除项目 InputMap 动作并保存 `project.godot`。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `action_name` | string | 是 | 动作名称 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `action_name` | string | 动作名称 |
+| `removed` | boolean | 是否已移除 |
+| `event_count` | int | 移除前的事件数 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=true`, `idempotentHint=false`, `openWorldHint=false`
+
+---
+
+### 140. list_project_autoloads
+
+列出项目自动加载条目，包含解析后的路径、单例标志和项目设置顺序。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `filter` | string | 否 | 大小写不敏感的自动加载名称或路径过滤 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `autoloads` | array | 自动加载条目数组 |
+| `count` | int | 条目数量 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 141. list_project_global_classes
+
+列出通过 `class_name` 元数据注册的项目全局脚本类。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `filter` | string | 否 | 大小写不敏感的类名、基类型或脚本路径过滤 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `classes` | array | 全局类信息数组 |
+| `count` | int | 类数量 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 142. get_class_api_metadata
+
+获取引擎 ClassDB 类或项目全局脚本类的类型化 API 元数据。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `class_name` | string | 是 | 类名（如 `"Node"` 或项目 `class_name`） |
+| `filter` | string | 否 | 方法/属性/信号/常量名称大小写不敏感过滤 |
+| `include_base_api` | boolean | 否 | 对全局类是否包含基类 ClassDB 元数据，默认 `true` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `class_name` | string | 类名 |
+| `source` | string | 来源：`classdb` 或 `global_class` |
+| `base_class` | string | 基类 |
+| `methods` | array | 方法列表 |
+| `properties` | array | 属性列表 |
+| `signals` | array | 信号列表 |
+| `constants` | array | 常量列表 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 143. inspect_csharp_project_support
+
+检查 C# / Mono 项目支持文件（.csproj 和 .sln），包括目标框架、程序集元数据和引用。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `search_path` | string | 否 | 扫描目录，默认 `res://` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `search_path` | string | 搜索路径 |
+| `project_count` | int | 项目文件数 |
+| `solution_count` | int | 解决方案文件数 |
+| `projects` | array | 项目详情 |
+| `solutions` | array | 解决方案详情 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 144. compare_render_screenshots
+
+比较两张截图图像并报告像素差异、RMSE 和基于阈值的匹配状态。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `baseline_path` | string | 是 | 基准截图路径 |
+| `candidate_path` | string | 是 | 候选截图路径 |
+| `max_diff_pixels` | int | 否 | 允许的最大差异像素数，默认 `0` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `baseline_path` | string | 基准路径 |
+| `candidate_path` | string | 候选路径 |
+| `width` | int | 图像宽度 |
+| `height` | int | 图像高度 |
+| `diff_pixel_count` | int | 差异像素数 |
+| `diff_ratio` | number | 差异比例 |
+| `rmse` | number | 均方根误差 |
+| `max_channel_delta` | number | 最大通道差异 |
+| `matches` | boolean | 是否匹配 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 145. inspect_tileset_resource
+
+检查 TileSet 资源并汇总其源、图集 tile 和场景 tile。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `resource_path` | string | 是 | TileSet 资源路径 |
+| `include_tiles` | boolean | 否 | 是否包含每个 tile 的详细信息，默认 `true` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `resource_path` | string | 资源路径 |
+| `source_count` | int | 源数量 |
+| `tile_size` | object | tile 尺寸 |
+| `sources` | array | 源信息数组 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 146. reimport_resources
+
+使用 Godot 的 `EditorFileSystem` 导入管线重新导入项目资源。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `resource_paths` | array | 是 | 要重新导入的源资源路径列表 |
+| `refresh_metadata` | boolean | 否 | 是否在重导入前刷新元数据，默认 `true` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` 或 `"partial"` |
+| `requested_count` | int | 请求重导入数 |
+| `reimported_count` | int | 实际重导入数 |
+| `resource_paths` | array | 请求的路径 |
+| `invalid_paths` | array | 无效路径 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=false`
+
+---
+
+### 147. get_import_metadata
+
+读取源资产的 Godot 导入元数据，包括导入器设置和导入后的产物路径。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `resource_path` | string | 是 | 源资产路径（如 `res://icon.png`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `resource_path` | string | 资源路径 |
+| `import_config_path` | string | 导入配置文件路径 |
+| `exists` | boolean | 是否存在 |
+| `importer` | string | 导入器名称 |
+| `resource_type` | string | 资源类型 |
+| `uid` | string | 资源 UID |
+| `imported_path` | string | 导入后的资源路径 |
+| `sections` | object | 导入器设置节 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 148. get_resource_uid_info
+
+检查 Godot ResourceUID 映射，用于资源路径或 `uid://` 标识符。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `resource_path` | string | 否 | 资源路径 |
+| `uid` | string | 否 | `uid://` 标识符 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `resource_path` | string | 资源路径 |
+| `uid` | string | UID 字符串 |
+| `uid_id` | string | UID 数值 ID |
+| `editor_uid` | string | 编辑器 UID |
+| `resolved_path` | string | 解析后的路径 |
+| `exists` | boolean | 资源是否存在 |
+| `has_uid_mapping` | boolean | 是否有 UID 映射 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 149. fix_resource_uid
+
+确保资源文件有持久的 UID 并刷新编辑器文件系统映射。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `resource_path` | string | 是 | 要修复的资源路径 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"`、`"already_assigned"` 或错误 |
+| `resource_path` | string | 资源路径 |
+| `previous_uid` | string | 之前的 UID |
+| `uid` | string | 新的 UID |
+| `uid_id` | string | UID 数值 ID |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=false`, `openWorldHint=false`
+
+---
+
+### 150. get_resource_dependencies
+
+使用 Godot 的 `ResourceLoader` 依赖元数据列出解析后的资源依赖。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `resource_path` | string | 是 | 要检查的资源路径 |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `resource_path` | string | 资源路径 |
+| `dependency_count` | int | 依赖数量 |
+| `dependencies` | array | 依赖路径列表 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 151. scan_missing_resource_dependencies
+
+扫描项目资源中的破损或缺失依赖引用。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `search_path` | string | 否 | 扫描目录，默认 `res://` |
+| `max_results` | int | 否 | 最大返回问题数，默认 `200` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `search_path` | string | 搜索路径 |
+| `scanned_resources` | int | 扫描的资源数 |
+| `issue_count` | int | 问题数量 |
+| `issues` | array | 问题详情数组 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 152. scan_cyclic_resource_dependencies
+
+基于解析的 `ResourceLoader` 依赖元数据扫描项目资源的循环依赖链。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `search_path` | string | 否 | 扫描目录，默认 `res://` |
+| `max_results` | int | 否 | 最大返回问题数，默认 `100` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `search_path` | string | 搜索路径 |
+| `scanned_resources` | int | 扫描的资源数 |
+| `issue_count` | int | 问题数量 |
+| `issues` | array | 循环依赖链详情 |
+| `truncated` | boolean | 结果是否被截断 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 153. detect_broken_scripts
+
+扫描 GDScript 文件的语法错误和轻量级警告。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `search_path` | string | 否 | 扫描目录，默认 `res://` |
+| `include_warnings` | boolean | 否 | 是否包含警告，默认 `true` |
+| `max_results` | int | 否 | 最大返回问题数，默认 `200` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `search_path` | string | 搜索路径 |
+| `scanned_scripts` | int | 扫描的脚本数 |
+| `broken_count` | int | 有语法错误的脚本数 |
+| `warning_count` | int | 有警告的脚本数 |
+| `issues` | array | 问题详情数组 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
+### 154. audit_project_health
+
+运行轻量级项目健康审计，覆盖破损脚本和缺失资源依赖。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `search_path` | string | 否 | 扫描目录，默认 `res://` |
+| `include_warnings` | boolean | 否 | 是否包含脚本警告，默认 `true` |
+| `max_results` | int | 否 | 每类最大问题数，默认 `200` |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"healthy"`、`"issues_found"` 或 `"error"` |
+| `search_path` | string | 搜索路径 |
+| `summary` | object | 审计摘要（broken_scripts、missing_deps、cyclic_deps 计数） |
+| `broken_scripts` | array | 破损脚本详情 |
+| `missing_dependencies` | array | 缺失依赖详情 |
+| `cyclic_dependencies` | array | 循环依赖详情 |
+
+**注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`, `openWorldHint=false`
+
+---
+
 ## 通用数据类型
 
 ### Vector2
@@ -1905,7 +3835,7 @@ Godot MCP Native 实现了 **70 个工具**，分为 6 大类：
 
 ## 总结
 
-本手册详细说明了 Godot MCP Native 项目的所有 70 个工具。每个工具都有清晰的参数说明、返回值描述和注解信息。
+本手册详细说明了 Godot MCP Native 项目的所有核心工具及部分补充工具。项目共 **154 个工具**（46 核心 + 108 补充），所有工具均可通过 MCP 工具管理面板按分组动态启用/禁用。补充工具（`*-Advanced` 分组）默认不启用，需在工具管理面板中手动开启。
 
 **提示**：
 - 使用 `tools/list` 方法获取所有工具的实时列表和完整 JSON Schema

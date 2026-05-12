@@ -379,7 +379,8 @@ func _register_select_node(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_select_node"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Editor-Advanced")
 
 func _tool_select_node(params: Dictionary) -> Dictionary:
 	var node_path: String = str(params.get("node_path", "")).strip_edges()
@@ -450,7 +451,8 @@ func _register_select_file(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_select_file"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Editor-Advanced")
 
 func _tool_select_file(params: Dictionary) -> Dictionary:
 	var file_path: String = str(params.get("file_path", "")).strip_edges()
@@ -526,7 +528,8 @@ func _register_get_inspector_properties(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_inspector_properties"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Editor-Advanced")
 
 func _tool_get_inspector_properties(params: Dictionary) -> Dictionary:
 	var node_path: String = str(params.get("node_path", "")).strip_edges()
@@ -632,7 +635,8 @@ func _register_list_export_presets(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_list_export_presets"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Editor-Advanced")
 
 func _tool_list_export_presets(params: Dictionary) -> Dictionary:
 	var preset_data: Dictionary = _load_export_presets()
@@ -677,7 +681,8 @@ func _register_inspect_export_templates(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_inspect_export_templates"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Editor-Advanced")
 
 func _tool_inspect_export_templates(params: Dictionary) -> Dictionary:
 	return _inspect_export_templates()
@@ -720,7 +725,8 @@ func _register_validate_export_preset(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_validate_export_preset"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Editor-Advanced")
 
 func _tool_validate_export_preset(params: Dictionary) -> Dictionary:
 	var preset_name: String = str(params.get("preset", "")).strip_edges()
@@ -810,7 +816,8 @@ func _register_run_export(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_run_export"),
-						  output_schema, annotations)
+						  output_schema, annotations,
+						  "supplementary", "Editor-Advanced")
 
 func _tool_run_export(params: Dictionary) -> Dictionary:
 	var preset_name: String = str(params.get("preset", "")).strip_edges()
