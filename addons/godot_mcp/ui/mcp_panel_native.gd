@@ -8,6 +8,7 @@ var _status_label: Label = null
 var _start_button: Button = null
 var _stop_button: Button = null
 var _auto_start_check: CheckBox = null
+var _vibe_coding_mode_check: CheckBox = null
 var _log_level_option: OptionButton = null
 var _security_level_option: OptionButton = null
 var _log_text_edit: TextEdit = null
@@ -255,6 +256,11 @@ func _create_settings_tab() -> VBoxContainer:
 	_auto_start_check.toggled.connect(_on_auto_start_toggled)
 	content.add_child(_auto_start_check)
 
+	_vibe_coding_mode_check = CheckBox.new()
+	_vibe_coding_mode_check.text = "Vibe Coding / 免打扰模式"
+	_vibe_coding_mode_check.toggled.connect(_on_vibe_coding_mode_toggled)
+	content.add_child(_vibe_coding_mode_check)
+
 	var log_hbox: HBoxContainer = HBoxContainer.new()
 	content.add_child(log_hbox)
 
@@ -420,6 +426,9 @@ func _update_ui_state() -> void:
 		if _auto_start_check:
 			_auto_start_check.button_pressed = _plugin.auto_start
 
+		if _vibe_coding_mode_check:
+			_vibe_coding_mode_check.button_pressed = _plugin.vibe_coding_mode if _plugin.get("vibe_coding_mode") != null else true
+
 		if _log_level_option:
 			_log_level_option.select(_plugin.log_level)
 
@@ -503,6 +512,10 @@ func _on_auto_start_toggled(button_pressed: bool) -> void:
 	if _plugin:
 		_plugin.auto_start = button_pressed
 	_debounce_save()
+
+func _on_vibe_coding_mode_toggled(button_pressed: bool) -> void:
+	if _plugin:
+		_plugin.vibe_coding_mode = button_pressed
 
 func _on_log_level_selected(index: int) -> void:
 	if _plugin:

@@ -5,6 +5,8 @@
 class_name EditorToolsNative
 extends RefCounted
 
+const VIBE_CODING_POLICY = preload("res://addons/godot_mcp/utils/vibe_coding_policy.gd")
+
 var _editor_interface: EditorInterface = null
 var _editor_operation_in_progress: bool = false
 
@@ -19,6 +21,13 @@ func _get_editor_interface() -> EditorInterface:
 		if plugin and plugin.has_method("get_editor_interface"):
 			return plugin.get_editor_interface()
 	return null
+
+func _is_vibe_coding_mode() -> bool:
+	if Engine.has_meta("GodotMCPPlugin"):
+		var plugin = Engine.get_meta("GodotMCPPlugin")
+		if plugin and plugin.get("vibe_coding_mode") != null:
+			return bool(plugin.vibe_coding_mode)
+	return true
 
 func _get_user_scene_root() -> Node:
 	var editor_interface: EditorInterface = _get_editor_interface()
@@ -159,6 +168,11 @@ func _register_run_project(server_core: RefCounted) -> void:
 			"scene_path": {
 				"type": "string",
 				"description": "Optional path to a specific scene to run. If not provided, runs the main scene."
+			},
+			"allow_window": {
+				"type": "boolean",
+				"description": "Allow this call to open or control the runtime window when Vibe Coding mode is enabled.",
+				"default": false
 			}
 		}
 	}
@@ -187,6 +201,10 @@ func _register_run_project(server_core: RefCounted) -> void:
 						  "core", "Editor")
 
 func _tool_run_project(params: Dictionary) -> Dictionary:
+	var policy_result: Dictionary = VIBE_CODING_POLICY.evaluate_runtime_window(_is_vibe_coding_mode(), params)
+	if policy_result.get("blocked", false):
+		return policy_result
+
 	var editor_interface: EditorInterface = _get_editor_interface()
 	if not editor_interface:
 		return {"error": "Editor interface not available"}
@@ -223,7 +241,13 @@ func _register_stop_project(server_core: RefCounted) -> void:
 	# inputSchema
 	var input_schema: Dictionary = {
 		"type": "object",
-		"properties": {}
+		"properties": {
+			"allow_window": {
+				"type": "boolean",
+				"description": "Allow this call to control the runtime window when Vibe Coding mode is enabled.",
+				"default": false
+			}
+		}
 	}
 	
 	# outputSchema
@@ -250,6 +274,10 @@ func _register_stop_project(server_core: RefCounted) -> void:
 						  "core", "Editor")
 
 func _tool_stop_project(params: Dictionary) -> Dictionary:
+	var policy_result: Dictionary = VIBE_CODING_POLICY.evaluate_runtime_window(_is_vibe_coding_mode(), params)
+	if policy_result.get("blocked", false):
+		return policy_result
+
 	var editor_interface: EditorInterface = _get_editor_interface()
 	if not editor_interface:
 		return {"error": "Editor interface not available"}
@@ -355,6 +383,11 @@ func _register_select_node(server_core: RefCounted) -> void:
 				"type": "boolean",
 				"description": "Whether to clear the existing editor selection before selecting the node. Default is true.",
 				"default": true
+			},
+			"allow_ui_focus": {
+				"type": "boolean",
+				"description": "Allow this call to change editor selection/focus when Vibe Coding mode is enabled.",
+				"default": false
 			}
 		},
 		"required": ["node_path"]
@@ -383,6 +416,10 @@ func _register_select_node(server_core: RefCounted) -> void:
 						  "supplementary", "Editor-Advanced")
 
 func _tool_select_node(params: Dictionary) -> Dictionary:
+	var policy_result: Dictionary = VIBE_CODING_POLICY.evaluate_editor_focus(_is_vibe_coding_mode(), params)
+	if policy_result.get("blocked", false):
+		return policy_result
+
 	var node_path: String = str(params.get("node_path", "")).strip_edges()
 	if node_path.is_empty():
 		return {"error": "Missing required parameter: node_path"}
@@ -429,6 +466,11 @@ func _register_select_file(server_core: RefCounted) -> void:
 			"file_path": {
 				"type": "string",
 				"description": "Project file path such as 'res://scenes/Main.tscn'."
+			},
+			"allow_ui_focus": {
+				"type": "boolean",
+				"description": "Allow this call to change the editor FileSystem selection when Vibe Coding mode is enabled.",
+				"default": false
 			}
 		},
 		"required": ["file_path"]
@@ -455,6 +497,10 @@ func _register_select_file(server_core: RefCounted) -> void:
 						  "supplementary", "Editor-Advanced")
 
 func _tool_select_file(params: Dictionary) -> Dictionary:
+	var policy_result: Dictionary = VIBE_CODING_POLICY.evaluate_editor_focus(_is_vibe_coding_mode(), params)
+	if policy_result.get("blocked", false):
+		return policy_result
+
 	var file_path: String = str(params.get("file_path", "")).strip_edges()
 	if file_path.is_empty():
 		return {"error": "Missing required parameter: file_path"}

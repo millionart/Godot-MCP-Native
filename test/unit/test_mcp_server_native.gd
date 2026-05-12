@@ -92,6 +92,7 @@ func test_export_variables():
 	assert_true(prop_names.has("http_port"), "Should have http_port export")
 	assert_true(prop_names.has("auth_enabled"), "Should have auth_enabled export")
 	assert_true(prop_names.has("log_level"), "Should have log_level export")
+	assert_true(prop_names.has("vibe_coding_mode"), "Should have vibe_coding_mode export")
 
 func test_has_load_tool_states_in_enter_tree():
 	var methods: Array = _plugin_script.get_script_method_list()
