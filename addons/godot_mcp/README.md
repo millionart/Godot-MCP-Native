@@ -13,13 +13,13 @@ A powerful Godot Engine plugin that integrates AI assistants (Claude, etc.) via 
 - **Full Project Access**: AI assistants can read and modify scripts, scenes, nodes, and resources
 - **Native Implementation**: No Node.js dependency required - runs entirely within Godot
 - **Real-time Editing**: Apply AI suggestions directly in the editor
-- **Comprehensive Tool Set** (70 tools):
-  - **Node Tools** (16): Create, modify, manage scene nodes, duplicate, move, rename, signal connections, group management
-  - **Script Tools** (9): Edit, analyze, create, attach, validate GDScript files, search in files
-  - **Scene Tools** (6): Manipulate scene structure and save scenes
-  - **Editor Tools** (8): Control editor functionality, screenshot, signal inspection, filesystem reload
-  - **Debug Tools** (26): Logging, script execution, debugger sessions, breakpoints, stack/variable inspection, profilers, runtime probe
-  - **Project Tools** (5): Access project settings and list resources
+- **Comprehensive Tool Set** (154 tools — 46 core + 108 supplementary):
+  - **Node Tools** (16 core + 4 advanced): Create, modify, manage scene nodes, duplicate, move, rename, signal connections, group management, batch operations, scene auditing
+  - **Script Tools** (9 core + 5 advanced): Edit, analyze, create, attach, validate GDScript files, search in files, symbol indexing, definition & reference lookup
+  - **Scene Tools** (6 core + 2 advanced): Manipulate scene structure, save scenes, list/open/close scene tabs
+  - **Editor Tools** (7 core + 9 advanced): Control editor functionality, screenshot, signal inspection, filesystem reload, node/file selection, export management, property inspector
+  - **Debug Tools** (3 core + 67 advanced): Logging, script execution, debugger sessions, breakpoints, stack/variable inspection, profilers, runtime probe, animation/audio/shader/tilemap runtime control, debug execution control
+  - **Project Tools** (5 core + 21 advanced): Access project settings, list resources, run tests, manage input mappings, inspect autoloads/global classes, resource diagnostics & health audit
 
 ## 📦 Installation
 
@@ -207,13 +207,6 @@ Implement a day/night cycle system with dynamic lighting
 - `open-scene` - Open a scene
 - `get-current-scene` - Get current scene info
 
-### Project Tools (5)
-- `get-project-info` - Get project information
-- `get-project-settings` - Get project settings
-- `list-project-resources` - List project resources
-- `create-resource` - Create a new resource
-- `get-project-structure` - Get project directory structure
-
 ### Editor Tools (8)
 - `get-editor-state` - Get current editor state
 - `run-project` - Run the project
@@ -224,7 +217,33 @@ Implement a day/night cycle system with dynamic lighting
 - `get-signals` - Inspect node signals and connections
 - `reload-project` - Rescan the project filesystem
 
-### Debug Tools (26)
+### Node-Advanced (4)
+- `batch-update-node-properties` - Batch update multiple node properties in one UndoRedo action
+- `batch-scene-node-edits` - Apply batch scene node create/delete/move edits in one UndoRedo action
+- `audit-scene-node-persistence` - Audit node owner and persistence state for the scene
+- `audit-scene-inheritance` - Audit inherited/instanced scene structure
+
+### Script-Advanced (5)
+- `list-project-script-symbols` - Index script symbols across GDScript and C# files
+- `find-script-symbol-definition` - Find definition locations for a script symbol
+- `find-script-symbol-references` - Find textual references to a script symbol
+- `rename-script-symbol` - Rename a script symbol across project files
+- `open-script-at-line` - Open a script at a specific line in the editor
+
+### Scene-Advanced (2)
+- `list-open-scenes` - List currently open scene tabs
+- `close-scene-tab` - Close a scene tab
+
+### Editor-Advanced (7)
+- `select-node` - Select a node in the scene and focus in Inspector
+- `select-file` - Select a file in the FileSystem dock
+- `get-inspector-properties` - Inspect node/resource properties like the Inspector
+- `list-export-presets` - List export presets
+- `inspect-export-templates` - Inspect installed export templates
+- `validate-export-preset` - Validate an export preset
+- `run-export` - Run a Godot CLI export
+
+### Debug Tools (3 core + 67 advanced)
 - `get-editor-logs` - Get editor/runtime logs
 - `execute-script` - Execute GDScript expression
 - `get-performance-metrics` - Get performance data
@@ -251,6 +270,73 @@ Implement a day/night cycle system with dynamic lighting
 - `evaluate-runtime-expression` - Evaluate a GDScript expression in the running game
 - `await-runtime-condition` - Poll a runtime expression until truthy or timeout
 - `assert-runtime-condition` - Assert a runtime expression becomes truthy within timeout
+- `get-debug-threads` - Return DAP-style debugger threads
+- `get-debug-state-events` - Read recorded debugger state transitions
+- `get-debug-output` - Read categorized runtime debugger output
+- `get-debug-scopes` - Group stack variables into DAP-like scopes
+- `get-debug-variables` - Resolve DAP-style variable references
+- `expand-debug-variable` - Expand a debug variable by scope and path
+- `evaluate-debug-expression` - Evaluate an expression in debugger context
+- `debug-step-into` / `debug-step-over` / `debug-step-out` / `debug-continue` - Debug execution control
+- `debug-step-into-and-wait` / `debug-step-over-and-wait` / `debug-step-out-and-wait` / `debug-continue-and-wait` - Debug execution with state wait
+- `await-debugger-state` - Check debugger session execution state
+- `get-runtime-performance-snapshot` - Capture runtime performance snapshot
+- `get-runtime-memory-trend` - Capture runtime memory trend
+- `create-runtime-node` - Create a node in the running game
+- `delete-runtime-node` - Delete a node from the running game
+- `simulate-runtime-input-event` - Inject structured InputEvent
+- `simulate-runtime-input-action` - Inject InputEventAction
+- `list-runtime-input-actions` - List runtime InputMap actions
+- `upsert-runtime-input-action` - Create/update a runtime InputMap action
+- `remove-runtime-input-action` - Remove a runtime InputMap action
+- `list-runtime-animations` - List animations on a runtime AnimationPlayer
+- `play-runtime-animation` - Play a runtime animation
+- `stop-runtime-animation` - Stop a runtime animation
+- `get-runtime-animation-state` - Get runtime animation playback state
+- `get-runtime-animation-tree-state` - Get runtime AnimationTree state
+- `set-runtime-animation-tree-active` - Enable/disable runtime AnimationTree
+- `travel-runtime-animation-tree` - Travel runtime animation state machine
+- `get-runtime-material-state` - Resolve runtime node material binding
+- `get-runtime-theme-item` - Resolve runtime Control theme item
+- `set-runtime-theme-override` - Apply runtime theme override
+- `clear-runtime-theme-override` - Remove runtime theme override
+- `get-runtime-shader-parameters` - List runtime shader parameters
+- `set-runtime-shader-parameter` - Update runtime shader uniform
+- `list-runtime-tilemap-layers` - List runtime TileMap layers
+- `get-runtime-tilemap-cell` - Get runtime TileMap cell data
+- `set-runtime-tilemap-cell` - Write/erase runtime TileMap cell
+- `list-runtime-audio-buses` - List runtime audio buses
+- `get-runtime-audio-bus` - Get runtime audio bus state
+- `update-runtime-audio-bus` - Update runtime audio bus
+- `get-runtime-screenshot` - Capture runtime viewport screenshot
+
+### Project Tools (5 core + 21 advanced)
+- `get-project-info` - Get project information
+- `get-project-settings` - Get project settings
+- `list-project-resources` - List project resources
+- `create-resource` - Create a new resource
+- `get-project-structure` - Get project directory structure
+- `list-project-tests` - Discover and list runnable project tests
+- `run-project-test` - Run a single project test
+- `run-project-tests` - Run multiple project tests
+- `list-project-input-actions` - List project InputMap actions
+- `upsert-project-input-action` - Create or update a project InputMap action
+- `remove-project-input-action` - Remove a project InputMap action
+- `list-project-autoloads` - List project autoload entries
+- `list-project-global-classes` - List project global script classes
+- `get-class-api-metadata` - Get ClassDB or global class API metadata
+- `inspect-csharp-project-support` - Inspect C# project support files
+- `compare-render-screenshots` - Compare two screenshots for pixel differences
+- `inspect-tileset-resource` - Inspect a TileSet resource
+- `reimport-resources` - Reimport resources through the import pipeline
+- `get-import-metadata` - Get resource import metadata
+- `get-resource-uid-info` - Inspect ResourceUID mappings
+- `fix-resource-uid` - Ensure a resource has a persisted UID
+- `get-resource-dependencies` - List resource dependencies
+- `scan-missing-resource-dependencies` - Find broken dependency references
+- `scan-cyclic-resource-dependencies` - Find cyclic dependency chains
+- `detect-broken-scripts` - Scan scripts for syntax errors
+- `audit-project-health` - Run a project health audit
 
 ## 🔒 Security Recommendations
 

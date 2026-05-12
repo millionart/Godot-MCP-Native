@@ -13,13 +13,13 @@
 - **完整项目访问**：AI 助手可以读取和修改脚本、场景、节点和资源
 - **原生实现**：无需 Node.js 依赖——完全在 Godot 中运行
 - **实时编辑**：直接在编辑器中应用 AI 建议
-- **全面的工具集**（70 个工具）：
-  - **节点工具**（16 个）：创建、修改、管理场景节点，复制、移动、重命名，信号连接，组管理
-  - **脚本工具**（9 个）：编辑、分析、创建、附加、验证 GDScript 文件，文件搜索
-  - **场景工具**（6 个）：操作场景结构并保存场景
-  - **编辑器工具**（8 个）：控制编辑器功能、截图、信号检查、文件系统重载
-  - **调试工具**（26 个）：日志、脚本执行、调试会话、断点、栈帧/变量读取、性能分析器、运行时探针
-  - **项目工具**（5 个）：访问项目设置和列出资源
+- **全面的工具集**（154 个工具——46 核心 + 108 补充）：
+  - **节点工具**（16 核心 + 4 高级）：创建、修改、管理场景节点，复制、移动、重命名，信号连接，组管理，批量操作，场景审计
+  - **脚本工具**（9 核心 + 5 高级）：编辑、分析、创建、附加、验证 GDScript 文件，文件搜索，符号索引，定义和引用查找
+  - **场景工具**（6 核心 + 2 高级）：操作场景结构、保存场景、列出/打开/关闭场景标签页
+  - **编辑器工具**（7 核心 + 9 高级）：控制编辑器功能、截图、信号检查、文件系统重载，节点/文件选择，导出管理，属性检查器
+  - **调试工具**（3 核心 + 67 高级）：日志、脚本执行、调试会话、断点、栈帧/变量读取、性能分析器、运行时探针，动画/音频/着色器/瓦片地图运行时控制，调试执行控制
+  - **项目工具**（5 核心 + 21 高级）：访问项目设置、列出资源，运行测试、管理输入映射、检查自动加载/全局类，资源诊断与健康审计
 
 ## 📦 安装
 
@@ -209,13 +209,6 @@ url = "http://localhost:19080/mcp"
 - `open-scene` - 打开场景
 - `get-current-scene` - 获取当前场景信息
 
-### 项目工具 (5)
-- `get-project-info` - 获取项目信息
-- `get-project-settings` - 获取项目设置
-- `list-project-resources` - 列出项目资源
-- `create-resource` - 创建新资源
-- `get-project-structure` - 获取项目目录结构
-
 ### 编辑器工具 (8)
 - `get-editor-state` - 获取当前编辑器状态
 - `run-project` - 运行项目
@@ -226,7 +219,33 @@ url = "http://localhost:19080/mcp"
 - `get-signals` - 检查节点信号和连接
 - `reload-project` - 重新扫描项目文件系统
 
-### 调试工具 (26)
+### 节点高级工具 (4)
+- `batch-update-node-properties` - 在单个 UndoRedo 动作中批量更新节点属性
+- `batch-scene-node-edits` - 在单个 UndoRedo 动作中批量执行场景节点编辑
+- `audit-scene-node-persistence` - 审计节点 owner 和持久化状态
+- `audit-scene-inheritance` - 审计场景继承/实例化结构
+
+### 脚本高级工具 (5)
+- `list-project-script-symbols` - 索引 GDScript 和 C# 文件的脚本符号
+- `find-script-symbol-definition` - 查找脚本符号的定义位置
+- `find-script-symbol-references` - 查找脚本符号的文本引用
+- `rename-script-symbol` - 跨文件重命名脚本符号
+- `open-script-at-line` - 在编辑器中打开脚本到指定行
+
+### 场景高级工具 (2)
+- `list-open-scenes` - 列出当前打开的场景标签页
+- `close-scene-tab` - 关闭场景标签页
+
+### 编辑器高级工具 (7)
+- `select-node` - 在场景中选择节点并聚焦检查器
+- `select-file` - 在文件系统面板中选择文件
+- `get-inspector-properties` - 检查节点/资源的属性元数据
+- `list-export-presets` - 列出导出预设
+- `inspect-export-templates` - 检查已安装的导出模板
+- `validate-export-preset` - 验证导出预设
+- `run-export` - 运行 Godot CLI 导出
+
+### 调试工具 (3 核心 + 67 高级)
 - `get-editor-logs` - 获取编辑器/运行时日志
 - `execute-script` - 执行 GDScript 表达式
 - `get-performance-metrics` - 获取性能数据
@@ -253,6 +272,73 @@ url = "http://localhost:19080/mcp"
 - `evaluate-runtime-expression` - 在运行中的游戏计算 GDScript 表达式
 - `await-runtime-condition` - 轮询运行时表达式直到为真或超时
 - `assert-runtime-condition` - 断言运行时表达式在超时内变为真
+- `get-debug-threads` - 返回 DAP 样式调试器线程
+- `get-debug-state-events` - 读取记录的调试器状态转换
+- `get-debug-output` - 读取分类的运行时调试器输出
+- `get-debug-scopes` - 将栈变量分组为 DAP 风格的 scope
+- `get-debug-variables` - 解析 DAP 风格的变量引用
+- `expand-debug-variable` - 通过 scope 和路径展开调试变量
+- `evaluate-debug-expression` - 在调试上下文评估表达式
+- `debug-step-into / debug-step-over / debug-step-out / debug-continue` - 调试执行控制
+- `debug-step-into-and-wait / debug-step-over-and-wait / debug-step-out-and-wait / debug-continue-and-wait` - 调试执行控制（等待状态）
+- `await-debugger-state` - 检查调试器会话执行状态
+- `get-runtime-performance-snapshot` - 捕获运行时性能快照
+- `get-runtime-memory-trend` - 捕获运行时内存趋势
+- `create-runtime-node` - 在运行中游戏创建节点
+- `delete-runtime-node` - 从运行中游戏删除节点
+- `simulate-runtime-input-event` - 注入结构化 InputEvent
+- `simulate-runtime-input-action` - 注入 InputEventAction
+- `list-runtime-input-actions` - 列出运行时 InputMap 动作
+- `upsert-runtime-input-action` - 创建或更新运行时 InputMap 动作
+- `remove-runtime-input-action` - 移除运行时 InputMap 动作
+- `list-runtime-animations` - 列出运行时动画
+- `play-runtime-animation` - 播放运行时动画
+- `stop-runtime-animation` - 停止运行时动画
+- `get-runtime-animation-state` - 获取运行时动画播放状态
+- `get-runtime-animation-tree-state` - 获取运行时 AnimationTree 状态
+- `set-runtime-animation-tree-active` - 启用/禁用 AnimationTree
+- `travel-runtime-animation-tree` - 转移运行时动画状态机
+- `get-runtime-material-state` - 解析运行时节点材质绑定
+- `get-runtime-theme-item` - 解析运行时 Control 主题项
+- `set-runtime-theme-override` - 应用运行时主题覆盖
+- `clear-runtime-theme-override` - 移除运行时主题覆盖
+- `get-runtime-shader-parameters` - 列出运行时着色器参数
+- `set-runtime-shader-parameter` - 更新运行时着色器 uniform
+- `list-runtime-tilemap-layers` - 列出运行时 TileMap 层
+- `get-runtime-tilemap-cell` - 获取运行时 TileMap 单元格数据
+- `set-runtime-tilemap-cell` - 写入/擦除运行时 TileMap 单元格
+- `list-runtime-audio-buses` - 列出运行时音频总线
+- `get-runtime-audio-bus` - 获取运行时音频总线状态
+- `update-runtime-audio-bus` - 更新运行时音频总线
+- `get-runtime-screenshot` - 捕获运行时视口截图
+
+### 项目工具 (5 核心 + 21 高级)
+- `get-project-info` - 获取项目信息
+- `get-project-settings` - 获取项目设置
+- `list-project-resources` - 列出项目资源
+- `create-resource` - 创建新资源
+- `get-project-structure` - 获取项目目录结构
+- `list-project-tests` - 发现和列出可运行的项目测试
+- `run-project-test` - 运行单个项目测试
+- `run-project-tests` - 运行多个项目测试
+- `list-project-input-actions` - 列出项目 InputMap 动作
+- `upsert-project-input-action` - 创建或更新项目 InputMap 动作
+- `remove-project-input-action` - 移除项目 InputMap 动作
+- `list-project-autoloads` - 列出项目自动加载条目
+- `list-project-global-classes` - 列出项目全局脚本类
+- `get-class-api-metadata` - 获取 ClassDB 或全局类 API 元数据
+- `inspect-csharp-project-support` - 检查 C# 项目支持文件
+- `compare-render-screenshots` - 比较两张截图并报告差异
+- `inspect-tileset-resource` - 检查 TileSet 资源
+- `reimport-resources` - 通过导入管线重新导入资源
+- `get-import-metadata` - 获取资源导入元数据
+- `get-resource-uid-info` - 检查 ResourceUID 映射
+- `fix-resource-uid` - 确保资源有持久化 UID
+- `get-resource-dependencies` - 列出资源依赖
+- `scan-missing-resource-dependencies` - 查找破损的依赖引用
+- `scan-cyclic-resource-dependencies` - 查找循环依赖链
+- `detect-broken-scripts` - 扫描脚本语法错误
+- `audit-project-health` - 运行项目健康审计
 
 ## 🔒 安全建议
 
