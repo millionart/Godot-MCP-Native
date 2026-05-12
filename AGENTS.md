@@ -105,11 +105,12 @@ Edit `addons/godot_mcp/README.md` and `addons/godot_mcp/README.zh.md`:
 - **规范文档：** `docs/development/pr-review-merge-spec.md`
 
 核心步骤：
-1. 创建集成分支 `integration/pr-review`
-2. 合并目标 PR 到集成分支
-3. 逐文件审查代码、测试覆盖、规范
-4. 运行 GUT 全量测试（0 failures 为硬性要求）
-5. 修复问题、记录审查文档
-6. Squash 合并到 `main`
+1. 创建集成分支 `integration/pr-review`，合并 PR 代码
+2. 逐文件审查代码、测试覆盖、规范
+3. 运行 GUT 全量测试（0 failures 为硬性要求）
+4. 阻断问题 → Request Changes 退回 PR 作者；小修复 → 直接推送到 PR head 分支
+5. 修复后重新验证，记录审查文档
+6. 通过 GitHub Squash Merge 合并 PR（PR 自动关闭）
+7. 清理本地集成分支
 
 注意：`_debounce_save()` 必须在 UI toggle handler 中调用，否则设置无法持久化。

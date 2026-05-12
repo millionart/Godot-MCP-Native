@@ -15,14 +15,16 @@
 ## 2. 流程总览
 
 ```
-GitHub PR ──→ 获取 PR refs ──→ 创建集成分支 ──→ 合并 PR
+GitHub PR ──→ 获取 PR refs ──→ 创建集成分支 ──→ 合并 PR 代码
                               │
                               ├──→ 审查代码 & 测试覆盖
                               ├──→ 运行 GUT 测试
-                              ├──→ 修复问题
-                              ├──→ 记录审查文档
                               │
-               main ←── Squash 合并 ←── 验证通过
+                   ┌── 阻断问题 ──→ Request Changes 退回 PR 作者
+                   │
+              问题处理 ── 小修复 ──→ 直接推送到 PR head 分支
+                   │
+                   └── 无问题/已修复 ──→ GitHub Squash Merge（PR 自动关闭）
 ```
 
 ---
@@ -46,6 +48,12 @@ git for-each-ref refs/remotes/origin/pr --format='%(refname:short)'
 
 ```bash
 git checkout -b integration/pr-review origin/main
+```
+
+将 PR 代码合并到集成分支进行审查：
+
+```bash
+git merge origin/pr/<N>
 ```
 
 ### 3.3 审查清单
@@ -92,9 +100,40 @@ git checkout -b integration/pr-review origin/main
 
 | 严重级 | 定义 | 处理方式 |
 |--------|------|----------|
-| 🔴 阻断 | 功能错误、测试失败、持久化缺失 | 必须在集成分支修复，重新验证 |
-| 🟡 优化 | 代码重复、缺少边界测试 | 建议修复；或记录到审查文档 |
-| 📝 记录 | CI 缺失、测试工具未集成 | 记录到文档，后续迭代 |
+| 🔴 阻断 | 功能错误、架构问题、测试失败 | 在 GitHub PR 上 Request Changes，附审查意见，退回 PR 作者自行修复 |
+| 🟡 小修复 | 缺 `_debounce_save()`、硬编码字符串、缺少翻译 key 等 | 审查者直接推送到 PR head 分支修复，再重新验证 |
+| 📝 记录 | CI 缺失、代码重复、测试工具未集成 | 记录到审查文档，后续迭代 |
+
+#### 小修复推送流程
+
+当审查发现小问题需要直接修复时：
+
+```bash
+# 1. 切到 PR 的 head 分支
+git checkout origin/pr/<N>
+
+# 2. 基于该分支创建本地修复分支（或直接在该分支上修改）
+git checkout -b fix/pr<N>-review-fixes
+
+# 3. 修改代码、运行测试验证
+
+# 4. 推送到 PR 的 head 分支（需 collaborator 权限或 PR 作者授权）
+git push origin fix/pr<N>-review-fixes:<PR_head_branch>
+
+# 5. 回到集成分支重新合并验证
+git checkout integration/pr-review
+git merge origin/pr/<N>
+```
+
+#### 阻断问题退回流程
+
+```bash
+# 通过 GitHub API 提交 Review（Request Changes）
+# 需使用 gh CLI 或 GitHub 网页操作：
+gh pr review <N> --request-changes --body "审查意见..."
+
+# PR 作者修复并 push 后，重新从 3.2 开始
+```
 
 ### 3.6 审查文档
 
@@ -107,16 +146,51 @@ git checkout -b integration/pr-review origin/main
 4. 测试覆盖率矩阵
 5. 审查结论（分维度评分）
 
-### 3.7 Squash 合并
+### 3.7 合并
+
+**通过 GitHub PR 页面合并**，确保 PR 自动关闭并有合并记录。
+
+#### 方式一：GitHub Squash Merge（推荐）
+
+在 GitHub PR 页面点击 **Squash and merge**，或在命令行：
 
 ```bash
-# 准备 main
+gh pr merge <N> --squash --subject "<type>: <中文标题>"
+```
+
+优点：
+- PR 自动关闭并关联到合并记录
+- 修复代码有 commit 归属（来自 PR head 分支）
+- GitHub 保留完整的审查和合并历史
+
+#### 方式二：GitHub Merge Commit
+
+```bash
+gh pr merge <N> --merge
+```
+
+保留 PR 的所有 commit 历史，适用于需要逐 commit 追踪的场景。
+
+#### 方式三：本地 Squash（仅限无 GitHub 权限时）
+
+```bash
 git checkout main
 git pull origin main
-
-# Squash 集成分支的所有 commits 为一个
 git merge --squash integration/pr-review
 git commit
+git push origin main
+```
+
+**注意**：此方式不会关闭 GitHub PR，需手动 Close 并说明合并 commit SHA。
+
+#### 合并后清理
+
+```bash
+# 删除本地集成分支
+git branch -D integration/pr-review
+
+# 删除修复分支（如有）
+git branch -D fix/pr<N>-review-fixes
 ```
 
 #### 提交信息格式
@@ -174,13 +248,30 @@ git merge-base --is-ancestor origin/pr/<N> origin/main && echo merged || echo no
 
 # 创建/重置集成分支
 git checkout -b integration/pr-review origin/main
-git branch -D integration/pr-review  # 删除
 
-# Squash 合并
-git merge --squash integration/pr-review
+# 合并 PR 到集成分支审查
+git merge origin/pr/<N>
 
-# 清理
+# 合并后清理
 git branch -D integration/pr-review
+```
+
+### GitHub PR 操作
+```bash
+# Squash 合并 PR（推荐）
+gh pr merge <N> --squash --subject "<type>: <中文标题>"
+
+# Merge Commit 合并 PR
+gh pr merge <N> --merge
+
+# 提交审查意见（Request Changes）
+gh pr review <N> --request-changes --body "审查意见..."
+
+# 提交审查通过
+gh pr review <N> --approve --body "审查通过"
+
+# 推送小修复到 PR head 分支
+git push origin fix/pr<N>-review-fixes:<PR_head_branch>
 ```
 
 ### 测试
