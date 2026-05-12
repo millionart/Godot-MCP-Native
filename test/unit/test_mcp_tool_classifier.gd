@@ -17,11 +17,11 @@ func test_all_154_tools_registered():
 
 func test_core_tools_count_within_limit():
 	var core_tools: Array = _classifier.get_core_tools()
-	assert_eq(core_tools.size(), 46, "Should have exactly 46 core tools")
+	assert_eq(core_tools.size(), 30, "Should have exactly 30 core tools")
 
 func test_supplementary_tools_count():
 	var supp_tools: Array = _classifier.get_supplementary_tools()
-	assert_eq(supp_tools.size(), 108, "Should have 108 supplementary tools")
+	assert_eq(supp_tools.size(), 124, "Should have 124 supplementary tools")
 
 func test_get_tool_category_create_node():
 	var cat: String = _classifier.get_tool_category("create_node")
@@ -29,7 +29,7 @@ func test_get_tool_category_create_node():
 
 func test_get_tool_category_execute_editor_script():
 	var cat: String = _classifier.get_tool_category("execute_editor_script")
-	assert_eq(cat, "supplementary", "execute_editor_script should be supplementary")
+	assert_eq(cat, "core", "execute_editor_script should be core")
 
 func test_get_tool_category_unknown():
 	var cat: String = _classifier.get_tool_category("non_existent_tool")
@@ -64,33 +64,51 @@ func test_get_all_groups_contains_supplementary_groups():
 	assert_true("Editor-Advanced" in groups, "Should contain Editor-Advanced group")
 	assert_true("Debug-Advanced" in groups, "Should contain Debug-Advanced group")
 	assert_true("Node-Advanced" in groups, "Should contain Node-Advanced group")
+	assert_true("Node-Write-Advanced" in groups, "Should contain Node-Write-Advanced group")
 	assert_true("Scene-Advanced" in groups, "Should contain Scene-Advanced group")
 	assert_true("Script-Advanced" in groups, "Should contain Script-Advanced group")
 	assert_true("Project-Advanced" in groups, "Should contain Project-Advanced group")
 
 func test_get_group_tools_node_write():
 	var tools: Array = _classifier.get_group_tools("Node-Write")
-	assert_true(tools.size() >= 10, "Node-Write should have 10+ tools")
+	assert_true(tools.size() >= 6, "Node-Write should have 6+ tools")
 	assert_true("create_node" in tools, "Node-Write should contain create_node")
 	assert_true("delete_node" in tools, "Node-Write should contain delete_node")
 	assert_true("update_node_property" in tools, "Node-Write should contain update_node_property")
 
 func test_get_group_tools_script():
 	var tools: Array = _classifier.get_group_tools("Script")
-	assert_true(tools.size() >= 9, "Script should have 9 tools")
+	assert_true(tools.size() >= 7, "Script should have 7 tools")
 	assert_true("read_script" in tools, "Script should contain read_script")
 	assert_true("create_script" in tools, "Script should contain create_script")
 	assert_true("modify_script" in tools, "Script should contain modify_script")
 
 func test_is_core_tool():
 	assert_true(_classifier.is_core_tool("create_node"), "create_node should be core")
-	assert_false(_classifier.is_core_tool("execute_editor_script"), "execute_editor_script should not be core")
+	assert_true(_classifier.is_core_tool("execute_editor_script"), "execute_editor_script should be core")
+	assert_true(_classifier.is_core_tool("execute_script"), "execute_script should be core")
 
 func test_is_supplementary_tool():
-	assert_true(_classifier.is_supplementary_tool("execute_editor_script"), "execute_editor_script should be supplementary")
 	assert_true(_classifier.is_supplementary_tool("reload_project"), "reload_project should be supplementary")
-	assert_true(_classifier.is_supplementary_tool("execute_script"), "execute_script should be supplementary")
 	assert_true(_classifier.is_supplementary_tool("get_performance_metrics"), "get_performance_metrics should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("set_anchor_preset"), "set_anchor_preset should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("connect_signal"), "connect_signal should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("disconnect_signal"), "disconnect_signal should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("set_node_groups"), "set_node_groups should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("add_resource"), "add_resource should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("get_node_groups"), "get_node_groups should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("find_nodes_in_group"), "find_nodes_in_group should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("analyze_script"), "analyze_script should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("validate_script"), "validate_script should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("search_in_files"), "search_in_files should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("list_project_scenes"), "list_project_scenes should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("get_scene_structure"), "get_scene_structure should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("get_selected_nodes"), "get_selected_nodes should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("set_editor_setting"), "set_editor_setting should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("get_editor_screenshot"), "get_editor_screenshot should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("get_signals"), "get_signals should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("create_resource"), "create_resource should be supplementary")
+	assert_true(_classifier.is_supplementary_tool("get_project_structure"), "get_project_structure should be supplementary")
 	assert_true(_classifier.is_supplementary_tool("get_debugger_sessions"), "get_debugger_sessions should be supplementary")
 	assert_true(_classifier.is_supplementary_tool("set_debugger_breakpoint"), "set_debugger_breakpoint should be supplementary")
 	assert_true(_classifier.is_supplementary_tool("send_debugger_message"), "send_debugger_message should be supplementary")
@@ -197,7 +215,7 @@ func test_is_supplementary_tool():
 	assert_true(_classifier.is_supplementary_tool("audit_project_health"), "audit_project_health should be supplementary")
 
 func test_get_core_max_count():
-	assert_eq(_classifier.get_core_max_count(), 40, "Core max count should be 40")
+	assert_eq(_classifier.get_core_max_count(), 30, "Core max count should be 30")
 
 func test_get_all_categories():
 	var cats: Array = _classifier.get_all_categories()

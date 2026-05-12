@@ -1488,7 +1488,7 @@ func _register_add_resource(server_core: RefCounted) -> void:
 			}
 		},
 		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
-		"core", "Node-Write"
+		"supplementary", "Node-Write-Advanced"
 	)
 
 func _tool_add_resource(params: Dictionary) -> Dictionary:
@@ -1569,7 +1569,7 @@ func _register_set_anchor_preset(server_core: RefCounted) -> void:
 			}
 		},
 		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
-		"core", "Node-Write"
+		"supplementary", "Node-Write-Advanced"
 	)
 
 func _tool_set_anchor_preset(params: Dictionary) -> Dictionary:
@@ -1654,7 +1654,7 @@ func _register_connect_signal(server_core: RefCounted) -> void:
 			}
 		},
 		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
-		"core", "Node-Write"
+		"supplementary", "Node-Write-Advanced"
 	)
 
 func _tool_connect_signal(params: Dictionary) -> Dictionary:
@@ -1751,7 +1751,7 @@ func _register_disconnect_signal(server_core: RefCounted) -> void:
 			}
 		},
 		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
-		"core", "Node-Write"
+		"supplementary", "Node-Write-Advanced"
 	)
 
 func _tool_disconnect_signal(params: Dictionary) -> Dictionary:
@@ -1827,7 +1827,7 @@ func _register_get_node_groups(server_core: RefCounted) -> void:
 			}
 		},
 		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
-		"core", "Node-Read"
+		"supplementary", "Node-Advanced"
 	)
 
 func _tool_get_node_groups(params: Dictionary) -> Dictionary:
@@ -1898,7 +1898,7 @@ func _register_set_node_groups(server_core: RefCounted) -> void:
 			}
 		},
 		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false},
-		"core", "Node-Write"
+		"supplementary", "Node-Write-Advanced"
 	)
 
 func _tool_set_node_groups(params: Dictionary) -> Dictionary:
@@ -1980,7 +1980,7 @@ func _register_find_nodes_in_group(server_core: RefCounted) -> void:
 			}
 		},
 		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
-		"core", "Node-Read"
+		"supplementary", "Node-Advanced"
 	)
 
 func _tool_find_nodes_in_group(params: Dictionary) -> Dictionary:

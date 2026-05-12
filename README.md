@@ -13,13 +13,13 @@ A powerful Godot Engine plugin that integrates AI assistants (Claude, etc.) via 
 - **Full Project Access**: AI assistants can read and modify scripts, scenes, nodes, and resources
 - **Native Implementation**: No Node.js dependency required - runs entirely within Godot
 - **Real-time Editing**: Apply AI suggestions directly in the editor
-- **Comprehensive Tool Set** (154 tools — 46 core + 108 supplementary):
-  - **Node Tools** (16 core + 4 advanced): Create, modify, manage scene nodes, duplicate, move, rename, signal connections, group management, batch operations, scene auditing
-  - **Script Tools** (9 core + 5 advanced): Edit, analyze, create, attach, validate GDScript files, search in files, symbol indexing, definition & reference lookup
-  - **Scene Tools** (6 core + 2 advanced): Manipulate scene structure, save scenes, list/open/close scene tabs
-  - **Editor Tools** (7 core + 9 advanced): Control editor functionality, screenshot, signal inspection, filesystem reload, node/file selection, export management, property inspector
-  - **Debug Tools** (3 core + 67 advanced): Logging, script execution, debugger sessions, breakpoints, stack/variable inspection, profilers, runtime probe, animation/audio/shader/tilemap runtime control, debug execution control
-  - **Project Tools** (5 core + 21 advanced): Access project settings, list resources, run tests, manage input mappings, inspect autoloads/global classes, resource diagnostics & health audit
+- **Comprehensive Tool Set** (154 tools — 30 core + 124 supplementary):
+  - **Node Tools** (9 core + 11 advanced): Create, modify, manage scene nodes, duplicate, move, rename, signal connections, anchor presets, group management, batch operations, scene auditing
+  - **Script Tools** (7 core + 8 advanced): Edit, analyze, create, attach, validate GDScript files, execute scripts, search in files, symbol indexing, definition & reference lookup
+  - **Scene Tools** (4 core + 4 advanced): Manipulate scene structure, save scenes, list/open/close scene tabs, project scene listing
+  - **Editor Tools** (4 core + 12 advanced): Control editor functionality, screenshot, signal inspection, filesystem reload, node/file selection, export management, property inspector
+  - **Debug Tools** (3 core + 66 advanced): Logging, debugger sessions, breakpoints, stack/variable inspection, profilers, runtime probe, animation/audio/shader/tilemap runtime control, debug execution control
+  - **Project Tools** (3 core + 23 advanced): Access project settings, list resources, create resources, run tests, manage input mappings, inspect autoloads/global classes, resource diagnostics & health audit
 
 ## 📦 Installation
 
@@ -170,71 +170,77 @@ Implement a day/night cycle system with dynamic lighting
 
 ## 📚 Available Commands
 
-### Node Tools (16)
-- `get-scene-tree` - Get scene tree structure
-- `get-node-properties` - Get properties of a specific node
+### Node-Write (6)
 - `create-node` - Create a new node
 - `delete-node` - Delete a node
 - `update-node-property` - Update node properties
-- `list-nodes` - List nodes under a parent
 - `duplicate-node` - Duplicate a node and its children
 - `move-node` - Move a node to a new parent
 - `rename-node` - Rename a node in the scene
-- `add-resource` - Add a resource child node (collision shape, mesh, etc.)
+
+### Node-Read (3)
+- `get-scene-tree` - Get scene tree structure
+- `get-node-properties` - Get properties of a specific node
+- `list-nodes` - List nodes under a parent
+
+### Node-Write-Advanced (5)
 - `set-anchor-preset` - Set anchor preset for Control nodes
 - `connect-signal` - Connect a signal between nodes
 - `disconnect-signal` - Disconnect a signal connection
-- `get-node-groups` - Get groups a node belongs to
 - `set-node-groups` - Set group memberships for a node
+- `add-resource` - Add a resource child node (collision shape, mesh, etc.)
+
+### Node-Advanced (6)
+- `get-node-groups` - Get groups a node belongs to
 - `find-nodes-in-group` - Find all nodes in a specific group
-
-### Script Tools (9)
-- `list-project-scripts` - List all scripts
-- `read-script` - Read a specific script
-- `modify-script` - Update script content
-- `create-script` - Create a new script
-- `analyze-script` - Analyze script structure
-- `get-current-script` - Get currently editing script
-- `attach-script` - Attach an existing script to a node
-- `validate-script` - Validate GDScript syntax
-- `search-in-files` - Search project files
-
-### Scene Tools (6)
-- `list-project-scenes` - List all scenes
-- `read-scene` - Read scene structure
-- `create-scene` - Create a new scene
-- `save-scene` - Save current scene
-- `open-scene` - Open a scene
-- `get-current-scene` - Get current scene info
-
-### Editor Tools (8)
-- `get-editor-state` - Get current editor state
-- `run-project` - Run the project
-- `stop-project` - Stop the running project
-- `get-selected-nodes` - Get selected nodes
-- `set-editor-setting` - Modify editor settings
-- `get-editor-screenshot` - Capture an editor viewport screenshot
-- `get-signals` - Inspect node signals and connections
-- `reload-project` - Rescan the project filesystem
-
-### Node-Advanced (4)
 - `batch-update-node-properties` - Batch update multiple node properties in one UndoRedo action
 - `batch-scene-node-edits` - Apply batch scene node create/delete/move edits in one UndoRedo action
 - `audit-scene-node-persistence` - Audit node owner and persistence state for the scene
 - `audit-scene-inheritance` - Audit inherited/instanced scene structure
 
-### Script-Advanced (5)
+### Script (7)
+- `list-project-scripts` - List all scripts
+- `read-script` - Read a specific script
+- `modify-script` - Update script content
+- `create-script` - Create a new script
+- `get-current-script` - Get currently editing script
+- `attach-script` - Attach an existing script to a node
+- `execute-script` - Execute GDScript expression
+
+### Script-Advanced (8)
+- `analyze-script` - Analyze script structure
+- `validate-script` - Validate GDScript syntax
+- `search-in-files` - Search project files
 - `list-project-script-symbols` - Index script symbols across GDScript and C# files
 - `find-script-symbol-definition` - Find definition locations for a script symbol
 - `find-script-symbol-references` - Find textual references to a script symbol
 - `rename-script-symbol` - Rename a script symbol across project files
 - `open-script-at-line` - Open a script at a specific line in the editor
 
-### Scene-Advanced (2)
+### Scene (4)
+- `create-scene` - Create a new scene
+- `save-scene` - Save current scene
+- `open-scene` - Open a scene
+- `get-current-scene` - Get current scene info
+
+### Scene-Advanced (4)
+- `list-project-scenes` - List all scenes
+- `get-scene-structure` - Get scene structure details
 - `list-open-scenes` - List currently open scene tabs
 - `close-scene-tab` - Close a scene tab
 
-### Editor-Advanced (7)
+### Editor (4)
+- `get-editor-state` - Get current editor state
+- `run-project` - Run the project
+- `stop-project` - Stop the running project
+- `execute-editor-script` - Execute GDScript script
+
+### Editor-Advanced (12)
+- `get-selected-nodes` - Get selected nodes
+- `set-editor-setting` - Modify editor settings
+- `get-editor-screenshot` - Capture an editor viewport screenshot
+- `get-signals` - Inspect node signals and connections
+- `reload-project` - Rescan the project filesystem
 - `select-node` - Select a node in the scene and focus in Inspector
 - `select-file` - Select a file in the FileSystem dock
 - `get-inspector-properties` - Inspect node/resource properties like the Inspector
@@ -243,13 +249,11 @@ Implement a day/night cycle system with dynamic lighting
 - `validate-export-preset` - Validate an export preset
 - `run-export` - Run a Godot CLI export
 
-### Debug Tools (3 core + 67 advanced)
+### Debug (3 core + 66 advanced)
 - `get-editor-logs` - Get editor/runtime logs
-- `execute-script` - Execute GDScript expression
-- `get-performance-metrics` - Get performance data
 - `debug-print` - Print debug info
-- `execute-editor-script` - Execute GDScript script
 - `clear-output` - Clear MCP/editor output buffers
+- `get-performance-metrics` - Get performance data
 - `get-debugger-sessions` - List editor debugger sessions and active/break state
 - `set-debugger-breakpoint` - Enable or disable debugger breakpoints
 - `send-debugger-message` - Send custom messages to the running game debugger
@@ -310,7 +314,7 @@ Implement a day/night cycle system with dynamic lighting
 - `update-runtime-audio-bus` - Update runtime audio bus
 - `get-runtime-screenshot` - Capture runtime viewport screenshot
 
-### Project Tools (5 core + 21 advanced)
+### Project (3 core + 23 advanced)
 - `get-project-info` - Get project information
 - `get-project-settings` - Get project settings
 - `list-project-resources` - List project resources

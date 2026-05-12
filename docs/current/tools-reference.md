@@ -22,12 +22,12 @@ Godot MCP Native 实现了 **154 个工具**，分为 6 大类（含核心和补
 
 | 类别 | 核心工具 | 补充工具 | 总计 | 源文件 | 用途 |
 |------|----------|----------|------|--------|------|
-| [Node Tools](#node-tools) | 16 | 4 | 20 | `node_tools_native.gd` | 节点管理（创建、删除、修改属性、复制、移动、重命名、信号、组） |
-| [Script Tools](#script-tools) | 9 | 5 | 14 | `script_tools_native.gd` | 脚本管理（读取、创建、修改、分析、附加、验证、搜索、符号索引） |
-| [Scene Tools](#scene-tools) | 6 | 2 | 8 | `scene_tools_native.gd` | 场景管理（创建、保存、打开、列出） |
-| [Editor Tools](#editor-tools) | 7 | 9 | 16 | `editor_tools_native.gd` | 编辑器操作（运行、停止、状态、截图、信号、导出、选择） |
+| [Node Tools](#node-tools) | 9 | 11 | 20 | `node_tools_native.gd` | 节点管理（创建、删除、修改属性、复制、移动、重命名、信号、组） |
+| [Script Tools](#script-tools) | 7 | 7 | 14 | `script_tools_native.gd` | 脚本管理（读取、创建、修改、分析、附加、验证、搜索、符号索引） |
+| [Scene Tools](#scene-tools) | 4 | 4 | 8 | `scene_tools_native.gd` | 场景管理（创建、保存、打开、列出） |
+| [Editor Tools](#editor-tools) | 4 | 12 | 16 | `editor_tools_native.gd` | 编辑器操作（运行、停止、状态、截图、信号、导出、选择） |
 | [Debug Tools](#debug-tools) | 3 | 67 | 70 | `debug_tools_native.gd` | 调试和运行时（日志、断点、栈帧、Profiler、运行时探针、动画、音频、着色器、瓦片地图） |
-| [Project Tools](#project-tools) | 5 | 21 | 26 | `project_tools_native.gd` | 项目配置（信息、设置、测试、输入映射、自动加载、全局类、资源诊断） |
+| [Project Tools](#project-tools) | 3 | 23 | 26 | `project_tools_native.gd` | 项目配置（信息、设置、测试、输入映射、自动加载、全局类、资源诊断） |
 
 ### Vibe Coding / 免打扰模式
 
@@ -1912,7 +1912,7 @@ Godot MCP Native 实现了 **154 个工具**，分为 6 大类（含核心和补
 
 ## Node-Advanced（补充工具）
 
-这些工具扩展了节点管理功能，支持批量操作和场景审计。需在工具管理面板中启用 `Node-Advanced` 分组后使用。
+这些工具扩展了节点管理功能，支持信号连接、节点组、锚点设置、资源添加、批量操作和场景审计。需在工具管理面板中启用 `Node-Advanced` / `Node-Write-Advanced` 分组后使用。
 
 ### 71. batch_update_node_properties
 
@@ -2003,7 +2003,7 @@ Godot MCP Native 实现了 **154 个工具**，分为 6 大类（含核心和补
 
 ## Script-Advanced（补充工具）
 
-这些工具扩展了脚本管理功能，支持符号索引、定义查找和引用搜索。需在工具管理面板中启用 `Script-Advanced` 分组后使用。
+这些工具扩展了脚本管理功能，支持脚本分析、验证、搜索、符号索引、定义查找和引用搜索。需在工具管理面板中启用 `Script-Advanced` 分组后使用。
 
 ### 75. list_project_script_symbols
 
@@ -2134,7 +2134,7 @@ Godot MCP Native 实现了 **154 个工具**，分为 6 大类（含核心和补
 
 ## Scene-Advanced（补充工具）
 
-这些工具扩展了场景管理功能，支持列出和关闭场景标签页。需在工具管理面板中启用 `Scene-Advanced` 分组后使用。
+这些工具扩展了场景管理功能，支持场景结构查询、列出项目场景、列出和关闭场景标签页。需在工具管理面板中启用 `Scene-Advanced` 分组后使用。
 
 ### 80. list_open_scenes
 
@@ -2175,7 +2175,7 @@ Godot MCP Native 实现了 **154 个工具**，分为 6 大类（含核心和补
 
 ## Editor-Advanced（补充工具）
 
-这些工具扩展了编辑器操作功能，支持节点/文件选择、属性检查、导出管理。需在工具管理面板中启用 `Editor-Advanced` 分组后使用。
+这些工具扩展了编辑器操作功能，支持节点选择、编辑器设置、截图、信号查询、文件选择、属性检查、导出管理。需在工具管理面板中启用 `Editor-Advanced` 分组后使用。
 
 ### 82. select_node
 
@@ -3355,7 +3355,7 @@ Continue：恢复执行。
 
 ## Project-Advanced（补充工具）
 
-这些工具扩展了项目配置管理功能，包括测试运行、输入映射管理、自动加载/全局类查询、资源诊断。需在工具管理面板中启用 `Project-Advanced` 分组后使用。
+这些工具扩展了项目配置管理功能，包括资源创建、项目结构查询、测试运行、输入映射管理、自动加载/全局类查询、资源诊断。需在工具管理面板中启用 `Project-Advanced` 分组后使用。
 
 ### 134. list_project_tests
 
@@ -3939,7 +3939,7 @@ Continue：恢复执行。
 
 ## 总结
 
-本手册详细说明了 Godot MCP Native 项目的所有核心工具及部分补充工具。项目共 **154 个工具**（46 核心 + 108 补充），所有工具均可通过 MCP 工具管理面板按分组动态启用/禁用。补充工具（`*-Advanced` 分组）默认不启用，需在工具管理面板中手动开启。
+本手册详细说明了 Godot MCP Native 项目的所有核心工具及部分补充工具。项目共 **154 个工具**（30 核心 + 124 补充），所有工具均可通过 MCP 工具管理面板按分组动态启用/禁用。补充工具（`*-Advanced` 分组）默认不启用，需在工具管理面板中手动开启。
 
 **提示**：
 - 使用 `tools/list` 方法获取所有工具的实时列表和完整 JSON Schema

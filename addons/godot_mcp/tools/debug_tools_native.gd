@@ -2949,7 +2949,7 @@ func _register_execute_script(server_core: RefCounted) -> void:
 	# 注册工具
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_execute_script"),
-						  output_schema, annotations, "supplementary", "Debug-Advanced")
+						  output_schema, annotations, "core", "Script")
 
 func _tool_execute_script(params: Dictionary) -> Dictionary:
 	var code: String = params.get("code", "")
@@ -3170,7 +3170,7 @@ func _register_execute_editor_script(server_core: RefCounted) -> void:
 
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_execute_editor_script"),
-						  output_schema, annotations, "supplementary", "Debug-Advanced")
+						  output_schema, annotations, "core", "Editor")
 
 func _tool_execute_editor_script(params: Dictionary) -> Dictionary:
 	var code: String = params.get("code", "")

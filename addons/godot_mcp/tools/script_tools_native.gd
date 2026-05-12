@@ -1547,7 +1547,7 @@ func _register_analyze_script(server_core: RefCounted) -> void:
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_analyze_script"),
 						  output_schema, annotations,
-						  "core", "Script")
+						  "supplementary", "Script-Advanced")
 
 func _tool_analyze_script(params: Dictionary) -> Dictionary:
 	# 参数提取
@@ -1934,7 +1934,7 @@ func _register_validate_script(server_core: RefCounted) -> void:
 	server_core.register_tool(tool_name, description, input_schema,
 		Callable(self, "_tool_validate_script"),
 		output_schema, annotations,
-		"core", "Script")
+		"supplementary", "Script-Advanced")
 
 func _tool_validate_script(params: Dictionary) -> Dictionary:
 	var script_path: String = params.get("script_path", "")
@@ -2087,7 +2087,7 @@ func _register_search_in_files(server_core: RefCounted) -> void:
 	server_core.register_tool(tool_name, description, input_schema,
 		Callable(self, "_tool_search_in_files"),
 		output_schema, annotations,
-		"core", "Script")
+		"supplementary", "Script-Advanced")
 
 func _tool_search_in_files(params: Dictionary) -> Dictionary:
 	var pattern: String = params.get("pattern", "")

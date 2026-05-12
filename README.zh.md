@@ -13,13 +13,13 @@
 - **完整项目访问**：AI 助手可以读取和修改脚本、场景、节点和资源
 - **原生实现**：无需 Node.js 依赖——完全在 Godot 中运行
 - **实时编辑**：直接在编辑器中应用 AI 建议
-- **全面的工具集**（154 个工具——46 核心 + 108 补充）：
-  - **节点工具**（16 核心 + 4 高级）：创建、修改、管理场景节点，复制、移动、重命名，信号连接，组管理，批量操作，场景审计
-  - **脚本工具**（9 核心 + 5 高级）：编辑、分析、创建、附加、验证 GDScript 文件，文件搜索，符号索引，定义和引用查找
-  - **场景工具**（6 核心 + 2 高级）：操作场景结构、保存场景、列出/打开/关闭场景标签页
-  - **编辑器工具**（7 核心 + 9 高级）：控制编辑器功能、截图、信号检查、文件系统重载，节点/文件选择，导出管理，属性检查器
-  - **调试工具**（3 核心 + 67 高级）：日志、脚本执行、调试会话、断点、栈帧/变量读取、性能分析器、运行时探针，动画/音频/着色器/瓦片地图运行时控制，调试执行控制
-  - **项目工具**（5 核心 + 21 高级）：访问项目设置、列出资源，运行测试、管理输入映射、检查自动加载/全局类，资源诊断与健康审计
+- **全面的工具集**（154 个工具——30 核心 + 124 补充）：
+  - **节点工具**（9 核心 + 11 高级）：创建、修改、管理场景节点，复制、移动、重命名，锚点预设，信号连接，组管理，批量操作，场景审计
+  - **脚本工具**（7 核心 + 8 高级）：编辑、分析、创建、附加、验证 GDScript 文件，执行脚本，文件搜索，符号索引，定义和引用查找
+  - **场景工具**（4 核心 + 4 高级）：操作场景结构、保存场景、列出/打开/关闭场景标签页，项目场景列表
+  - **编辑器工具**（4 核心 + 12 高级）：控制编辑器功能、截图、信号检查、文件系统重载，节点/文件选择，导出管理，属性检查器
+  - **调试工具**（3 核心 + 66 高级）：日志、调试会话、断点、栈帧/变量读取、性能分析器、运行时探针，动画/音频/着色器/瓦片地图运行时控制，调试执行控制
+  - **项目工具**（3 核心 + 23 高级）：访问项目设置、列出资源、创建资源，运行测试、管理输入映射、检查自动加载/全局类，资源诊断与健康审计
 
 ## 📦 安装
 
@@ -172,71 +172,77 @@ url = "http://localhost:19080/mcp"
 
 ## 📚 可用命令
 
-### 节点工具 (16)
-- `get-scene-tree` - 获取场景树结构
-- `get-node-properties` - 获取特定节点的属性
+### Node-Write (6)
 - `create-node` - 创建新节点
 - `delete-node` - 删除节点
 - `update-node-property` - 更新节点属性
-- `list-nodes` - 列出父节点下的所有节点
 - `duplicate-node` - 复制节点及子节点
 - `move-node` - 移动节点到新父节点
 - `rename-node` - 重命名节点
-- `add-resource` - 向节点添加资源子节点（碰撞形状、网格等）
+
+### Node-Read (3)
+- `get-scene-tree` - 获取场景树结构
+- `get-node-properties` - 获取特定节点的属性
+- `list-nodes` - 列出父节点下的所有节点
+
+### Node-Write-Advanced (5)
 - `set-anchor-preset` - 设置 Control 节点锚点预设
 - `connect-signal` - 连接节点间的信号
 - `disconnect-signal` - 断开信号连接
-- `get-node-groups` - 获取节点所属的组
 - `set-node-groups` - 设置节点的组成员关系
+- `add-resource` - 向节点添加资源子节点（碰撞形状、网格等）
+
+### Node-Advanced (6)
+- `get-node-groups` - 获取节点所属的组
 - `find-nodes-in-group` - 查找组中的所有节点
-
-### 脚本工具 (9)
-- `list-project-scripts` - 列出所有脚本
-- `read-script` - 读取特定脚本
-- `modify-script` - 更新脚本内容
-- `create-script` - 创建新脚本
-- `analyze-script` - 分析脚本结构
-- `get-current-script` - 获取当前正在编辑的脚本
-- `attach-script` - 将已有脚本附加到节点
-- `validate-script` - 验证 GDScript 语法
-- `search-in-files` - 搜索项目文件
-
-### 场景工具 (6)
-- `list-project-scenes` - 列出所有场景
-- `read-scene` - 读取场景结构
-- `create-scene` - 创建新场景
-- `save-scene` - 保存当前场景
-- `open-scene` - 打开场景
-- `get-current-scene` - 获取当前场景信息
-
-### 编辑器工具 (8)
-- `get-editor-state` - 获取当前编辑器状态
-- `run-project` - 运行项目
-- `stop-project` - 停止运行中的项目
-- `get-selected-nodes` - 获取选中的节点
-- `set-editor-setting` - 修改编辑器设置
-- `get-editor-screenshot` - 截取编辑器视口截图
-- `get-signals` - 检查节点信号和连接
-- `reload-project` - 重新扫描项目文件系统
-
-### 节点高级工具 (4)
 - `batch-update-node-properties` - 在单个 UndoRedo 动作中批量更新节点属性
 - `batch-scene-node-edits` - 在单个 UndoRedo 动作中批量执行场景节点编辑
 - `audit-scene-node-persistence` - 审计节点 owner 和持久化状态
 - `audit-scene-inheritance` - 审计场景继承/实例化结构
 
-### 脚本高级工具 (5)
+### Script (7)
+- `list-project-scripts` - 列出所有脚本
+- `read-script` - 读取特定脚本
+- `modify-script` - 更新脚本内容
+- `create-script` - 创建新脚本
+- `get-current-script` - 获取当前正在编辑的脚本
+- `attach-script` - 将已有脚本附加到节点
+- `execute-script` - 执行 GDScript 表达式
+
+### Script-Advanced (8)
+- `analyze-script` - 分析脚本结构
+- `validate-script` - 验证 GDScript 语法
+- `search-in-files` - 搜索项目文件
 - `list-project-script-symbols` - 索引 GDScript 和 C# 文件的脚本符号
 - `find-script-symbol-definition` - 查找脚本符号的定义位置
 - `find-script-symbol-references` - 查找脚本符号的文本引用
 - `rename-script-symbol` - 跨文件重命名脚本符号
 - `open-script-at-line` - 在编辑器中打开脚本到指定行
 
-### 场景高级工具 (2)
+### Scene (4)
+- `create-scene` - 创建新场景
+- `save-scene` - 保存当前场景
+- `open-scene` - 打开场景
+- `get-current-scene` - 获取当前场景信息
+
+### Scene-Advanced (4)
+- `list-project-scenes` - 列出所有场景
+- `get-scene-structure` - 获取场景结构详情
 - `list-open-scenes` - 列出当前打开的场景标签页
 - `close-scene-tab` - 关闭场景标签页
 
-### 编辑器高级工具 (7)
+### Editor (4)
+- `get-editor-state` - 获取当前编辑器状态
+- `run-project` - 运行项目
+- `stop-project` - 停止运行中的项目
+- `execute-editor-script` - 执行 GDScript 脚本
+
+### Editor-Advanced (12)
+- `get-selected-nodes` - 获取选中的节点
+- `set-editor-setting` - 修改编辑器设置
+- `get-editor-screenshot` - 截取编辑器视口截图
+- `get-signals` - 检查节点信号和连接
+- `reload-project` - 重新扫描项目文件系统
 - `select-node` - 在场景中选择节点并聚焦检查器
 - `select-file` - 在文件系统面板中选择文件
 - `get-inspector-properties` - 检查节点/资源的属性元数据
@@ -245,13 +251,11 @@ url = "http://localhost:19080/mcp"
 - `validate-export-preset` - 验证导出预设
 - `run-export` - 运行 Godot CLI 导出
 
-### 调试工具 (3 核心 + 67 高级)
+### Debug (3 核心 + 66 高级)
 - `get-editor-logs` - 获取编辑器/运行时日志
-- `execute-script` - 执行 GDScript 表达式
-- `get-performance-metrics` - 获取性能数据
 - `debug-print` - 打印调试信息
-- `execute-editor-script` - 执行 GDScript 脚本
 - `clear-output` - 清除 MCP/编辑器输出缓冲
+- `get-performance-metrics` - 获取性能数据
 - `get-debugger-sessions` - 列出编辑器调试会话和 active/break 状态
 - `set-debugger-breakpoint` - 启用或禁用调试断点
 - `send-debugger-message` - 向运行中的游戏调试器发送自定义消息
@@ -312,7 +316,7 @@ url = "http://localhost:19080/mcp"
 - `update-runtime-audio-bus` - 更新运行时音频总线
 - `get-runtime-screenshot` - 捕获运行时视口截图
 
-### 项目工具 (5 核心 + 21 高级)
+### Project (3 核心 + 23 高级)
 - `get-project-info` - 获取项目信息
 - `get-project-settings` - 获取项目设置
 - `list-project-resources` - 列出项目资源

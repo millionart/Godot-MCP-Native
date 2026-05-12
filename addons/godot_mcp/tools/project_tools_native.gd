@@ -1346,7 +1346,7 @@ func _register_create_resource(server_core: RefCounted) -> void:
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_create_resource"),
 						  output_schema, annotations,
-						  "core", "Project")
+						  "supplementary", "Project-Advanced")
 
 func _tool_create_resource(params: Dictionary) -> Dictionary:
 	# 参数提取
@@ -1437,7 +1437,7 @@ func _register_get_project_structure(server_core: RefCounted) -> void:
 	server_core.register_tool(tool_name, description, input_schema,
 						  Callable(self, "_tool_get_project_structure"),
 						  output_schema, annotations,
-						  "core", "Project")
+						  "supplementary", "Project-Advanced")
 
 func _tool_get_project_structure(params: Dictionary) -> Dictionary:
 	var max_depth: int = params.get("max_depth", 3)
