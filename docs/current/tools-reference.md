@@ -29,6 +29,14 @@ Godot MCP Native 实现了 **154 个工具**，分为 6 大类（含核心和补
 | [Debug Tools](#debug-tools) | 3 | 67 | 70 | `debug_tools_native.gd` | 调试和运行时（日志、断点、栈帧、Profiler、运行时探针、动画、音频、着色器、瓦片地图） |
 | [Project Tools](#project-tools) | 5 | 21 | 26 | `project_tools_native.gd` | 项目配置（信息、设置、测试、输入映射、自动加载、全局类、资源诊断） |
 
+### Vibe Coding / 免打扰模式
+
+`vibe_coding_mode` 默认启用。该模式不会关闭 MCP 服务，但会阻止会抢占真人用户编辑器上下文的操作。
+
+- 会切换场景、选择节点/文件或聚焦脚本编辑器的工具，需要本次调用传入 `allow_ui_focus=true`。
+- 会打开或控制运行窗口的工具，需要本次调用传入 `allow_window=true`。
+- 需要人工调试配合 MCP 时，可以在 MCP 面板关闭 `Vibe Coding / 免打扰模式`。
+
 ### 工具调用格式
 
 ```json
@@ -600,6 +608,33 @@ Godot MCP Native 实现了 **154 个工具**，分为 6 大类（含核心和补
 
 ---
 
+### open_script_at_line
+
+打开脚本并定位到指定行/列。默认会尝试在脚本编辑器中定位，但在 `vibe_coding_mode=true` 时不会抢占编辑器焦点，除非本次调用传入 `allow_ui_focus=true`。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `script_path` | string | 是 | 脚本文件路径（如 `res://scripts/player.gd`） |
+| `line` | int | 否 | 1-based 行号（默认 `1`） |
+| `column` | int | 否 | 0-based 列号（默认 `0`） |
+| `grab_focus` | boolean | 否 | 是否让编辑器获取焦点（默认 `true`）。免打扰模式下只有 `allow_ui_focus=true` 时才生效 |
+| `allow_ui_focus` | boolean | 否 | 免打扰模式下允许本次调用聚焦脚本编辑器（默认 `false`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `script_path` | string | 打开的脚本路径 |
+| `line` | int | 请求的 1-based 行号 |
+| `column` | int | 请求的 0-based 列号 |
+| `caret_line` | int | Godot 编辑器中的 0-based 光标行 |
+| `caret_column` | int | Godot 编辑器中的 0-based 光标列 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=true`
+
+---
+
 ### 19. create_script
 
 创建新脚本文件，支持模板和自动附加到节点。
@@ -843,6 +878,7 @@ Godot MCP Native 实现了 **154 个工具**，分为 6 大类（含核心和补
 | 参数 | 类型 | 必需 | 描述 |
 |------|------|------|------|
 | `scene_path` | string | 是 | 场景文件路径 |
+| `allow_ui_focus` | boolean | 否 | 免打扰模式下允许本次调用切换当前编辑器场景（默认 `false`） |
 
 **返回值**：
 | 字段 | 类型 | 描述 |
@@ -904,6 +940,27 @@ Godot MCP Native 实现了 **154 个工具**，分为 6 大类（含核心和补
 
 ---
 
+### close_scene_tab
+
+关闭当前场景标签页，或先激活指定场景标签页再关闭。该操作会改变编辑器场景标签状态，在 `vibe_coding_mode=true` 时需要本次调用传入 `allow_ui_focus=true`。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `scene_path` | string | 否 | 要关闭的场景路径。如不提供，关闭当前活动场景 |
+| `allow_ui_focus` | boolean | 否 | 免打扰模式下允许本次调用激活或关闭场景标签（默认 `false`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `closed_scene` | string | 被关闭的场景路径 |
+| `remaining_count` | int | 关闭后仍打开的场景数量 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=true`, `idempotentHint=false`
+
+---
+
 ### 31. list_project_scenes
 
 列出项目中的所有场景文件。
@@ -951,6 +1008,7 @@ Godot MCP Native 实现了 **154 个工具**，分为 6 大类（含核心和补
 | 参数 | 类型 | 必需 | 描述 |
 |------|------|------|------|
 | `scene_path` | string | 否 | 指定要运行的场景路径。如不提供，运行主场景 |
+| `allow_window` | boolean | 否 | 免打扰模式下允许本次调用打开运行窗口（默认 `false`） |
 
 **返回值**：
 | 字段 | 类型 | 描述 |
@@ -966,7 +1024,10 @@ Godot MCP Native 实现了 **154 个工具**，分为 6 大类（含核心和补
 
 停止运行项目（Stop 按钮）。
 
-**参数**：无
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `allow_window` | boolean | 否 | 免打扰模式下允许本次调用控制运行窗口（默认 `false`） |
 
 **返回值**：
 | 字段 | 类型 | 描述 |
@@ -1012,6 +1073,49 @@ Godot MCP Native 实现了 **154 个工具**，分为 6 大类（含核心和补
 ```
 
 **注解**：`readOnlyHint=true`, `destructiveHint=false`, `idempotentHint=true`
+
+---
+
+### select_node
+
+在当前编辑场景中选择节点，并在 Inspector 中编辑该节点。该操作会改变编辑器选择和焦点，在 `vibe_coding_mode=true` 时需要本次调用传入 `allow_ui_focus=true`。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `node_path` | string | 是 | 节点路径（如 `/root/MainScene/Player`） |
+| `clear_existing` | boolean | 否 | 选择前是否清空现有选择（默认 `true`） |
+| `allow_ui_focus` | boolean | 否 | 免打扰模式下允许本次调用改变编辑器选择/焦点（默认 `false`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `node_path` | string | 被选择节点的友好路径 |
+| `node_type` | string | 节点类型 |
+| `selected_count` | int | 选择后的节点数量 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=true`
+
+---
+
+### select_file
+
+在 Godot FileSystem dock 中选择项目文件。该操作会改变编辑器文件选择，在 `vibe_coding_mode=true` 时需要本次调用传入 `allow_ui_focus=true`。
+
+**参数**：
+| 参数 | 类型 | 必需 | 描述 |
+|------|------|------|------|
+| `file_path` | string | 是 | 项目文件路径（如 `res://scenes/Main.tscn`） |
+| `allow_ui_focus` | boolean | 否 | 免打扰模式下允许本次调用改变 FileSystem 选择（默认 `false`） |
+
+**返回值**：
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `status` | string | `"success"` |
+| `file_path` | string | 被选择的文件路径 |
+
+**注解**：`readOnlyHint=false`, `destructiveHint=false`, `idempotentHint=true`
 
 ---
 
