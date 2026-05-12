@@ -1,8 +1,8 @@
 import json
+import shutil
 import subprocess
 import sys
 import time
-import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -10,6 +10,15 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GODOT_EXE = Path(r"C:\SourceCode\Godot_v4.6.2-stable_mono_win64\Godot_v4.6.2-stable_mono_win64_console.exe")
 MCP_URL = "http://127.0.0.1:9080/mcp"
+TEMP_DIR = REPO_ROOT / ".tmp_runtime_node_lifecycle"
+SCENE_PATH = "res://.tmp_runtime_node_lifecycle/runtime_node_lifecycle_scene.tscn"
+SCENE_FILE = TEMP_DIR / "runtime_node_lifecycle_scene.tscn"
+
+SCENE_TEXT = """
+[gd_scene format=3]
+
+[node name="RuntimeNodeRoot" type="Node2D"]
+""".strip() + "\n"
 
 
 def rpc_call(method: str, params: dict | None = None, request_id: int = 1) -> dict:
@@ -25,7 +34,7 @@ def rpc_call(method: str, params: dict | None = None, request_id: int = 1) -> di
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=15) as response:
+    with urllib.request.urlopen(request, timeout=20) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
@@ -49,26 +58,6 @@ def get_debugger_messages(count: int = 100, request_id: int = 5000) -> dict:
         {"count": count, "order": "desc"},
         request_id=request_id,
     )
-
-
-def poll_tool(
-    name: str,
-    arguments: dict,
-    predicate,
-    timeout_seconds: float = 10.0,
-    start_request_id: int = 1000,
-    poll_interval_seconds: float = 0.5,
-) -> dict:
-    deadline = time.time() + timeout_seconds
-    request_id = start_request_id
-    last_result = None
-    while time.time() < deadline:
-        last_result = tool_call(name, arguments, request_id=request_id)
-        if predicate(last_result):
-            return last_result
-        time.sleep(poll_interval_seconds)
-        request_id += 1
-    raise AssertionError(f"{name} did not reach expected state. Last result: {last_result}")
 
 
 def wait_for_server(timeout_seconds: float = 30.0) -> None:
@@ -99,11 +88,39 @@ def wait_for_current_scene(scene_path: str, timeout_seconds: float = 10.0, start
     raise AssertionError(f"Scene did not become active: expected {scene_path}, last result: {last_result}")
 
 
-def dispatch_runtime_tool(name: str, arguments: dict, request_id: int) -> dict:
-    result = tool_call(name, arguments, request_id=request_id)
-    if result.get("status") not in {"success", "pending", "stale"}:
-        raise AssertionError(f"{name} did not dispatch cleanly: {result}")
-    return result
+def wait_for_active_debugger_session(timeout_seconds: float = 20.0, start_request_id: int = 300) -> dict:
+    deadline = time.time() + timeout_seconds
+    request_id = start_request_id
+    last_result = None
+    while time.time() < deadline:
+        last_result = tool_call("get_debugger_sessions", {}, request_id=request_id)
+        sessions = last_result.get("sessions", [])
+        if last_result.get("count", 0) > 0 and any(session.get("active") for session in sessions):
+            return last_result
+        time.sleep(0.5)
+        request_id += 1
+    raise AssertionError(f"Debugger session never became active: {last_result}")
+
+
+def prime_runtime_probe(
+    timeout_seconds: float = 8.0,
+    start_request_id: int = 30,
+    minimum_node_count: int = 0,
+) -> dict:
+    deadline = time.time() + timeout_seconds
+    request_id = start_request_id
+    last_result = None
+    while time.time() < deadline:
+        last_result = tool_call("get_runtime_info", {"timeout_ms": 2000}, request_id=request_id)
+        if (
+            last_result.get("status") == "success"
+            and last_result.get("current_scene")
+            and int(last_result.get("node_count", 0)) >= minimum_node_count
+        ):
+            return last_result
+        time.sleep(0.5)
+        request_id += 1
+    raise AssertionError(f"Runtime probe never primed: {last_result}")
 
 
 def run_project_until_debugger_active(scene_path: str, attempts: int = 3, start_request_id: int = 4) -> None:
@@ -116,24 +133,9 @@ def run_project_until_debugger_active(scene_path: str, attempts: int = 3, start_
         else:
             try:
                 time.sleep(1.0)
-                deadline = time.time() + 15.0
-                while time.time() < deadline:
-                    sessions = tool_call("get_debugger_sessions", {}, request_id=request_id + 1)
-                    if sessions["count"] > 0 and any(session.get("active") for session in sessions["sessions"]):
-                        break
-                    time.sleep(0.5)
-                else:
-                    raise AssertionError("Debugger session never became active")
-
-                runtime_info = poll_tool(
-                    "get_runtime_info",
-                    {"timeout_ms": 2000},
-                    lambda result: result.get("status") in {"success", "stale"} and "node_count" in result,
-                    timeout_seconds=12.0,
-                    start_request_id=request_id + 20,
-                )
-                if runtime_info["node_count"] <= 0:
-                    raise AssertionError(f"Unexpected runtime_info payload: {runtime_info}")
+                wait_for_active_debugger_session(start_request_id=request_id + 1)
+                time.sleep(1.5)
+                prime_runtime_probe(start_request_id=request_id + 21, minimum_node_count=3)
                 return
             except AssertionError as exc:
                 last_error = exc
@@ -146,6 +148,13 @@ def run_project_until_debugger_active(scene_path: str, attempts: int = 3, start_
     if last_error:
         raise last_error
     raise AssertionError("Failed to start project with an active debugger session")
+
+
+def dispatch_runtime_tool(name: str, arguments: dict, request_id: int) -> dict:
+    result = tool_call(name, arguments, request_id=request_id)
+    if result.get("status") not in {"success", "pending"}:
+        raise AssertionError(f"{name} did not dispatch cleanly: {result}")
+    return result
 
 
 def wait_for_debugger_message(
@@ -209,6 +218,11 @@ def dispatch_runtime_tool_until_message(
 
 
 def main() -> int:
+    if TEMP_DIR.exists():
+        shutil.rmtree(TEMP_DIR, ignore_errors=True)
+    TEMP_DIR.mkdir(parents=True, exist_ok=True)
+    SCENE_FILE.write_text(SCENE_TEXT, encoding="utf-8")
+
     args = [
         str(GODOT_EXE),
         "--editor",
@@ -225,169 +239,118 @@ def main() -> int:
         cwd=REPO_ROOT,
     )
 
+    scene_root_path = "/root/RuntimeNodeRoot"
+    spawned_node_path = "/root/RuntimeNodeRoot/SpawnedRuntimeNode"
+
     try:
         wait_for_server()
         wait_for_editor_scene_state_to_stabilize()
+
         tools_response = rpc_call("tools/list")
         tool_names = {tool["name"] for tool in tools_response["result"]["tools"]}
-
         expected_tools = {
-            "get_runtime_info",
-            "get_runtime_scene_tree",
-            "inspect_runtime_node",
-            "list_runtime_tilemap_layers",
-            "get_runtime_tilemap_cell",
-            "set_runtime_tilemap_cell",
-            "update_runtime_node_property",
-            "call_runtime_node_method",
+            "create_runtime_node",
+            "delete_runtime_node",
             "evaluate_runtime_expression",
-            "await_runtime_condition",
-            "assert_runtime_condition",
         }
-        missing = sorted(expected_tools - tool_names)
-        if missing:
-            raise AssertionError(f"Missing expected runtime tools: {missing}")
+        missing_tools = sorted(expected_tools - tool_names)
+        if missing_tools:
+            raise AssertionError(f"Missing expected runtime node lifecycle tools: {missing_tools}")
 
-        project_info = tool_call("get_project_info", request_id=2)
-        main_scene = project_info["main_scene"]
-        if not main_scene:
-            raise AssertionError("Project has no main scene configured")
+        open_result = tool_call("open_scene", {"scene_path": SCENE_PATH}, request_id=2)
+        if open_result.get("status") != "success":
+            raise AssertionError(f"open_scene failed: {open_result}")
+        wait_for_current_scene(SCENE_PATH)
 
-        open_scene_result = tool_call("open_scene", {"scene_path": main_scene}, request_id=3)
-        if open_scene_result.get("status") != "success":
-            raise AssertionError(f"open_scene failed: {open_scene_result}")
-        wait_for_current_scene(main_scene)
-
-        install_result = tool_call(
-            "install_runtime_probe",
-            {"node_name": "MCPRuntimeProbe", "persistent": True},
-            request_id=4,
-        )
+        install_result = tool_call("install_runtime_probe", {}, request_id=3)
         if install_result.get("status") not in {"success", "already_installed"}:
             raise AssertionError(f"install_runtime_probe failed: {install_result}")
 
-        run_project_until_debugger_active(main_scene, start_request_id=5)
+        run_project_until_debugger_active(SCENE_PATH)
 
-        runtime_info = poll_tool(
-            "get_runtime_info",
-            {"timeout_ms": 2000},
-            lambda result: result.get("status") in {"success", "stale"} and "node_count" in result,
-            timeout_seconds=12.0,
-            start_request_id=105,
-        )
-        if runtime_info["node_count"] <= 0:
-            raise AssertionError(f"Unexpected runtime_info payload: {runtime_info}")
-        current_scene_path = runtime_info["current_scene"]
-
-        scene_tree = dispatch_runtime_tool_until_message(
-            "get_runtime_scene_tree",
-            {"max_depth": 2, "timeout_ms": 2000},
-            "mcp:scene_tree",
-            lambda payload: payload and "child_count" in payload,
-            attempts=3,
-            start_request_id=900,
-        )
-        if scene_tree.get("child_count", -1) < 0:
-            raise AssertionError(f"Invalid scene tree response: {scene_tree}")
-
-        inspect_result = dispatch_runtime_tool_until_message(
-            "inspect_runtime_node",
-            {"node_path": current_scene_path, "timeout_ms": 2000},
-            "mcp:node",
-            lambda payload: payload and payload.get("path") == current_scene_path,
+        created = dispatch_runtime_tool_until_message(
+            "create_runtime_node",
+            {
+                "parent_path": scene_root_path,
+                "node_type": "Node2D",
+                "node_name": "SpawnedRuntimeNode",
+                "timeout_ms": 2000,
+            },
+            "mcp:runtime_node_created",
+            lambda payload: payload
+            and payload.get("node_path") == spawned_node_path
+            and payload.get("node_type") == "Node2D",
             attempts=3,
             start_request_id=1000,
         )
+        if created.get("parent_path") != scene_root_path:
+            raise AssertionError(f"Expected created runtime node to attach under scene root: {created}")
 
-        update_result = dispatch_runtime_tool_until_message(
-            "update_runtime_node_property",
+        exists_after_create = dispatch_runtime_tool_until_message(
+            "evaluate_runtime_expression",
             {
-                "node_path": current_scene_path,
-                "property_name": "process_priority",
-                "property_value": 7,
+                "expression": 'get_node_or_null("/root/RuntimeNodeRoot/SpawnedRuntimeNode") != null',
                 "timeout_ms": 2000,
             },
-            "mcp:node_property_updated",
+            "mcp:expression_result",
             lambda payload: payload
-            and payload.get("node_path") == current_scene_path
-            and payload.get("property_name") == "process_priority"
-            and payload.get("new_value") == 7,
+            and payload.get("expression") == 'get_node_or_null("/root/RuntimeNodeRoot/SpawnedRuntimeNode") != null'
+            and payload.get("value") is True,
             attempts=3,
             start_request_id=1100,
         )
+        if exists_after_create.get("value") is not True:
+            raise AssertionError(f"Expected spawned runtime node to exist after create: {exists_after_create}")
 
-        eval_result = dispatch_runtime_tool_until_message(
-            "evaluate_runtime_expression",
+        deleted = dispatch_runtime_tool_until_message(
+            "delete_runtime_node",
             {
-                "expression": "process_priority",
-                "node_path": current_scene_path,
+                "node_path": spawned_node_path,
                 "timeout_ms": 2000,
             },
-            "mcp:expression_result",
-            lambda payload: payload and payload.get("expression") == "process_priority" and payload.get("value") == 7,
+            "mcp:runtime_node_deleted",
+            lambda payload: payload
+            and payload.get("node_path") == spawned_node_path
+            and payload.get("node_type") == "Node2D",
             attempts=3,
             start_request_id=1200,
         )
+        if deleted.get("node_path") != spawned_node_path:
+            raise AssertionError(f"Expected deleted runtime node path to match spawned node: {deleted}")
 
-        call_result = dispatch_runtime_tool_until_message(
-            "call_runtime_node_method",
+        absent_after_delete = dispatch_runtime_tool_until_message(
+            "evaluate_runtime_expression",
             {
-                "node_path": current_scene_path,
-                "method_name": "get_child_count",
-                "arguments": [],
+                "expression": 'get_node_or_null("/root/RuntimeNodeRoot/SpawnedRuntimeNode") == null',
                 "timeout_ms": 2000,
-            },
-            "mcp:node_method_result",
-            lambda payload: payload
-            and payload.get("node_path") == current_scene_path
-            and payload.get("method_name") == "get_child_count"
-            and payload.get("result", -1) >= 0,
-            attempts=3,
-            start_request_id=1300,
-        )
-
-        assert_result = dispatch_runtime_tool_until_message(
-            "assert_runtime_condition",
-            {
-                "expression": "process_priority == 7",
-                "node_path": current_scene_path,
-                "timeout_ms": 1000,
-                "poll_interval_ms": 100,
-                "description": "current scene process_priority should update to 7",
             },
             "mcp:expression_result",
             lambda payload: payload
-            and payload.get("expression") == "process_priority == 7"
+            and payload.get("expression") == 'get_node_or_null("/root/RuntimeNodeRoot/SpawnedRuntimeNode") == null'
             and payload.get("value") is True,
             attempts=3,
-            start_request_id=1400,
+            start_request_id=1300,
         )
+        if absent_after_delete.get("value") is not True:
+            raise AssertionError(f"Expected spawned runtime node to be absent after delete: {absent_after_delete}")
 
-        stop_result = tool_call("stop_project", {}, request_id=14)
-        if stop_result.get("status") != "success":
-            raise AssertionError(f"stop_project failed: {stop_result}")
-
-        remove_result = tool_call(
-            "remove_runtime_probe",
-            {"node_name": "MCPRuntimeProbe"},
-            request_id=15,
-        )
-        if remove_result.get("status") not in {"success", "not_installed"}:
-            raise AssertionError(f"remove_runtime_probe failed: {remove_result}")
-
-        save_cleanup = tool_call("save_scene", {}, request_id=16)
-        if save_cleanup.get("status") != "success":
-            raise AssertionError(f"cleanup save_scene failed: {save_cleanup}")
-
-        print("runtime probe flow verified")
+        print("runtime node lifecycle flow verified")
         return 0
     finally:
+        try:
+            tool_call("stop_project", {}, request_id=99)
+        except Exception:
+            pass
+
         process.terminate()
         try:
             process.wait(timeout=10)
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=10)
+
+        if TEMP_DIR.exists():
+            shutil.rmtree(TEMP_DIR, ignore_errors=True)
 
 
 if __name__ == "__main__":

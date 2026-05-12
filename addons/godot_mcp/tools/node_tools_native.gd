@@ -13,6 +13,8 @@ func register_tools(server_core: RefCounted) -> void:
 	_register_create_node(server_core)
 	_register_delete_node(server_core)
 	_register_update_node_property(server_core)
+	_register_batch_update_node_properties(server_core)
+	_register_batch_scene_node_edits(server_core)
 	_register_get_node_properties(server_core)
 	_register_list_nodes(server_core)
 	_register_get_scene_tree(server_core)
@@ -26,6 +28,8 @@ func register_tools(server_core: RefCounted) -> void:
 	_register_get_node_groups(server_core)
 	_register_set_node_groups(server_core)
 	_register_find_nodes_in_group(server_core)
+	_register_audit_scene_node_persistence(server_core)
+	_register_audit_scene_inheritance(server_core)
 
 func _register_create_node(server_core: RefCounted) -> void:
 	server_core.register_tool(
@@ -267,6 +271,467 @@ func _tool_update_node_property(params: Dictionary) -> Dictionary:
 		"new_value": str(new_value)
 	}
 
+func _register_batch_update_node_properties(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"batch_update_node_properties",
+		"Update multiple node properties inside one editor UndoRedo action. Useful for transaction-style scene edits that should undo in a single step.",
+		{
+			"type": "object",
+			"properties": {
+				"label": {
+					"type": "string",
+					"description": "Optional UndoRedo action label. Default is 'Batch Update Node Properties'."
+				},
+				"changes": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"node_path": {"type": "string"},
+							"property_name": {"type": "string"},
+							"property_value": {}
+						},
+						"required": ["node_path", "property_name", "property_value"]
+					},
+					"description": "Property updates to apply in one action."
+				}
+			},
+			"required": ["changes"]
+		},
+		Callable(self, "_tool_batch_update_node_properties"),
+		{
+			"type": "object",
+			"properties": {
+				"status": {"type": "string"},
+				"label": {"type": "string"},
+				"change_count": {"type": "integer"},
+				"changes": {"type": "array"}
+			}
+		},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+	)
+
+func _tool_batch_update_node_properties(params: Dictionary) -> Dictionary:
+	var changes: Array = params.get("changes", [])
+	if changes.is_empty():
+		return {"error": "Missing required parameter: changes"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var prepared_changes: Array = []
+	for change in changes:
+		if not (change is Dictionary):
+			return {"error": "Each change entry must be an object"}
+		var node_path: String = str(change.get("node_path", ""))
+		var property_name: String = str(change.get("property_name", ""))
+		if node_path.is_empty() or property_name.is_empty() or not change.has("property_value"):
+			return {"error": "Each change requires node_path, property_name, and property_value"}
+		var target_node: Node = _resolve_node_path(node_path)
+		if not target_node:
+			return {"error": "Node not found: " + node_path}
+		if not property_name in target_node:
+			return {"error": "Property '" + property_name + "' not found on node " + node_path}
+		var actual_value: Variant = change.get("property_value")
+		if actual_value is String:
+			var parsed: Variant = JSON.parse_string(actual_value)
+			if parsed != null:
+				actual_value = parsed
+		var converted_value: Variant = _convert_value_for_property(target_node, property_name, actual_value)
+		prepared_changes.append({
+			"node": target_node,
+			"node_path": node_path,
+			"property_name": property_name,
+			"old_value": target_node.get(property_name),
+			"new_value": converted_value
+		})
+
+	var label: String = str(params.get("label", "Batch Update Node Properties")).strip_edges()
+	if label.is_empty():
+		label = "Batch Update Node Properties"
+
+	var undo_redo: EditorUndoRedoManager = editor_interface.get_editor_undo_redo()
+	if undo_redo:
+		undo_redo.create_action(label)
+		for prepared in prepared_changes:
+			undo_redo.add_do_property(prepared["node"], prepared["property_name"], prepared["new_value"])
+			undo_redo.add_undo_property(prepared["node"], prepared["property_name"], prepared["old_value"])
+		undo_redo.commit_action()
+	else:
+		for prepared in prepared_changes:
+			prepared["node"].set(prepared["property_name"], prepared["new_value"])
+
+	editor_interface.mark_scene_as_unsaved()
+
+	var results: Array = []
+	for prepared in prepared_changes:
+		results.append({
+			"node_path": prepared["node_path"],
+			"property_name": prepared["property_name"],
+			"old_value": _serialize_value(prepared["old_value"]),
+			"new_value": _serialize_value(prepared["node"].get(prepared["property_name"]))
+		})
+
+	return {
+		"status": "success",
+		"label": label,
+		"change_count": results.size(),
+		"changes": results
+	}
+
+func _register_batch_scene_node_edits(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"batch_scene_node_edits",
+		"Apply multiple create/delete scene node edits inside one editor UndoRedo action so the full structure change undoes in a single step.",
+		{
+			"type": "object",
+			"properties": {
+				"label": {
+					"type": "string",
+					"description": "Optional UndoRedo action label. Default is 'Batch Scene Node Edits'."
+				},
+				"operations": {
+					"type": "array",
+					"description": "Ordered create/delete operations to apply in one transaction.",
+					"items": {
+						"type": "object",
+						"properties": {
+							"type": {"type": "string"},
+							"parent_path": {"type": "string"},
+							"node_type": {"type": "string"},
+							"node_name": {"type": "string"},
+							"node_path": {"type": "string"},
+							"new_name": {"type": "string"},
+							"new_parent_path": {"type": "string"},
+							"keep_global_transform": {"type": "boolean"}
+						},
+						"required": ["type"]
+					}
+				}
+			},
+			"required": ["operations"]
+		},
+		Callable(self, "_tool_batch_scene_node_edits"),
+		{
+			"type": "object",
+			"properties": {
+				"status": {"type": "string"},
+				"label": {"type": "string"},
+				"operation_count": {"type": "integer"},
+				"operations": {"type": "array"}
+			}
+		},
+		{"readOnlyHint": false, "destructiveHint": true, "idempotentHint": false, "openWorldHint": false}
+	)
+
+func _tool_batch_scene_node_edits(params: Dictionary) -> Dictionary:
+	var operations: Array = params.get("operations", [])
+	if operations.is_empty():
+		return {"error": "Missing required parameter: operations"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var scene_root: Node = _get_user_scene_root()
+	if not scene_root:
+		return {"error": "No scene is currently open"}
+
+	var prepared_operations: Array = []
+	for operation in operations:
+		if not (operation is Dictionary):
+			return {"error": "Each operation entry must be an object"}
+		var operation_type: String = str(operation.get("type", "")).strip_edges().to_lower()
+		match operation_type:
+			"create":
+				var parent_path: String = str(operation.get("parent_path", ""))
+				var node_type: String = str(operation.get("node_type", "Node"))
+				var node_name: String = str(operation.get("node_name", "NewNode"))
+				if parent_path.is_empty() or node_name.is_empty():
+					return {"error": "Create operations require parent_path and node_name"}
+				var parent_node: Node = _resolve_node_path(parent_path)
+				if not parent_node:
+					if parent_path == "/root":
+						parent_node = scene_root
+					else:
+						return {"error": "Parent node not found: " + parent_path}
+				if not ClassDB.class_exists(node_type):
+					return {"error": "Invalid node type: " + node_type}
+				var new_node: Node = ClassDB.instantiate(node_type)
+				new_node.name = node_name
+				new_node.owner = scene_root
+				prepared_operations.append({
+					"type": "create",
+					"parent": parent_node,
+					"parent_path": parent_path,
+					"node": new_node,
+					"node_type": node_type,
+					"node_name": node_name
+				})
+			"delete":
+				var node_path: String = str(operation.get("node_path", ""))
+				if node_path.is_empty():
+					return {"error": "Delete operations require node_path"}
+				var target_node: Node = _resolve_node_path(node_path)
+				if not target_node:
+					return {"error": "Node not found: " + node_path}
+				var parent: Node = target_node.get_parent()
+				if not parent:
+					return {"error": "Cannot delete scene root"}
+				var node_index: int = target_node.get_index()
+				var duplicated: Node = target_node.duplicate()
+				if duplicated:
+					duplicated.owner = target_node.owner
+				prepared_operations.append({
+					"type": "delete",
+					"node_path": node_path,
+					"parent": parent,
+					"node": target_node,
+					"node_snapshot": duplicated,
+					"node_owner": target_node.owner,
+					"node_name": String(target_node.name),
+					"node_type": target_node.get_class(),
+					"node_index": node_index
+				})
+			"rename":
+				var rename_node_path: String = str(operation.get("node_path", ""))
+				var new_name: String = str(operation.get("new_name", "")).strip_edges()
+				if rename_node_path.is_empty() or new_name.is_empty():
+					return {"error": "Rename operations require node_path and new_name"}
+				var rename_target: Node = _resolve_node_path(rename_node_path)
+				if not rename_target:
+					return {"error": "Node not found: " + rename_node_path}
+				var old_name: String = str(rename_target.name)
+				var rename_parent: Node = rename_target.get_parent()
+				if rename_parent and old_name != new_name and rename_parent.has_node(new_name):
+					return {"error": "Name '" + new_name + "' already exists in parent"}
+				prepared_operations.append({
+					"type": "rename",
+					"node_path": rename_node_path,
+					"node": rename_target,
+					"old_name": old_name,
+					"new_name": new_name,
+					"node_type": rename_target.get_class()
+				})
+			"move":
+				var move_node_path: String = str(operation.get("node_path", ""))
+				var new_parent_path: String = str(operation.get("new_parent_path", ""))
+				var keep_global_transform: bool = bool(operation.get("keep_global_transform", true))
+				if move_node_path.is_empty() or new_parent_path.is_empty():
+					return {"error": "Move operations require node_path and new_parent_path"}
+				var move_target: Node = _resolve_node_path(move_node_path)
+				if not move_target:
+					return {"error": "Node not found: " + move_node_path}
+				var old_parent: Node = move_target.get_parent()
+				if not old_parent:
+					return {"error": "Cannot move scene root"}
+				var move_parent: Node = _resolve_node_path(new_parent_path)
+				if not move_parent:
+					if new_parent_path == "/root":
+						move_parent = scene_root
+					else:
+						return {"error": "New parent not found: " + new_parent_path}
+				if move_target == move_parent:
+					return {"error": "Cannot move node to itself"}
+				if move_target.is_ancestor_of(move_parent):
+					return {"error": "Cannot move node to its own descendant"}
+				prepared_operations.append({
+					"type": "move",
+					"node_path": move_node_path,
+					"node": move_target,
+					"old_parent": old_parent,
+					"new_parent": move_parent,
+					"new_parent_path": new_parent_path,
+					"keep_global_transform": keep_global_transform,
+					"node_owner": move_target.owner,
+					"node_name": String(move_target.name),
+					"node_type": move_target.get_class(),
+					"old_index": move_target.get_index()
+				})
+			_:
+				return {"error": "Unsupported operation type: " + operation_type}
+
+	var label: String = str(params.get("label", "Batch Scene Node Edits")).strip_edges()
+	if label.is_empty():
+		label = "Batch Scene Node Edits"
+
+	var undo_redo: EditorUndoRedoManager = editor_interface.get_editor_undo_redo()
+	if not undo_redo:
+		return {"error": "Editor UndoRedo is not available"}
+
+	undo_redo.create_action(label)
+	var result_operations: Array = []
+	for prepared in prepared_operations:
+		if prepared["type"] == "create":
+			var created_parent: Node = prepared["parent"]
+			var created_node: Node = prepared["node"]
+			undo_redo.add_do_method(created_parent, "add_child", created_node)
+			undo_redo.add_do_method(created_node, "set_owner", scene_root)
+			undo_redo.add_undo_method(created_parent, "remove_child", created_node)
+			result_operations.append({
+				"type": "create",
+				"node_path": _make_friendly_path(created_node, scene_root),
+				"node_type": prepared["node_type"]
+			})
+		else:
+			match String(prepared["type"]):
+				"delete":
+					var deleted_parent: Node = prepared["parent"]
+					var deleted_node: Node = prepared["node"]
+					var deleted_snapshot: Node = prepared["node_snapshot"]
+					undo_redo.add_do_method(deleted_parent, "remove_child", deleted_node)
+					undo_redo.add_undo_method(deleted_parent, "add_child", deleted_snapshot)
+					undo_redo.add_undo_method(deleted_snapshot, "set_owner", prepared["node_owner"])
+					undo_redo.add_undo_method(deleted_parent, "move_child", deleted_snapshot, prepared["node_index"])
+					result_operations.append({
+						"type": "delete",
+						"node_path": prepared["node_path"],
+						"node_type": prepared["node_type"]
+					})
+				"rename":
+					var renamed_node: Node = prepared["node"]
+					undo_redo.add_do_property(renamed_node, "name", prepared["new_name"])
+					undo_redo.add_undo_property(renamed_node, "name", prepared["old_name"])
+					var renamed_parent_path: String = _make_friendly_path(renamed_node.get_parent(), scene_root)
+					result_operations.append({
+						"type": "rename",
+						"old_node_path": prepared["node_path"],
+						"node_path": _append_child_path(renamed_parent_path, prepared["new_name"]),
+						"old_name": prepared["old_name"],
+						"new_name": prepared["new_name"],
+						"node_type": prepared["node_type"]
+					})
+				"move":
+					var moved_node: Node = prepared["node"]
+					var old_parent_ref: Node = prepared["old_parent"]
+					var new_parent_ref: Node = prepared["new_parent"]
+					var preserve_global: bool = bool(prepared["keep_global_transform"])
+					undo_redo.add_do_method(moved_node, "reparent", new_parent_ref, preserve_global)
+					undo_redo.add_do_method(moved_node, "set_owner", prepared["node_owner"])
+					undo_redo.add_undo_method(moved_node, "reparent", old_parent_ref, preserve_global)
+					undo_redo.add_undo_method(moved_node, "set_owner", prepared["node_owner"])
+					undo_redo.add_undo_method(old_parent_ref, "move_child", moved_node, prepared["old_index"])
+					var friendly_new_parent_path: String = _make_friendly_path(new_parent_ref, scene_root)
+					result_operations.append({
+						"type": "move",
+						"old_node_path": prepared["node_path"],
+						"node_path": _append_child_path(friendly_new_parent_path, prepared["node_name"]),
+						"new_parent_path": friendly_new_parent_path,
+						"node_type": prepared["node_type"]
+					})
+	undo_redo.commit_action()
+	editor_interface.mark_scene_as_unsaved()
+
+	return {
+		"status": "success",
+		"label": label,
+		"operation_count": result_operations.size(),
+		"operations": result_operations
+	}
+
+func _register_audit_scene_node_persistence(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"audit_scene_node_persistence",
+		"Audit node owner and persistence state for the currently edited scene. Reports missing or invalid owner relationships that affect scene saving and inheritance.",
+		{
+			"type": "object",
+			"properties": {}
+		},
+		Callable(self, "_tool_audit_scene_node_persistence"),
+		{
+			"type": "object",
+			"properties": {
+				"scene_path": {"type": "string"},
+				"scene_root_path": {"type": "string"},
+				"total_nodes": {"type": "integer"},
+				"persistent_node_count": {"type": "integer"},
+				"issue_count": {"type": "integer"},
+				"nodes": {"type": "array"},
+				"issues": {"type": "array"}
+			}
+		},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_audit_scene_node_persistence(params: Dictionary) -> Dictionary:
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var scene_root: Node = _get_user_scene_root()
+	if not scene_root:
+		return {"error": "No scene is currently open"}
+
+	var nodes: Array = []
+	var issues: Array = []
+	_collect_scene_persistence_entries(scene_root, scene_root, nodes, issues)
+
+	var persistent_node_count: int = 0
+	for entry in nodes:
+		if bool(entry.get("is_persistent", false)):
+			persistent_node_count += 1
+
+	return {
+		"scene_path": String(scene_root.scene_file_path),
+		"scene_root_path": _make_friendly_path(scene_root, scene_root),
+		"total_nodes": nodes.size(),
+		"persistent_node_count": persistent_node_count,
+		"issue_count": issues.size(),
+		"nodes": nodes,
+		"issues": issues
+	}
+
+func _register_audit_scene_inheritance(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"audit_scene_inheritance",
+		"Audit inherited or instanced scene structure for the current scene. Classifies local nodes, instance roots, inherited instance content, and local additions inside instanced subtrees.",
+		{
+			"type": "object",
+			"properties": {}
+		},
+		Callable(self, "_tool_audit_scene_inheritance"),
+		{
+			"type": "object",
+			"properties": {
+				"scene_path": {"type": "string"},
+				"scene_root_path": {"type": "string"},
+				"node_count": {"type": "integer"},
+				"instance_root_count": {"type": "integer"},
+				"issue_count": {"type": "integer"},
+				"instance_roots": {"type": "array"},
+				"nodes": {"type": "array"},
+				"issues": {"type": "array"}
+			}
+		},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_audit_scene_inheritance(params: Dictionary) -> Dictionary:
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var scene_root: Node = _get_user_scene_root()
+	if not scene_root:
+		return {"error": "No scene is currently open"}
+
+	var nodes: Array = []
+	var instance_roots: Array = []
+	var issues: Array = []
+	_collect_scene_inheritance_entries(scene_root, scene_root, nodes, instance_roots, issues)
+
+	return {
+		"scene_path": String(scene_root.scene_file_path),
+		"scene_root_path": _make_friendly_path(scene_root, scene_root),
+		"node_count": nodes.size(),
+		"instance_root_count": instance_roots.size(),
+		"issue_count": issues.size(),
+		"instance_roots": instance_roots,
+		"nodes": nodes,
+		"issues": issues
+	}
+
 func _register_get_node_properties(server_core: RefCounted) -> void:
 	server_core.register_tool(
 		"get_node_properties",
@@ -450,10 +915,11 @@ func _get_user_scene_root() -> Node:
 	if scene_root and not scene_root.name.begins_with("@") and scene_root.get_class() != "PanelContainer":
 		return scene_root
 	
-	var open_scenes: Array = editor_interface.get_open_scenes()
-	for scene in open_scenes:
-		if scene and not scene.name.begins_with("@") and scene.get_class() != "PanelContainer":
-			return scene
+	var open_scene_roots: Array = editor_interface.get_open_scene_roots()
+	for root in open_scene_roots:
+		var node_root: Node = root
+		if node_root and not node_root.name.begins_with("@") and node_root.get_class() != "PanelContainer":
+			return node_root
 	
 	return scene_root
 
@@ -467,6 +933,13 @@ static func _make_friendly_path(node: Node, scene_root: Node) -> String:
 	if node_path.begins_with(root_path + "/"):
 		return "/root/" + scene_root.name + node_path.substr(root_path.length())
 	return node_path
+
+static func _append_child_path(parent_path: String, child_name: String) -> String:
+	if parent_path.is_empty() or parent_path == "/":
+		return "/" + child_name
+	if parent_path.ends_with("/"):
+		return parent_path + child_name
+	return parent_path + "/" + child_name
 
 static func _collect_nodes(node: Node, path: String, recursive: bool, result: Array[String], scene_root: Node = null) -> void:
 	var node_path: String = _make_friendly_path(node, scene_root)
@@ -591,6 +1064,109 @@ static func _serialize_value(value: Variant) -> Variant:
 			return result
 		_:
 			return str(value)
+
+func _collect_scene_persistence_entries(node: Node, scene_root: Node, nodes: Array, issues: Array) -> void:
+	var owner: Node = node.owner
+	var owner_path: String = _make_friendly_path(owner, scene_root) if owner else ""
+	var node_path: String = _make_friendly_path(node, scene_root)
+	var is_scene_root: bool = node == scene_root
+	var node_entry: Dictionary = {
+		"node_path": node_path,
+		"node_name": String(node.name),
+		"node_type": node.get_class(),
+		"owner_path": owner_path,
+		"is_persistent": owner != null or is_scene_root,
+		"is_scene_root": is_scene_root,
+		"scene_file_path": String(node.scene_file_path)
+	}
+	nodes.append(node_entry)
+
+	if not is_scene_root:
+		if owner == null:
+			issues.append({
+				"node_path": node_path,
+				"issue_code": "missing_owner",
+				"message": "Node has no owner and will not be saved with the scene."
+			})
+		elif not _is_owner_chain_valid(node, owner):
+			issues.append({
+				"node_path": node_path,
+				"issue_code": "owner_not_ancestor",
+				"message": "Node owner is not an ancestor in the scene tree.",
+				"owner_path": owner_path
+			})
+
+	for child in node.get_children():
+		_collect_scene_persistence_entries(child, scene_root, nodes, issues)
+
+func _collect_scene_inheritance_entries(node: Node, scene_root: Node, nodes: Array, instance_roots: Array, issues: Array) -> void:
+	var node_path: String = _make_friendly_path(node, scene_root)
+	var owner: Node = node.owner
+	var owner_path: String = _make_friendly_path(owner, scene_root) if owner else ""
+	var direct_scene_file_path: String = String(node.scene_file_path)
+	var nearest_instance_root: Node = _find_nearest_instance_root(node, scene_root)
+	var nearest_instance_root_path: String = _make_friendly_path(nearest_instance_root, scene_root) if nearest_instance_root else ""
+	var source_scene_path: String = String(nearest_instance_root.scene_file_path) if nearest_instance_root else direct_scene_file_path
+
+	var relationship: String = "local"
+	if node == scene_root:
+		relationship = "scene_root"
+	elif not direct_scene_file_path.is_empty():
+		relationship = "instance_root"
+	elif nearest_instance_root:
+		if owner == scene_root or owner == null:
+			relationship = "local_override"
+		else:
+			relationship = "inherited_content"
+
+	var node_entry: Dictionary = {
+		"node_path": node_path,
+		"node_name": String(node.name),
+		"node_type": node.get_class(),
+		"owner_path": owner_path,
+		"scene_file_path": direct_scene_file_path,
+		"relationship": relationship,
+		"instance_root_path": nearest_instance_root_path,
+		"source_scene_path": source_scene_path
+	}
+	nodes.append(node_entry)
+
+	if relationship == "instance_root":
+		instance_roots.append({
+			"node_path": node_path,
+			"node_name": String(node.name),
+			"node_type": node.get_class(),
+			"source_scene_path": direct_scene_file_path
+		})
+
+	if nearest_instance_root and relationship == "inherited_content":
+		if owner == scene_root or (owner and not nearest_instance_root.is_ancestor_of(owner) and owner != nearest_instance_root):
+			issues.append({
+				"node_path": node_path,
+				"issue_code": "unexpected_instance_owner",
+				"owner_path": owner_path,
+				"instance_root_path": nearest_instance_root_path,
+				"message": "Inherited instance content should be owned by the instance root or one of its ancestors."
+			})
+
+	for child in node.get_children():
+		_collect_scene_inheritance_entries(child, scene_root, nodes, instance_roots, issues)
+
+func _is_owner_chain_valid(node: Node, owner: Node) -> bool:
+	var current: Node = node.get_parent()
+	while current:
+		if current == owner:
+			return true
+		current = current.get_parent()
+	return false
+
+func _find_nearest_instance_root(node: Node, scene_root: Node) -> Node:
+	var current: Node = node
+	while current and current != scene_root:
+		if not String(current.scene_file_path).is_empty():
+			return current
+		current = current.get_parent()
+	return null
 
 static func _build_scene_tree_node(node: Node, current_depth: int, max_depth: int, scene_root: Node = null) -> Dictionary:
 	var node_info: Dictionary = {

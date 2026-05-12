@@ -25,11 +25,16 @@ func _get_editor_interface() -> EditorInterface:
 
 func register_tools(server_core: RefCounted) -> void:
 	_register_list_project_scripts(server_core)
+	_register_list_project_script_symbols(server_core)
+	_register_find_script_symbol_definition(server_core)
+	_register_find_script_symbol_references(server_core)
+	_register_rename_script_symbol(server_core)
 	_register_read_script(server_core)
 	_register_create_script(server_core)
 	_register_modify_script(server_core)
 	_register_analyze_script(server_core)
 	_register_get_current_script(server_core)
+	_register_open_script_at_line(server_core)
 	_register_attach_script(server_core)
 	_register_validate_script(server_core)
 	_register_search_in_files(server_core)
@@ -104,6 +109,433 @@ func _tool_list_project_scripts(params: Dictionary) -> Dictionary:
 		"count": scripts.size()
 	}
 
+# ============================================================================
+# list_project_script_symbols - 列出项目脚本符号索引
+# ============================================================================
+
+func _register_list_project_script_symbols(server_core: RefCounted) -> void:
+	var tool_name: String = "list_project_script_symbols"
+	var description: String = "Index script symbols across project GDScript and C# files. Returns class, extends, functions, signals, properties, and constants."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"search_path": {
+				"type": "string",
+				"description": "Optional subpath to search (e.g. 'res://scripts/'). Default is 'res://'.",
+				"default": "res://"
+			},
+			"include_extensions": {
+				"type": "array",
+				"items": {"type": "string"},
+				"description": "Script file extensions to include. Supported values are '.gd' and '.cs'. Default is ['.gd', '.cs'].",
+				"default": [".gd", ".cs"]
+			},
+			"symbol_kinds": {
+				"type": "array",
+				"items": {"type": "string"},
+				"description": "Optional symbol kinds to keep: 'function', 'signal', 'property', 'constant'."
+			},
+			"name_filter": {
+				"type": "string",
+				"description": "Optional case-insensitive substring filter applied to symbol names."
+			}
+		}
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"scripts": {"type": "array", "items": {"type": "object"}},
+			"count": {"type": "integer"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": true,
+		"destructiveHint": false,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+						  Callable(self, "_tool_list_project_script_symbols"),
+						  output_schema, annotations)
+
+func _tool_list_project_script_symbols(params: Dictionary) -> Dictionary:
+	var search_path: String = str(params.get("search_path", "res://")).strip_edges()
+	var validation: Dictionary = PathValidator.validate_directory_path(search_path)
+	if not validation["valid"]:
+		return {"error": "Invalid path: " + validation["error"]}
+	search_path = validation["sanitized"]
+
+	var include_extensions: Array = _normalize_script_extensions(params.get("include_extensions", [".gd", ".cs"]))
+	if include_extensions.is_empty():
+		return {"error": "include_extensions must contain at least one supported script extension"}
+
+	var symbol_kinds: Array = _normalize_symbol_kinds(params.get("symbol_kinds", []))
+	var name_filter: String = str(params.get("name_filter", "")).strip_edges().to_lower()
+	var script_paths: Array = []
+	_collect_script_files(search_path, include_extensions, script_paths)
+	script_paths.sort()
+
+	var scripts: Array = []
+	for script_path in script_paths:
+		var entry: Dictionary = _index_script_symbols(script_path)
+		if entry.has("error"):
+			continue
+		entry = _filter_script_symbol_entry(entry, symbol_kinds, name_filter)
+		if entry.is_empty():
+			continue
+		scripts.append(entry)
+
+	return {
+		"scripts": scripts,
+		"count": scripts.size()
+	}
+
+# ============================================================================
+# find_script_symbol_definition - 查找脚本符号定义
+# ============================================================================
+
+func _register_find_script_symbol_definition(server_core: RefCounted) -> void:
+	var tool_name: String = "find_script_symbol_definition"
+	var description: String = "Find definition locations for a script symbol across GDScript and C# project files."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"symbol_name": {
+				"type": "string",
+				"description": "Symbol name to resolve, such as 'ready_up', 'Spawned', or 'TempSymbolTarget'."
+			},
+			"search_path": {
+				"type": "string",
+				"description": "Optional subpath to search (e.g. 'res://scripts/'). Default is 'res://'.",
+				"default": "res://"
+			},
+			"include_extensions": {
+				"type": "array",
+				"items": {"type": "string"},
+				"description": "Script file extensions to include. Supported values are '.gd' and '.cs'. Default is ['.gd', '.cs'].",
+				"default": [".gd", ".cs"]
+			},
+			"symbol_kinds": {
+				"type": "array",
+				"items": {"type": "string"},
+				"description": "Optional symbol kinds to keep: 'class', 'function', 'signal', 'property', 'constant'."
+			},
+			"preferred_script_path": {
+				"type": "string",
+				"description": "Optional preferred script path to rank first when multiple matches exist."
+			},
+			"max_results": {
+				"type": "integer",
+				"description": "Maximum number of definitions to return. Default is 20.",
+				"default": 20
+			}
+		},
+		"required": ["symbol_name"]
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"symbol_name": {"type": "string"},
+			"definitions": {"type": "array", "items": {"type": "object"}},
+			"count": {"type": "integer"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": true,
+		"destructiveHint": false,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+						  Callable(self, "_tool_find_script_symbol_definition"),
+						  output_schema, annotations)
+
+func _tool_find_script_symbol_definition(params: Dictionary) -> Dictionary:
+	var symbol_name: String = str(params.get("symbol_name", "")).strip_edges()
+	if symbol_name.is_empty():
+		return {"error": "Missing required parameter: symbol_name"}
+
+	var search_path: String = str(params.get("search_path", "res://")).strip_edges()
+	var path_validation: Dictionary = PathValidator.validate_directory_path(search_path)
+	if not path_validation["valid"]:
+		return {"error": "Invalid path: " + path_validation["error"]}
+	search_path = path_validation["sanitized"]
+
+	var include_extensions: Array = _normalize_script_extensions(params.get("include_extensions", [".gd", ".cs"]))
+	if include_extensions.is_empty():
+		return {"error": "include_extensions must contain at least one supported script extension"}
+
+	var symbol_kinds: Array = _normalize_definition_symbol_kinds(params.get("symbol_kinds", []))
+	var preferred_script_path: String = str(params.get("preferred_script_path", "")).strip_edges()
+	var max_results: int = max(1, int(params.get("max_results", 20)))
+
+	var script_paths: Array = []
+	_collect_script_files(search_path, include_extensions, script_paths)
+	script_paths.sort()
+	if not preferred_script_path.is_empty():
+		script_paths.sort_custom(Callable(self, "_compare_script_paths_for_preference").bind(preferred_script_path))
+
+	var definitions: Array = []
+	for script_path in script_paths:
+		if definitions.size() >= max_results:
+			break
+		var matches: Array = _find_symbol_definitions_in_script(script_path, symbol_name, symbol_kinds)
+		for match in matches:
+			definitions.append(match)
+			if definitions.size() >= max_results:
+				break
+
+	return {
+		"symbol_name": symbol_name,
+		"definitions": definitions,
+		"count": definitions.size()
+	}
+
+# ============================================================================
+# find_script_symbol_references - 查找脚本符号引用
+# ============================================================================
+
+func _register_find_script_symbol_references(server_core: RefCounted) -> void:
+	var tool_name: String = "find_script_symbol_references"
+	var description: String = "Find textual project references to a script symbol across GDScript, C#, and scene files."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"symbol_name": {
+				"type": "string",
+				"description": "Symbol name to search for, such as 'TempReferenceTarget' or 'ready_up'."
+			},
+			"search_path": {
+				"type": "string",
+				"description": "Optional subpath to search (e.g. 'res://scripts/'). Default is 'res://'.",
+				"default": "res://"
+			},
+			"include_extensions": {
+				"type": "array",
+				"items": {"type": "string"},
+				"description": "File extensions to search. Supported values are '.gd', '.cs', and '.tscn'. Default is ['.gd', '.cs', '.tscn'].",
+				"default": [".gd", ".cs", ".tscn"]
+			},
+			"include_definitions": {
+				"type": "boolean",
+				"description": "Whether to include definition lines in the result. Default is false.",
+				"default": false
+			},
+			"case_sensitive": {
+				"type": "boolean",
+				"description": "Whether symbol matching is case-sensitive. Default is true.",
+				"default": true
+			},
+			"preferred_script_path": {
+				"type": "string",
+				"description": "Optional preferred script path to rank first when multiple reference files exist."
+			},
+			"max_results": {
+				"type": "integer",
+				"description": "Maximum number of reference matches to return. Default is 100.",
+				"default": 100
+			}
+		},
+		"required": ["symbol_name"]
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"symbol_name": {"type": "string"},
+			"references": {"type": "array", "items": {"type": "object"}},
+			"count": {"type": "integer"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": true,
+		"destructiveHint": false,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+						  Callable(self, "_tool_find_script_symbol_references"),
+						  output_schema, annotations)
+
+func _tool_find_script_symbol_references(params: Dictionary) -> Dictionary:
+	var symbol_name: String = str(params.get("symbol_name", "")).strip_edges()
+	if symbol_name.is_empty():
+		return {"error": "Missing required parameter: symbol_name"}
+
+	var search_path: String = str(params.get("search_path", "res://")).strip_edges()
+	var path_validation: Dictionary = PathValidator.validate_directory_path(search_path)
+	if not path_validation["valid"]:
+		return {"error": "Invalid path: " + path_validation["error"]}
+	search_path = path_validation["sanitized"]
+
+	var include_extensions: Array = _normalize_reference_extensions(params.get("include_extensions", [".gd", ".cs", ".tscn"]))
+	if include_extensions.is_empty():
+		return {"error": "include_extensions must contain at least one supported file extension"}
+
+	var include_definitions: bool = bool(params.get("include_definitions", false))
+	var case_sensitive: bool = bool(params.get("case_sensitive", true))
+	var preferred_script_path: String = str(params.get("preferred_script_path", "")).strip_edges()
+	var max_results: int = max(1, int(params.get("max_results", 100)))
+
+	var file_paths: Array = []
+	_collect_script_reference_files(search_path, include_extensions, file_paths)
+	file_paths.sort()
+	if not preferred_script_path.is_empty():
+		file_paths.sort_custom(Callable(self, "_compare_script_paths_for_preference").bind(preferred_script_path))
+
+	var definitions_by_path: Dictionary = {}
+	if not include_definitions:
+		definitions_by_path = _collect_definition_lines_by_path(file_paths, symbol_name, case_sensitive)
+
+	var references: Array = []
+	for file_path in file_paths:
+		if references.size() >= max_results:
+			break
+		var definition_lines: Array = definitions_by_path.get(file_path, [])
+		var matches: Array = _find_symbol_references_in_file(file_path, symbol_name, case_sensitive, include_definitions, definition_lines, max_results - references.size())
+		for match in matches:
+			references.append(match)
+			if references.size() >= max_results:
+				break
+
+	return {
+		"symbol_name": symbol_name,
+		"references": references,
+		"count": references.size()
+	}
+
+# ============================================================================
+# rename_script_symbol - 重命名脚本符号
+# ============================================================================
+
+func _register_rename_script_symbol(server_core: RefCounted) -> void:
+	var tool_name: String = "rename_script_symbol"
+	var description: String = "Rename a script symbol across project files using identifier-boundary text replacements. Supports dry-run previews before applying changes."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"symbol_name": {
+				"type": "string",
+				"description": "Existing symbol name to rename."
+			},
+			"new_name": {
+				"type": "string",
+				"description": "New symbol name to write."
+			},
+			"search_path": {
+				"type": "string",
+				"description": "Optional subpath to search. Default is 'res://'.",
+				"default": "res://"
+			},
+			"include_extensions": {
+				"type": "array",
+				"items": {"type": "string"},
+				"description": "File extensions to update. Supported values are '.gd', '.cs', and '.tscn'. Default is ['.gd', '.cs'].",
+				"default": [".gd", ".cs"]
+			},
+			"case_sensitive": {
+				"type": "boolean",
+				"description": "Whether symbol matching is case-sensitive. Default is true.",
+				"default": true
+			},
+			"dry_run": {
+				"type": "boolean",
+				"description": "When true, preview the impacted files without modifying them. Default is true.",
+				"default": true
+			},
+			"max_results": {
+				"type": "integer",
+				"description": "Maximum number of replacement matches to inspect. Default is 200.",
+				"default": 200
+			}
+		},
+		"required": ["symbol_name", "new_name"]
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"symbol_name": {"type": "string"},
+			"new_name": {"type": "string"},
+			"dry_run": {"type": "boolean"},
+			"changed_files": {"type": "array", "items": {"type": "object"}},
+			"replacement_count": {"type": "integer"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": false,
+		"destructiveHint": true,
+		"idempotentHint": false,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+						  Callable(self, "_tool_rename_script_symbol"),
+						  output_schema, annotations)
+
+func _tool_rename_script_symbol(params: Dictionary) -> Dictionary:
+	var symbol_name: String = str(params.get("symbol_name", "")).strip_edges()
+	var new_name: String = str(params.get("new_name", "")).strip_edges()
+	if symbol_name.is_empty():
+		return {"error": "Missing required parameter: symbol_name"}
+	if new_name.is_empty():
+		return {"error": "Missing required parameter: new_name"}
+	if symbol_name == new_name:
+		return {"error": "symbol_name and new_name must differ"}
+	if not _is_valid_identifier_name(new_name):
+		return {"error": "new_name must be a valid identifier"}
+
+	var search_path: String = str(params.get("search_path", "res://")).strip_edges()
+	var path_validation: Dictionary = PathValidator.validate_directory_path(search_path)
+	if not path_validation["valid"]:
+		return {"error": "Invalid path: " + path_validation["error"]}
+	search_path = path_validation["sanitized"]
+
+	var include_extensions: Array = _normalize_reference_extensions(params.get("include_extensions", [".gd", ".cs"]))
+	if include_extensions.is_empty():
+		return {"error": "include_extensions must contain at least one supported file extension"}
+
+	var case_sensitive: bool = bool(params.get("case_sensitive", true))
+	var dry_run: bool = bool(params.get("dry_run", true))
+	var max_results: int = max(1, int(params.get("max_results", 200)))
+
+	var file_paths: Array = []
+	_collect_script_reference_files(search_path, include_extensions, file_paths)
+	file_paths.sort()
+
+	var changed_files: Array = []
+	var replacement_count: int = 0
+	for file_path in file_paths:
+		if replacement_count >= max_results:
+			break
+		var remaining_results: int = max_results - replacement_count
+		var replacement_result: Dictionary = _rename_symbol_in_file(file_path, symbol_name, new_name, case_sensitive, dry_run, remaining_results)
+		if replacement_result.is_empty():
+			continue
+		changed_files.append(replacement_result)
+		replacement_count += int(replacement_result.get("replacement_count", 0))
+
+	return {
+		"symbol_name": symbol_name,
+		"new_name": new_name,
+		"dry_run": dry_run,
+		"changed_files": changed_files,
+		"replacement_count": replacement_count
+	}
+
 # 辅助函数：递归收集脚本文件
 func _collect_scripts(directory_path: String, result: Array) -> void:
 	var dir: DirAccess = DirAccess.open(directory_path)
@@ -133,6 +565,584 @@ func _collect_scripts(directory_path: String, result: Array) -> void:
 		file_name = dir.get_next()
 	
 	dir.list_dir_end()
+
+func _collect_script_files(directory_path: String, extensions: Array, result: Array) -> void:
+	var dir: DirAccess = DirAccess.open(directory_path)
+	if not dir:
+		return
+
+	dir.list_dir_begin()
+	var file_name: String = dir.get_next()
+	while not file_name.is_empty():
+		if file_name != "." and file_name != "..":
+			var full_path: String = directory_path
+			if not full_path.ends_with("/"):
+				full_path += "/"
+			full_path += file_name
+
+			if dir.current_is_dir():
+				_collect_script_files(full_path, extensions, result)
+			else:
+				var extension: String = "." + file_name.get_extension().to_lower()
+				if extensions.has(extension):
+					result.append(full_path)
+		file_name = dir.get_next()
+	dir.list_dir_end()
+
+func _normalize_script_extensions(raw_extensions: Variant) -> Array:
+	var normalized: Array = []
+	if not (raw_extensions is Array):
+		return normalized
+	for extension in raw_extensions:
+		var extension_text: String = str(extension).strip_edges().to_lower()
+		if extension_text.is_empty():
+			continue
+		if not extension_text.begins_with("."):
+			extension_text = "." + extension_text
+		if extension_text in [".gd", ".cs"] and not normalized.has(extension_text):
+			normalized.append(extension_text)
+	return normalized
+
+func _normalize_symbol_kinds(raw_symbol_kinds: Variant) -> Array:
+	var normalized: Array = []
+	if not (raw_symbol_kinds is Array):
+		return normalized
+	for kind in raw_symbol_kinds:
+		var kind_text: String = str(kind).strip_edges().to_lower()
+		if kind_text in ["function", "signal", "property", "constant"] and not normalized.has(kind_text):
+			normalized.append(kind_text)
+	return normalized
+
+func _normalize_definition_symbol_kinds(raw_symbol_kinds: Variant) -> Array:
+	var normalized: Array = []
+	if not (raw_symbol_kinds is Array):
+		return normalized
+	for kind in raw_symbol_kinds:
+		var kind_text: String = str(kind).strip_edges().to_lower()
+		if kind_text in ["class", "function", "signal", "property", "constant"] and not normalized.has(kind_text):
+			normalized.append(kind_text)
+	return normalized
+
+func _normalize_reference_extensions(raw_extensions: Variant) -> Array:
+	var normalized: Array = []
+	if not (raw_extensions is Array):
+		return normalized
+	for extension in raw_extensions:
+		var extension_text: String = str(extension).strip_edges().to_lower()
+		if extension_text.is_empty():
+			continue
+		if not extension_text.begins_with("."):
+			extension_text = "." + extension_text
+		if extension_text in [".gd", ".cs", ".tscn"] and not normalized.has(extension_text):
+			normalized.append(extension_text)
+	return normalized
+
+func _is_valid_identifier_name(identifier_name: String) -> bool:
+	if identifier_name.is_empty():
+		return false
+	var regex: RegEx = RegEx.new()
+	if regex.compile("^[A-Za-z_][A-Za-z0-9_]*$") != OK:
+		return false
+	return regex.search(identifier_name) != null
+
+func _index_script_symbols(script_path: String) -> Dictionary:
+	var file: FileAccess = FileAccess.open(script_path, FileAccess.READ)
+	if not file:
+		return {"error": "Failed to open file: " + script_path}
+	var content: String = file.get_as_text()
+	file.close()
+
+	if script_path.ends_with(".gd"):
+		return _index_gdscript_symbols(script_path, content)
+	if script_path.ends_with(".cs"):
+		return _index_csharp_symbols(script_path, content)
+	return {"error": "Unsupported script extension: " + script_path}
+
+func _index_gdscript_symbols(script_path: String, content: String) -> Dictionary:
+	var line_count: int = content.split("\n").size()
+	var has_class_name: bool = false
+	var class_name_value: String = ""
+	var extends_from: String = ""
+	var functions: Array = []
+	var signals: Array = []
+	var properties: Array = []
+	var constants: Array = []
+
+	for line in content.split("\n"):
+		var trimmed: String = _strip_inline_comment(line).strip_edges()
+		if trimmed.is_empty():
+			continue
+		if trimmed.begins_with("class_name "):
+			has_class_name = true
+			class_name_value = trimmed.trim_prefix("class_name ").split(" ")[0].strip_edges()
+		elif trimmed.begins_with("extends ") and extends_from.is_empty():
+			extends_from = trimmed.trim_prefix("extends ").split(" ")[0].strip_edges()
+		elif trimmed.begins_with("func "):
+			var func_name: String = trimmed.trim_prefix("func ").split("(")[0].strip_edges()
+			if not func_name.is_empty():
+				functions.append(func_name)
+		elif trimmed.begins_with("signal "):
+			var signal_name: String = trimmed.trim_prefix("signal ").split("(")[0].strip_edges()
+			if not signal_name.is_empty():
+				signals.append(signal_name)
+		elif trimmed.begins_with("const "):
+			var const_name: String = trimmed.trim_prefix("const ").split(":")[0].split("=")[0].strip_edges()
+			if not const_name.is_empty():
+				constants.append(const_name)
+		elif trimmed.begins_with("var ") and not trimmed.begins_with("var _"):
+			var var_name: String = trimmed.trim_prefix("var ").split(":")[0].split("=")[0].strip_edges()
+			if not var_name.is_empty():
+				properties.append(var_name)
+
+	return {
+		"script_path": script_path,
+		"language": "gdscript",
+		"class_name": class_name_value,
+		"has_class_name": has_class_name,
+		"extends_from": extends_from,
+		"functions": functions,
+		"signals": signals,
+		"properties": properties,
+		"constants": constants,
+		"line_count": line_count,
+		"symbol_count": functions.size() + signals.size() + properties.size() + constants.size()
+	}
+
+func _index_csharp_symbols(script_path: String, content: String) -> Dictionary:
+	var line_count: int = content.split("\n").size()
+	var class_name_value: String = ""
+	var extends_from: String = ""
+	var functions: Array = []
+	var signals: Array = []
+	var properties: Array = []
+	var constants: Array = []
+	var next_delegate_is_signal: bool = false
+
+	var class_regex: RegEx = RegEx.new()
+	class_regex.compile("class\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(?::\\s*([A-Za-z_][A-Za-z0-9_\\.]*))?")
+	var method_regex: RegEx = RegEx.new()
+	method_regex.compile("(?:public|private|protected|internal)\\s+(?:override\\s+|virtual\\s+|static\\s+|async\\s+|partial\\s+)*[A-Za-z_][A-Za-z0-9_<>\\.?\\[\\]]*\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(")
+	var property_regex: RegEx = RegEx.new()
+	property_regex.compile("(?:public|private|protected|internal)\\s+(?:static\\s+)?[A-Za-z_][A-Za-z0-9_<>\\.?\\[\\]]*\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\{")
+	var constant_regex: RegEx = RegEx.new()
+	constant_regex.compile("(?:public|private|protected|internal)\\s+const\\s+[A-Za-z_][A-Za-z0-9_<>\\.?\\[\\]]*\\s+([A-Za-z_][A-Za-z0-9_]*)")
+	var delegate_regex: RegEx = RegEx.new()
+	delegate_regex.compile("delegate\\s+void\\s+([A-Za-z_][A-Za-z0-9_]*)EventHandler\\s*\\(")
+
+	for line in content.split("\n"):
+		var trimmed: String = _strip_csharp_line_comment(line).strip_edges()
+		if trimmed.is_empty():
+			continue
+
+		if trimmed.contains("[Signal]"):
+			next_delegate_is_signal = true
+			continue
+
+		if class_name_value.is_empty():
+			var class_match: RegExMatch = class_regex.search(trimmed)
+			if class_match:
+				class_name_value = class_match.get_string(1)
+				extends_from = class_match.get_string(2)
+				continue
+
+		var constant_match: RegExMatch = constant_regex.search(trimmed)
+		if constant_match:
+			constants.append(constant_match.get_string(1))
+			continue
+
+		if next_delegate_is_signal:
+			var delegate_match: RegExMatch = delegate_regex.search(trimmed)
+			if delegate_match:
+				signals.append(delegate_match.get_string(1))
+			next_delegate_is_signal = false
+			continue
+
+		var property_match: RegExMatch = property_regex.search(trimmed)
+		if property_match and trimmed.contains("get;"):
+			properties.append(property_match.get_string(1))
+			continue
+
+		var method_match: RegExMatch = method_regex.search(trimmed)
+		if method_match and not trimmed.contains(" class "):
+			functions.append(method_match.get_string(1))
+
+	return {
+		"script_path": script_path,
+		"language": "csharp",
+		"class_name": class_name_value,
+		"has_class_name": not class_name_value.is_empty(),
+		"extends_from": extends_from,
+		"functions": functions,
+		"signals": signals,
+		"properties": properties,
+		"constants": constants,
+		"line_count": line_count,
+		"symbol_count": functions.size() + signals.size() + properties.size() + constants.size()
+	}
+
+func _filter_script_symbol_entry(entry: Dictionary, symbol_kinds: Array, name_filter: String) -> Dictionary:
+	var filtered: Dictionary = entry.duplicate(true)
+	var include_all_kinds: bool = symbol_kinds.is_empty()
+	var functions: Array = entry.get("functions", []).duplicate()
+	var signals: Array = entry.get("signals", []).duplicate()
+	var properties: Array = entry.get("properties", []).duplicate()
+	var constants: Array = entry.get("constants", []).duplicate()
+
+	if not include_all_kinds and not symbol_kinds.has("function"):
+		functions.clear()
+	if not include_all_kinds and not symbol_kinds.has("signal"):
+		signals.clear()
+	if not include_all_kinds and not symbol_kinds.has("property"):
+		properties.clear()
+	if not include_all_kinds and not symbol_kinds.has("constant"):
+		constants.clear()
+
+	functions = _filter_symbol_names(functions, name_filter)
+	signals = _filter_symbol_names(signals, name_filter)
+	properties = _filter_symbol_names(properties, name_filter)
+	constants = _filter_symbol_names(constants, name_filter)
+
+	filtered["functions"] = functions
+	filtered["signals"] = signals
+	filtered["properties"] = properties
+	filtered["constants"] = constants
+	filtered["symbol_count"] = functions.size() + signals.size() + properties.size() + constants.size()
+
+	if name_filter.is_empty():
+		return filtered
+
+	if filtered["symbol_count"] > 0:
+		return filtered
+
+	var class_name_value: String = str(filtered.get("class_name", "")).to_lower()
+	var extends_from: String = str(filtered.get("extends_from", "")).to_lower()
+	if class_name_value.contains(name_filter) or extends_from.contains(name_filter):
+		return filtered
+	return {}
+
+func _filter_symbol_names(names: Array, name_filter: String) -> Array:
+	if name_filter.is_empty():
+		return names
+	var filtered: Array = []
+	for name in names:
+		var name_text: String = str(name)
+		if name_text.to_lower().contains(name_filter):
+			filtered.append(name_text)
+	return filtered
+
+func _strip_inline_comment(line: String) -> String:
+	var comment_index: int = line.find("#")
+	if comment_index >= 0:
+		return line.substr(0, comment_index)
+	return line
+
+func _strip_csharp_line_comment(line: String) -> String:
+	var comment_index: int = line.find("//")
+	if comment_index >= 0:
+		return line.substr(0, comment_index)
+	return line
+
+func _find_symbol_definitions_in_script(script_path: String, symbol_name: String, symbol_kinds: Array) -> Array:
+	var file: FileAccess = FileAccess.open(script_path, FileAccess.READ)
+	if not file:
+		return []
+	var content: String = file.get_as_text()
+	file.close()
+
+	if script_path.ends_with(".gd"):
+		return _find_gdscript_symbol_definitions(script_path, content, symbol_name, symbol_kinds)
+	if script_path.ends_with(".cs"):
+		return _find_csharp_symbol_definitions(script_path, content, symbol_name, symbol_kinds)
+	return []
+
+func _find_gdscript_symbol_definitions(script_path: String, content: String, symbol_name: String, symbol_kinds: Array) -> Array:
+	var definitions: Array = []
+	var class_name_value: String = ""
+	var extends_from: String = ""
+	var include_all_kinds: bool = symbol_kinds.is_empty()
+
+	var lines: PackedStringArray = content.split("\n")
+	for i in range(lines.size()):
+		var raw_line: String = lines[i]
+		var trimmed: String = _strip_inline_comment(raw_line).strip_edges()
+		if trimmed.is_empty():
+			continue
+
+		if trimmed.begins_with("class_name "):
+			class_name_value = trimmed.trim_prefix("class_name ").split(" ")[0].strip_edges()
+			if (include_all_kinds or symbol_kinds.has("class")) and class_name_value == symbol_name:
+				definitions.append(_build_symbol_definition(script_path, "gdscript", class_name_value, extends_from, "class", class_name_value, i + 1, raw_line.strip_edges()))
+			continue
+
+		if trimmed.begins_with("extends ") and extends_from.is_empty():
+			extends_from = trimmed.trim_prefix("extends ").split(" ")[0].strip_edges()
+			continue
+
+		if (include_all_kinds or symbol_kinds.has("signal")) and trimmed.begins_with("signal "):
+			var signal_name: String = trimmed.trim_prefix("signal ").split("(")[0].strip_edges()
+			if signal_name == symbol_name:
+				definitions.append(_build_symbol_definition(script_path, "gdscript", class_name_value, extends_from, "signal", signal_name, i + 1, raw_line.strip_edges()))
+			continue
+
+		if (include_all_kinds or symbol_kinds.has("constant")) and trimmed.begins_with("const "):
+			var const_name: String = trimmed.trim_prefix("const ").split(":")[0].split("=")[0].strip_edges()
+			if const_name == symbol_name:
+				definitions.append(_build_symbol_definition(script_path, "gdscript", class_name_value, extends_from, "constant", const_name, i + 1, raw_line.strip_edges()))
+			continue
+
+		if (include_all_kinds or symbol_kinds.has("property")) and trimmed.begins_with("var ") and not trimmed.begins_with("var _"):
+			var property_name: String = trimmed.trim_prefix("var ").split(":")[0].split("=")[0].strip_edges()
+			if property_name == symbol_name:
+				definitions.append(_build_symbol_definition(script_path, "gdscript", class_name_value, extends_from, "property", property_name, i + 1, raw_line.strip_edges()))
+			continue
+
+		if (include_all_kinds or symbol_kinds.has("function")) and trimmed.begins_with("func "):
+			var function_name: String = trimmed.trim_prefix("func ").split("(")[0].strip_edges()
+			if function_name == symbol_name:
+				definitions.append(_build_symbol_definition(script_path, "gdscript", class_name_value, extends_from, "function", function_name, i + 1, raw_line.strip_edges()))
+
+	return definitions
+
+func _find_csharp_symbol_definitions(script_path: String, content: String, symbol_name: String, symbol_kinds: Array) -> Array:
+	var definitions: Array = []
+	var class_name_value: String = ""
+	var extends_from: String = ""
+	var include_all_kinds: bool = symbol_kinds.is_empty()
+	var next_delegate_is_signal: bool = false
+
+	var class_regex: RegEx = RegEx.new()
+	class_regex.compile("class\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(?::\\s*([A-Za-z_][A-Za-z0-9_\\.]*))?")
+	var method_regex: RegEx = RegEx.new()
+	method_regex.compile("(?:public|private|protected|internal)\\s+(?:override\\s+|virtual\\s+|static\\s+|async\\s+|partial\\s+)*[A-Za-z_][A-Za-z0-9_<>\\.?\\[\\]]*\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(")
+	var property_regex: RegEx = RegEx.new()
+	property_regex.compile("(?:public|private|protected|internal)\\s+(?:static\\s+)?[A-Za-z_][A-Za-z0-9_<>\\.?\\[\\]]*\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\{")
+	var constant_regex: RegEx = RegEx.new()
+	constant_regex.compile("(?:public|private|protected|internal)\\s+const\\s+[A-Za-z_][A-Za-z0-9_<>\\.?\\[\\]]*\\s+([A-Za-z_][A-Za-z0-9_]*)")
+	var delegate_regex: RegEx = RegEx.new()
+	delegate_regex.compile("delegate\\s+void\\s+([A-Za-z_][A-Za-z0-9_]*)EventHandler\\s*\\(")
+
+	var lines: PackedStringArray = content.split("\n")
+	for i in range(lines.size()):
+		var raw_line: String = lines[i]
+		var trimmed: String = _strip_csharp_line_comment(raw_line).strip_edges()
+		if trimmed.is_empty():
+			continue
+
+		if trimmed.contains("[Signal]"):
+			next_delegate_is_signal = true
+			continue
+
+		if class_name_value.is_empty():
+			var class_match: RegExMatch = class_regex.search(trimmed)
+			if class_match:
+				class_name_value = class_match.get_string(1)
+				extends_from = class_match.get_string(2)
+				if (include_all_kinds or symbol_kinds.has("class")) and class_name_value == symbol_name:
+					definitions.append(_build_symbol_definition(script_path, "csharp", class_name_value, extends_from, "class", class_name_value, i + 1, raw_line.strip_edges()))
+				continue
+
+		if (include_all_kinds or symbol_kinds.has("constant")):
+			var constant_match: RegExMatch = constant_regex.search(trimmed)
+			if constant_match and constant_match.get_string(1) == symbol_name:
+				definitions.append(_build_symbol_definition(script_path, "csharp", class_name_value, extends_from, "constant", symbol_name, i + 1, raw_line.strip_edges()))
+				continue
+
+		if next_delegate_is_signal:
+			var delegate_match: RegExMatch = delegate_regex.search(trimmed)
+			if delegate_match:
+				var delegate_name: String = delegate_match.get_string(1)
+				if (include_all_kinds or symbol_kinds.has("signal")) and delegate_name == symbol_name:
+					definitions.append(_build_symbol_definition(script_path, "csharp", class_name_value, extends_from, "signal", delegate_name, i + 1, raw_line.strip_edges()))
+			next_delegate_is_signal = false
+			continue
+
+		if (include_all_kinds or symbol_kinds.has("property")):
+			var property_match: RegExMatch = property_regex.search(trimmed)
+			if property_match and trimmed.contains("get;"):
+				var property_name: String = property_match.get_string(1)
+				if property_name == symbol_name:
+					definitions.append(_build_symbol_definition(script_path, "csharp", class_name_value, extends_from, "property", property_name, i + 1, raw_line.strip_edges()))
+					continue
+
+		if (include_all_kinds or symbol_kinds.has("function")):
+			var method_match: RegExMatch = method_regex.search(trimmed)
+			if method_match and not trimmed.contains(" class "):
+				var function_name: String = method_match.get_string(1)
+				if function_name == symbol_name:
+					definitions.append(_build_symbol_definition(script_path, "csharp", class_name_value, extends_from, "function", function_name, i + 1, raw_line.strip_edges()))
+
+	return definitions
+
+func _build_symbol_definition(script_path: String, language: String, class_name_value: String, extends_from: String, symbol_kind: String, symbol_name: String, line: int, context_line: String) -> Dictionary:
+	return {
+		"script_path": script_path,
+		"language": language,
+		"class_name": class_name_value,
+		"extends_from": extends_from,
+		"symbol_kind": symbol_kind,
+		"symbol_name": symbol_name,
+		"line": line,
+		"context_line": context_line
+	}
+
+func _compare_script_paths_for_preference(left: String, right: String, preferred_script_path: String) -> bool:
+	var left_preferred: bool = left == preferred_script_path
+	var right_preferred: bool = right == preferred_script_path
+	if left_preferred != right_preferred:
+		return left_preferred
+	return left < right
+
+func _collect_script_reference_files(directory_path: String, extensions: Array, result: Array) -> void:
+	var dir: DirAccess = DirAccess.open(directory_path)
+	if not dir:
+		return
+
+	dir.list_dir_begin()
+	var file_name: String = dir.get_next()
+	while not file_name.is_empty():
+		if file_name != "." and file_name != "..":
+			var full_path: String = directory_path
+			if not full_path.ends_with("/"):
+				full_path += "/"
+			full_path += file_name
+
+			if dir.current_is_dir():
+				_collect_script_reference_files(full_path, extensions, result)
+			else:
+				var extension: String = "." + file_name.get_extension().to_lower()
+				if extensions.has(extension):
+					result.append(full_path)
+		file_name = dir.get_next()
+	dir.list_dir_end()
+
+func _collect_definition_lines_by_path(file_paths: Array, symbol_name: String, case_sensitive: bool) -> Dictionary:
+	var definitions_by_path: Dictionary = {}
+	for file_path in file_paths:
+		if not (file_path.ends_with(".gd") or file_path.ends_with(".cs")):
+			continue
+		var definitions: Array = _find_symbol_definitions_in_script(file_path, symbol_name, [])
+		if not case_sensitive:
+			var filtered_definitions: Array = []
+			for definition in definitions:
+				if str(definition.get("symbol_name", "")).to_lower() == symbol_name.to_lower():
+					filtered_definitions.append(definition)
+			definitions = filtered_definitions
+		var lines: Array = []
+		for definition in definitions:
+			lines.append(int(definition.get("line", 0)))
+		if not lines.is_empty():
+			definitions_by_path[file_path] = lines
+	return definitions_by_path
+
+func _find_symbol_references_in_file(file_path: String, symbol_name: String, case_sensitive: bool, include_definitions: bool, definition_lines: Array, remaining_results: int) -> Array:
+	var file: FileAccess = FileAccess.open(file_path, FileAccess.READ)
+	if not file:
+		return []
+
+	var lines: PackedStringArray = file.get_as_text().split("\n")
+	file.close()
+
+	var references: Array = []
+	var regex: RegEx = RegEx.new()
+	var escaped_symbol_name: String = _escape_regex_pattern(symbol_name)
+	var compile_pattern: String = "(?i)(?<![A-Za-z0-9_])%s(?![A-Za-z0-9_])" % escaped_symbol_name if not case_sensitive else "(?<![A-Za-z0-9_])%s(?![A-Za-z0-9_])" % escaped_symbol_name
+	if regex.compile(compile_pattern) != OK:
+		return []
+
+	for i in range(lines.size()):
+		if references.size() >= remaining_results:
+			break
+		var line_number: int = i + 1
+		if not include_definitions and definition_lines.has(line_number):
+			continue
+		var raw_line: String = lines[i]
+		var search_line: String = raw_line
+		if file_path.ends_with(".gd"):
+			search_line = _strip_inline_comment(raw_line)
+		elif file_path.ends_with(".cs"):
+			search_line = _strip_csharp_line_comment(raw_line)
+		var matches: Array = regex.search_all(search_line)
+		for match in matches:
+			references.append({
+				"script_path": file_path,
+				"line": line_number,
+				"column": match.get_start(),
+				"match_text": match.get_string(),
+				"context_line": raw_line.strip_edges(),
+				"is_definition": definition_lines.has(line_number)
+			})
+			if references.size() >= remaining_results:
+				break
+
+	return references
+
+func _escape_regex_pattern(text: String) -> String:
+	var escaped: String = ""
+	var special_characters: String = "\\.^$|?*+()[]{}"
+	for character in text:
+		var character_text: String = str(character)
+		if special_characters.contains(character_text):
+			escaped += "\\" + character_text
+		else:
+			escaped += character_text
+	return escaped
+
+func _rename_symbol_in_file(file_path: String, symbol_name: String, new_name: String, case_sensitive: bool, dry_run: bool, remaining_results: int) -> Dictionary:
+	var file: FileAccess = FileAccess.open(file_path, FileAccess.READ)
+	if not file:
+		return {}
+
+	var lines: PackedStringArray = file.get_as_text().split("\n")
+	file.close()
+
+	var regex: RegEx = RegEx.new()
+	var escaped_symbol_name: String = _escape_regex_pattern(symbol_name)
+	var compile_pattern: String = "(?i)(?<![A-Za-z0-9_])%s(?![A-Za-z0-9_])" % escaped_symbol_name if not case_sensitive else "(?<![A-Za-z0-9_])%s(?![A-Za-z0-9_])" % escaped_symbol_name
+	if regex.compile(compile_pattern) != OK:
+		return {}
+
+	var replacements: Array = []
+	var updated_lines: PackedStringArray = []
+	for i in range(lines.size()):
+		var raw_line: String = lines[i]
+		var matches: Array = regex.search_all(raw_line)
+		var replacement_total: int = min(matches.size(), max(0, remaining_results - replacements.size()))
+		if replacement_total <= 0:
+			updated_lines.append(raw_line)
+			continue
+		var new_line: String = regex.sub(raw_line, new_name, true, replacement_total)
+		if new_line != raw_line:
+			replacements.append({
+				"line": i + 1,
+				"before": raw_line.strip_edges(),
+				"after": new_line.strip_edges(),
+				"replacement_count": replacement_total
+			})
+		updated_lines.append(new_line)
+		if replacements.size() >= remaining_results:
+			for j in range(i + 1, lines.size()):
+				updated_lines.append(lines[j])
+			break
+
+	if replacements.is_empty():
+		return {}
+
+	if not dry_run:
+		var write_file: FileAccess = FileAccess.open(file_path, FileAccess.WRITE)
+		if not write_file:
+			return {}
+		write_file.store_string("\n".join(updated_lines))
+		write_file.close()
+
+	var total_replacements: int = 0
+	for replacement in replacements:
+		total_replacements += int(replacement.get("replacement_count", 0))
+
+	return {
+		"script_path": file_path,
+		"replacement_count": total_replacements,
+		"changes": replacements
+	}
 
 # ============================================================================
 # read_script - 读取脚本内容
@@ -657,6 +1667,115 @@ func _tool_get_current_script(params: Dictionary) -> Dictionary:
 		"script_path": script_path,
 		"content": content,
 		"line_count": line_count
+	}
+
+# ============================================================================
+# open_script_at_line - 打开脚本并定位到指定行/列
+# ============================================================================
+
+func _register_open_script_at_line(server_core: RefCounted) -> void:
+	var tool_name: String = "open_script_at_line"
+	var description: String = "Open a script in the Godot script editor and move the caret to a specific line and column."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"script_path": {
+				"type": "string",
+				"description": "Path to the script file (e.g. 'res://scripts/player.gd')."
+			},
+			"line": {
+				"type": "integer",
+				"description": "1-based line number to focus.",
+				"default": 1
+			},
+			"column": {
+				"type": "integer",
+				"description": "0-based column to focus.",
+				"default": 0
+			},
+			"grab_focus": {
+				"type": "boolean",
+				"description": "Whether the editor should grab focus. Default is true.",
+				"default": true
+			}
+		},
+		"required": ["script_path"]
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"status": {"type": "string"},
+			"script_path": {"type": "string"},
+			"line": {"type": "integer"},
+			"column": {"type": "integer"},
+			"caret_line": {"type": "integer"},
+			"caret_column": {"type": "integer"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": false,
+		"destructiveHint": false,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+						  Callable(self, "_tool_open_script_at_line"),
+						  output_schema, annotations)
+
+func _tool_open_script_at_line(params: Dictionary) -> Dictionary:
+	var script_path: String = str(params.get("script_path", "")).strip_edges()
+	if script_path.is_empty():
+		return {"error": "Missing required parameter: script_path"}
+
+	var validation: Dictionary = PathValidator.validate_file_path(script_path, [".gd", ".cs"])
+	if not validation["valid"]:
+		return {"error": "Invalid path: " + validation["error"]}
+	script_path = validation["sanitized"]
+
+	if not FileAccess.file_exists(script_path):
+		return {"error": "Script file not found: " + script_path}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var script_resource: Script = load(script_path)
+	if not script_resource:
+		return {"error": "Failed to load script: " + script_path}
+
+	var line: int = max(1, int(params.get("line", 1)))
+	var column: int = max(0, int(params.get("column", 0)))
+	var grab_focus: bool = params.get("grab_focus", true)
+
+	editor_interface.edit_script(script_resource, line - 1, column, grab_focus)
+
+	var caret_line: int = line - 1
+	var caret_column: int = column
+	var script_editor: ScriptEditor = editor_interface.get_script_editor()
+	if script_editor:
+		var current_editor: ScriptEditorBase = script_editor.get_current_editor()
+		if current_editor:
+			var base_editor: Control = current_editor.get_base_editor()
+			if base_editor:
+				if base_editor.has_method("set_caret_line"):
+					base_editor.call("set_caret_line", line - 1, true, true, -1, 0)
+				if base_editor.has_method("set_caret_column"):
+					base_editor.call("set_caret_column", column, true, 0)
+				if base_editor.has_method("get_caret_line") and base_editor.has_method("get_caret_column"):
+					caret_line = int(base_editor.call("get_caret_line"))
+					caret_column = int(base_editor.call("get_caret_column"))
+
+	return {
+		"status": "success",
+		"script_path": script_path,
+		"line": line,
+		"column": column,
+		"caret_line": caret_line + 1,
+		"caret_column": caret_column
 	}
 
 # ============================================================================

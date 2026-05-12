@@ -29,10 +29,11 @@ func _get_user_scene_root() -> Node:
 	if scene_root and not scene_root.name.begins_with("@") and scene_root.get_class() != "PanelContainer":
 		return scene_root
 	
-	var open_scenes: Array = editor_interface.get_open_scenes()
-	for scene in open_scenes:
-		if scene and not scene.name.begins_with("@") and scene.get_class() != "PanelContainer":
-			return scene
+	var open_scene_roots: Array = editor_interface.get_open_scene_roots()
+	for root in open_scene_roots:
+		var node_root: Node = root
+		if node_root and not node_root.name.begins_with("@") and node_root.get_class() != "PanelContainer":
+			return node_root
 	
 	return scene_root
 
@@ -56,10 +57,17 @@ func register_tools(server_core: RefCounted) -> void:
 	_register_run_project(server_core)
 	_register_stop_project(server_core)
 	_register_get_selected_nodes(server_core)
+	_register_select_node(server_core)
+	_register_select_file(server_core)
+	_register_get_inspector_properties(server_core)
 	_register_set_editor_setting(server_core)
 	_register_get_editor_screenshot(server_core)
 	_register_get_signals(server_core)
 	_register_reload_project(server_core)
+	_register_list_export_presets(server_core)
+	_register_inspect_export_templates(server_core)
+	_register_validate_export_preset(server_core)
+	_register_run_export(server_core)
 
 # ============================================================================
 # get_editor_state - 获取编辑器状态
@@ -193,7 +201,11 @@ func _tool_run_project(params: Dictionary) -> Dictionary:
 			return {"error": "Scene file not found: " + scene_path}
 		editor_interface.play_custom_scene(scene_path)
 	else:
-		editor_interface.play_current_scene()
+		var scene_root: Node = _get_user_scene_root()
+		if scene_root:
+			editor_interface.play_current_scene()
+		else:
+			editor_interface.play_main_scene()
 	
 	return {
 		"status": "success",
@@ -323,6 +335,654 @@ func _tool_get_selected_nodes(params: Dictionary) -> Dictionary:
 		"selected_nodes": selected_nodes,
 		"count": selected_nodes.size()
 	}
+
+# ============================================================================
+# select_node - 选择并在 Inspector 中编辑节点
+# ============================================================================
+
+func _register_select_node(server_core: RefCounted) -> void:
+	var tool_name: String = "select_node"
+	var description: String = "Select a node in the current edited scene and focus it in the Inspector."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"node_path": {
+				"type": "string",
+				"description": "Node path such as '/root/MainScene/Player'."
+			},
+			"clear_existing": {
+				"type": "boolean",
+				"description": "Whether to clear the existing editor selection before selecting the node. Default is true.",
+				"default": true
+			}
+		},
+		"required": ["node_path"]
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"status": {"type": "string"},
+			"node_path": {"type": "string"},
+			"node_type": {"type": "string"},
+			"selected_count": {"type": "integer"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": false,
+		"destructiveHint": false,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+						  Callable(self, "_tool_select_node"),
+						  output_schema, annotations)
+
+func _tool_select_node(params: Dictionary) -> Dictionary:
+	var node_path: String = str(params.get("node_path", "")).strip_edges()
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+
+	var clear_existing: bool = params.get("clear_existing", true)
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var target_node: Node = _resolve_node_path(editor_interface, node_path)
+	if not target_node:
+		return {"error": "Node not found: " + node_path}
+
+	var selection: EditorSelection = editor_interface.get_selection()
+	if selection:
+		if clear_existing:
+			selection.clear()
+		selection.add_node(target_node)
+
+	editor_interface.edit_node(target_node)
+
+	var selected_count: int = 1
+	if selection:
+		selected_count = selection.get_selected_nodes().size()
+
+	return {
+		"status": "success",
+		"node_path": _make_friendly_path(target_node, _get_user_scene_root()),
+		"node_type": target_node.get_class(),
+		"selected_count": selected_count
+	}
+
+# ============================================================================
+# select_file - 在 FileSystem dock 中选择文件
+# ============================================================================
+
+func _register_select_file(server_core: RefCounted) -> void:
+	var tool_name: String = "select_file"
+	var description: String = "Select a project file in the Godot FileSystem dock."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"file_path": {
+				"type": "string",
+				"description": "Project file path such as 'res://scenes/Main.tscn'."
+			}
+		},
+		"required": ["file_path"]
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"status": {"type": "string"},
+			"file_path": {"type": "string"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": false,
+		"destructiveHint": false,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+						  Callable(self, "_tool_select_file"),
+						  output_schema, annotations)
+
+func _tool_select_file(params: Dictionary) -> Dictionary:
+	var file_path: String = str(params.get("file_path", "")).strip_edges()
+	if file_path.is_empty():
+		return {"error": "Missing required parameter: file_path"}
+
+	var validation: Dictionary = PathValidator.validate_path(file_path)
+	if not validation["valid"]:
+		return {"error": "Invalid path: " + validation["error"]}
+	file_path = validation["sanitized"]
+
+	if not FileAccess.file_exists(file_path):
+		return {"error": "File not found: " + file_path}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	editor_interface.select_file(file_path)
+	return {
+		"status": "success",
+		"file_path": file_path
+	}
+
+# ============================================================================
+# get_inspector_properties - 获取 Inspector 风格的属性元数据
+# ============================================================================
+
+func _register_get_inspector_properties(server_core: RefCounted) -> void:
+	var tool_name: String = "get_inspector_properties"
+	var description: String = "Inspect a node or resource and return property metadata and serialized values similar to the Inspector."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"node_path": {
+				"type": "string",
+				"description": "Optional node path to inspect."
+			},
+			"resource_path": {
+				"type": "string",
+				"description": "Optional resource path to inspect."
+			},
+			"property_filter": {
+				"type": "string",
+				"description": "Optional substring filter for property names."
+			},
+			"include_values": {
+				"type": "boolean",
+				"description": "Whether to include current property values. Default is true.",
+				"default": true
+			}
+		}
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"target_kind": {"type": "string"},
+			"target_path": {"type": "string"},
+			"class_name": {"type": "string"},
+			"property_count": {"type": "integer"},
+			"properties": {"type": "array"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": true,
+		"destructiveHint": false,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+						  Callable(self, "_tool_get_inspector_properties"),
+						  output_schema, annotations)
+
+func _tool_get_inspector_properties(params: Dictionary) -> Dictionary:
+	var node_path: String = str(params.get("node_path", "")).strip_edges()
+	var resource_path: String = str(params.get("resource_path", "")).strip_edges()
+	var property_filter: String = str(params.get("property_filter", "")).strip_edges().to_lower()
+	var include_values: bool = params.get("include_values", true)
+
+	if node_path.is_empty() and resource_path.is_empty():
+		return {"error": "Provide node_path or resource_path"}
+
+	var editor_interface: EditorInterface = _get_editor_interface()
+	if not editor_interface:
+		return {"error": "Editor interface not available"}
+
+	var target_object: Object = null
+	var target_kind: String = ""
+	var target_path: String = ""
+
+	if not node_path.is_empty():
+		var target_node: Node = _resolve_node_path(editor_interface, node_path)
+		if not target_node:
+			return {"error": "Node not found: " + node_path}
+		editor_interface.edit_node(target_node)
+		editor_interface.inspect_object(target_node)
+		target_object = target_node
+		target_kind = "node"
+		target_path = _make_friendly_path(target_node, _get_user_scene_root())
+	else:
+		var validation: Dictionary = PathValidator.validate_path(resource_path)
+		if not validation["valid"]:
+			return {"error": "Invalid path: " + validation["error"]}
+		resource_path = validation["sanitized"]
+		if not FileAccess.file_exists(resource_path):
+			return {"error": "File not found: " + resource_path}
+		var resource: Resource = load(resource_path)
+		if not resource:
+			return {"error": "Failed to load resource: " + resource_path}
+		editor_interface.inspect_object(resource)
+		target_object = resource
+		target_kind = "resource"
+		target_path = resource_path
+
+	var properties: Array = []
+	for property_info_variant in target_object.get_property_list():
+		var property_info: Dictionary = property_info_variant
+		var property_name: String = str(property_info.get("name", ""))
+		if property_name.is_empty():
+			continue
+		if not property_filter.is_empty() and not property_name.to_lower().contains(property_filter):
+			continue
+
+		var serialized: Dictionary = {
+			"name": property_name,
+			"type": int(property_info.get("type", TYPE_NIL)),
+			"usage": int(property_info.get("usage", 0)),
+			"hint": int(property_info.get("hint", PROPERTY_HINT_NONE)),
+			"hint_string": str(property_info.get("hint_string", "")),
+			"class_name": str(property_info.get("class_name", ""))
+		}
+		if include_values:
+			serialized["value"] = _serialize_editor_value(target_object.get(property_name))
+		properties.append(serialized)
+
+	return {
+		"target_kind": target_kind,
+		"target_path": target_path,
+		"class_name": target_object.get_class(),
+		"property_count": properties.size(),
+		"properties": properties
+	}
+
+# ============================================================================
+# list_export_presets - 列出导出预设
+# ============================================================================
+
+func _register_list_export_presets(server_core: RefCounted) -> void:
+	var tool_name: String = "list_export_presets"
+	var description: String = "List export presets from export_presets.cfg."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {}
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"config_path": {"type": "string"},
+			"count": {"type": "integer"},
+			"presets": {
+				"type": "array",
+				"items": {"type": "object"}
+			}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": true,
+		"destructiveHint": false,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+						  Callable(self, "_tool_list_export_presets"),
+						  output_schema, annotations)
+
+func _tool_list_export_presets(params: Dictionary) -> Dictionary:
+	var preset_data: Dictionary = _load_export_presets()
+	if preset_data.has("error"):
+		return preset_data
+	return {
+		"config_path": preset_data["config_path"],
+		"count": preset_data["presets"].size(),
+		"presets": preset_data["presets"]
+	}
+
+# ============================================================================
+# inspect_export_templates - 检查本机导出模板
+# ============================================================================
+
+func _register_inspect_export_templates(server_core: RefCounted) -> void:
+	var tool_name: String = "inspect_export_templates"
+	var description: String = "Inspect locally installed Godot export templates for the current editor version."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {}
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"templates_root": {"type": "string"},
+			"current_version": {"type": "string"},
+			"matching_version_installed": {"type": "boolean"},
+			"installed_versions": {"type": "array"},
+			"detected_files": {"type": "array"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": true,
+		"destructiveHint": false,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+						  Callable(self, "_tool_inspect_export_templates"),
+						  output_schema, annotations)
+
+func _tool_inspect_export_templates(params: Dictionary) -> Dictionary:
+	return _inspect_export_templates()
+
+# ============================================================================
+# validate_export_preset - 校验导出预设
+# ============================================================================
+
+func _register_validate_export_preset(server_core: RefCounted) -> void:
+	var tool_name: String = "validate_export_preset"
+	var description: String = "Validate an export preset against export_presets.cfg and local template availability."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"preset": {
+				"type": "string",
+				"description": "Preset name or section, e.g. 'Windows Desktop' or 'preset.0'."
+			}
+		},
+		"required": ["preset"]
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"valid": {"type": "boolean"},
+			"preset": {"type": "object"},
+			"errors": {"type": "array"},
+			"warnings": {"type": "array"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": true,
+		"destructiveHint": false,
+		"idempotentHint": true,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+						  Callable(self, "_tool_validate_export_preset"),
+						  output_schema, annotations)
+
+func _tool_validate_export_preset(params: Dictionary) -> Dictionary:
+	var preset_name: String = str(params.get("preset", "")).strip_edges()
+	if preset_name.is_empty():
+		return {"error": "Missing required parameter: preset"}
+
+	var preset_data: Dictionary = _load_export_presets()
+	if preset_data.has("error"):
+		return preset_data
+
+	var preset: Dictionary = _find_export_preset(preset_data["presets"], preset_name)
+	if preset.is_empty():
+		return {
+			"valid": false,
+			"errors": ["Export preset not found: " + preset_name],
+			"warnings": [],
+			"preset": {}
+		}
+
+	var errors: Array[String] = []
+	var warnings: Array[String] = []
+	if str(preset.get("platform", "")).is_empty():
+		errors.append("Preset is missing platform")
+	if str(preset.get("name", "")).is_empty():
+		errors.append("Preset is missing name")
+	if str(preset.get("export_path", "")).is_empty():
+		warnings.append("Preset does not define export_path; run_export must receive output_path")
+
+	var template_info: Dictionary = _inspect_export_templates()
+	if not bool(template_info.get("matching_version_installed", false)):
+		warnings.append("Matching export templates are not installed for current Godot version")
+
+	return {
+		"valid": errors.is_empty(),
+		"preset": preset,
+		"errors": errors,
+		"warnings": warnings,
+		"template_info": template_info
+	}
+
+# ============================================================================
+# run_export - 执行导出
+# ============================================================================
+
+func _register_run_export(server_core: RefCounted) -> void:
+	var tool_name: String = "run_export"
+	var description: String = "Run a Godot CLI export for a configured preset."
+
+	var input_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"preset": {
+				"type": "string",
+				"description": "Preset name or section."
+			},
+			"output_path": {
+				"type": "string",
+				"description": "Optional absolute or res:// output path override."
+			},
+			"mode": {
+				"type": "string",
+				"enum": ["release", "debug", "pack", "patch"],
+				"default": "release"
+			}
+		},
+		"required": ["preset"]
+	}
+
+	var output_schema: Dictionary = {
+		"type": "object",
+		"properties": {
+			"success": {"type": "boolean"},
+			"exit_code": {"type": "integer"},
+			"command": {"type": "array"},
+			"output_path": {"type": "string"},
+			"logs": {"type": "array"},
+			"errors": {"type": "array"}
+		}
+	}
+
+	var annotations: Dictionary = {
+		"readOnlyHint": false,
+		"destructiveHint": false,
+		"idempotentHint": false,
+		"openWorldHint": false
+	}
+
+	server_core.register_tool(tool_name, description, input_schema,
+						  Callable(self, "_tool_run_export"),
+						  output_schema, annotations)
+
+func _tool_run_export(params: Dictionary) -> Dictionary:
+	var preset_name: String = str(params.get("preset", "")).strip_edges()
+	if preset_name.is_empty():
+		return {"error": "Missing required parameter: preset"}
+
+	var mode: String = str(params.get("mode", "release")).strip_edges().to_lower()
+	var mode_to_flag: Dictionary = {
+		"release": "--export-release",
+		"debug": "--export-debug",
+		"pack": "--export-pack",
+		"patch": "--export-patch"
+	}
+	if not mode_to_flag.has(mode):
+		return {"error": "Invalid mode: " + mode}
+
+	var preset_data: Dictionary = _load_export_presets()
+	if preset_data.has("error"):
+		return preset_data
+
+	var preset: Dictionary = _find_export_preset(preset_data["presets"], preset_name)
+	if preset.is_empty():
+		return {"error": "Export preset not found: " + preset_name}
+
+	var output_path: String = str(params.get("output_path", "")).strip_edges()
+	if output_path.is_empty():
+		output_path = str(preset.get("export_path", "")).strip_edges()
+	if output_path.is_empty():
+		return {"error": "Export preset has no export_path and output_path was not provided"}
+
+	if output_path.begins_with("res://"):
+		output_path = ProjectSettings.globalize_path(output_path)
+
+	var output_dir: String = output_path.get_base_dir()
+	if not output_dir.is_empty():
+		DirAccess.make_dir_recursive_absolute(output_dir)
+
+	var executable_path: String = OS.get_executable_path()
+	var project_path: String = ProjectSettings.globalize_path("res://")
+	var args: Array[String] = [
+		"--headless",
+		"--path", project_path,
+		str(mode_to_flag[mode]),
+		str(preset.get("name", "")),
+		output_path
+	]
+
+	var logs: Array = []
+	var exit_code: int = OS.execute(executable_path, args, logs, true)
+	var sanitized_logs: Array[String] = []
+	for line in logs:
+		sanitized_logs.append(_sanitize_cli_output(str(line)))
+	var error_lines: Array[String] = []
+	for text_line in sanitized_logs:
+		if text_line.contains("ERROR:") or text_line.contains("Export failed") or text_line.contains("No export template"):
+			error_lines.append(text_line)
+
+	return {
+		"success": exit_code == OK,
+		"exit_code": exit_code,
+		"command": [executable_path] + args,
+		"output_path": output_path,
+		"preset": preset,
+		"logs": sanitized_logs,
+		"errors": error_lines
+	}
+
+func _load_export_presets() -> Dictionary:
+	var config_path: String = "res://export_presets.cfg"
+	if not FileAccess.file_exists(config_path):
+		return {
+			"config_path": config_path,
+			"presets": []
+		}
+
+	var config: ConfigFile = ConfigFile.new()
+	var load_error: Error = config.load(config_path)
+	if load_error != OK:
+		return {"error": "Failed to load export_presets.cfg: " + error_string(load_error)}
+
+	var presets: Array = []
+	for raw_section in config.get_sections():
+		var section_name: String = str(raw_section)
+		if not section_name.begins_with("preset.") or section_name.ends_with(".options"):
+			continue
+
+		var preset: Dictionary = {
+			"section": section_name,
+			"name": str(config.get_value(section_name, "name", "")),
+			"platform": str(config.get_value(section_name, "platform", "")),
+			"export_path": str(config.get_value(section_name, "export_path", "")),
+			"runnable": bool(config.get_value(section_name, "runnable", false))
+		}
+		presets.append(preset)
+
+	return {
+		"config_path": config_path,
+		"presets": presets
+	}
+
+func _inspect_export_templates() -> Dictionary:
+	var version_info: Dictionary = Engine.get_version_info()
+	var version_variants: Array[String] = []
+	var base_version: String = "%d.%d.%d.%s" % [
+		int(version_info.get("major", 0)),
+		int(version_info.get("minor", 0)),
+		int(version_info.get("patch", 0)),
+		str(version_info.get("status", "stable"))
+	]
+	version_variants.append(base_version)
+	version_variants.append(base_version + ".mono")
+
+	var templates_root: String = OS.get_environment("APPDATA").path_join("Godot").path_join("export_templates")
+	var installed_versions: Array[String] = []
+	var detected_files: Array[String] = []
+	var matching_version_installed: bool = false
+
+	var root_dir: DirAccess = DirAccess.open(templates_root)
+	if root_dir:
+		root_dir.list_dir_begin()
+		var entry: String = root_dir.get_next()
+		while entry != "":
+			if root_dir.current_is_dir() and not entry.begins_with("."):
+				installed_versions.append(entry)
+				if version_variants.has(entry):
+					matching_version_installed = true
+					var version_dir_path: String = templates_root.path_join(entry)
+					var version_dir: DirAccess = DirAccess.open(version_dir_path)
+					if version_dir:
+						version_dir.list_dir_begin()
+						var file_name: String = version_dir.get_next()
+						while file_name != "":
+							if not version_dir.current_is_dir():
+								detected_files.append(version_dir_path.path_join(file_name))
+							file_name = version_dir.get_next()
+						version_dir.list_dir_end()
+			entry = root_dir.get_next()
+		root_dir.list_dir_end()
+
+	installed_versions.sort()
+	detected_files.sort()
+
+	return {
+		"templates_root": templates_root,
+		"current_version": base_version,
+		"matching_version_installed": matching_version_installed,
+		"expected_versions": version_variants,
+		"installed_versions": installed_versions,
+		"detected_files": detected_files
+	}
+
+func _find_export_preset(presets: Array, preset_name: String) -> Dictionary:
+	for preset_value in presets:
+		var preset: Dictionary = preset_value
+		if str(preset.get("section", "")) == preset_name:
+			return preset
+		if str(preset.get("name", "")) == preset_name:
+			return preset
+	return {}
+
+func _sanitize_cli_output(text: String) -> String:
+	var sanitized: String = ""
+	for i in range(text.length()):
+		var codepoint: int = text.unicode_at(i)
+		var keep_char: bool = codepoint >= 32 and codepoint != 127
+		if codepoint == 9 or codepoint == 10 or codepoint == 13:
+			keep_char = true
+		if codepoint >= 0xE000 and codepoint <= 0xF8FF:
+			keep_char = false
+		if keep_char:
+			sanitized += String.chr(codepoint)
+	return sanitized
 
 # ============================================================================
 # set_editor_setting - 设置编辑器属性
@@ -608,6 +1268,33 @@ func _resolve_node_path(editor_interface: EditorInterface, path: String) -> Node
 		var relative: String = path.substr(("/root/" + edited_scene.name + "/").length())
 		return edited_scene.get_node_or_null(relative)
 	return edited_scene.get_node_or_null(path)
+
+func _serialize_editor_value(value: Variant) -> Variant:
+	if value == null:
+		return null
+	match typeof(value):
+		TYPE_BOOL, TYPE_INT, TYPE_FLOAT, TYPE_STRING:
+			return value
+		TYPE_VECTOR2:
+			return {"x": value.x, "y": value.y}
+		TYPE_VECTOR3:
+			return {"x": value.x, "y": value.y, "z": value.z}
+		TYPE_VECTOR4:
+			return {"x": value.x, "y": value.y, "z": value.z, "w": value.w}
+		TYPE_COLOR:
+			return {"r": value.r, "g": value.g, "b": value.b, "a": value.a}
+		TYPE_ARRAY:
+			var array_result: Array = []
+			for item in value:
+				array_result.append(_serialize_editor_value(item))
+			return array_result
+		TYPE_DICTIONARY:
+			var dict_result: Dictionary = {}
+			for key in value:
+				dict_result[str(key)] = _serialize_editor_value(value[key])
+			return dict_result
+		_:
+			return str(value)
 
 # ============================================================================
 # reload_project - 重新扫描文件系统并重新加载脚本

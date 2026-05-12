@@ -10,6 +10,7 @@ var _max_log_lines: int = 1000
 var _server_core: RefCounted = null
 var _log_mutex: Mutex = Mutex.new()
 var _execution_mutex: Mutex = Mutex.new()
+var _pending_runtime_probe_requests: Dictionary = {}
 
 func initialize(editor_interface: EditorInterface) -> void:
 	_editor_interface = editor_interface
@@ -28,13 +29,40 @@ func _get_user_scene_root() -> Node:
 	if not editor_interface:
 		return null
 	var scene_root: Node = editor_interface.get_edited_scene_root()
-	if scene_root and not scene_root.name.begins_with("@") and scene_root.get_class() != "PanelContainer":
+	if _is_user_scene_root(scene_root):
 		return scene_root
-	var open_scenes: Array = editor_interface.get_open_scenes()
-	for scene in open_scenes:
-		if scene and not scene.name.begins_with("@") and scene.get_class() != "PanelContainer":
-			return scene
-	return scene_root
+	var open_scene_roots: Array = editor_interface.get_open_scene_roots()
+	for root in open_scene_roots:
+		var node_root: Node = root
+		if _is_user_scene_root(node_root):
+			return node_root
+	return null
+
+func _is_user_scene_root(node: Node) -> bool:
+	if not node:
+		return false
+	if node.name.begins_with("@") or node.get_class() == "PanelContainer":
+		return false
+	return not String(node.scene_file_path).is_empty()
+
+func _to_runtime_friendly_path(node: Node, scene_root: Node = null) -> String:
+	if not node:
+		return ""
+	var resolved_scene_root: Node = scene_root
+	if not resolved_scene_root:
+		resolved_scene_root = _get_user_scene_root()
+	if not resolved_scene_root:
+		return str(node.get_path())
+	var root_name: String = String(resolved_scene_root.name)
+	if root_name.is_empty():
+		return str(node.get_path())
+	if node == resolved_scene_root:
+		return "/root/" + root_name
+	var node_path: String = str(node.get_path())
+	var scene_root_path: String = str(resolved_scene_root.get_path())
+	if node_path.begins_with(scene_root_path + "/"):
+		return "/root/" + root_name + node_path.substr(scene_root_path.length())
+	return node_path
 
 # ============================================================================
 # 工具注册
@@ -52,23 +80,68 @@ func register_tools(server_core: RefCounted) -> void:
 	_register_execute_editor_script(server_core)
 	_register_clear_output(server_core)
 	_register_get_debugger_sessions(server_core)
+	_register_get_debug_threads(server_core)
 	_register_set_debugger_breakpoint(server_core)
 	_register_send_debugger_message(server_core)
 	_register_toggle_debugger_profiler(server_core)
 	_register_get_debugger_messages(server_core)
+	_register_get_debug_state_events(server_core)
+	_register_get_debug_output(server_core)
 	_register_add_debugger_capture_prefix(server_core)
 	_register_get_debug_stack_frames(server_core)
 	_register_get_debug_stack_variables(server_core)
+	_register_get_debug_scopes(server_core)
+	_register_get_debug_variables(server_core)
+	_register_expand_debug_variable(server_core)
+	_register_evaluate_debug_expression(server_core)
 	_register_install_runtime_probe(server_core)
 	_register_remove_runtime_probe(server_core)
 	_register_request_debug_break(server_core)
 	_register_send_debug_command(server_core)
+	_register_debug_step_into(server_core)
+	_register_debug_step_over(server_core)
+	_register_debug_step_out(server_core)
+	_register_debug_continue(server_core)
+	_register_debug_step_into_and_wait(server_core)
+	_register_debug_step_over_and_wait(server_core)
+	_register_debug_step_out_and_wait(server_core)
+	_register_debug_continue_and_wait(server_core)
+	_register_await_debugger_state(server_core)
 	_register_get_runtime_info(server_core)
+	_register_get_runtime_performance_snapshot(server_core)
+	_register_get_runtime_memory_trend(server_core)
 	_register_get_runtime_scene_tree(server_core)
 	_register_inspect_runtime_node(server_core)
+	_register_create_runtime_node(server_core)
+	_register_delete_runtime_node(server_core)
 	_register_update_runtime_node_property(server_core)
 	_register_call_runtime_node_method(server_core)
 	_register_evaluate_runtime_expression(server_core)
+	_register_simulate_runtime_input_event(server_core)
+	_register_simulate_runtime_input_action(server_core)
+	_register_list_runtime_input_actions(server_core)
+	_register_upsert_runtime_input_action(server_core)
+	_register_remove_runtime_input_action(server_core)
+	_register_list_runtime_animations(server_core)
+	_register_play_runtime_animation(server_core)
+	_register_stop_runtime_animation(server_core)
+	_register_get_runtime_animation_state(server_core)
+	_register_get_runtime_animation_tree_state(server_core)
+	_register_set_runtime_animation_tree_active(server_core)
+	_register_travel_runtime_animation_tree(server_core)
+	_register_get_runtime_material_state(server_core)
+	_register_get_runtime_theme_item(server_core)
+	_register_set_runtime_theme_override(server_core)
+	_register_clear_runtime_theme_override(server_core)
+	_register_get_runtime_shader_parameters(server_core)
+	_register_set_runtime_shader_parameter(server_core)
+	_register_list_runtime_tilemap_layers(server_core)
+	_register_get_runtime_tilemap_cell(server_core)
+	_register_set_runtime_tilemap_cell(server_core)
+	_register_list_runtime_audio_buses(server_core)
+	_register_get_runtime_audio_bus(server_core)
+	_register_update_runtime_audio_bus(server_core)
+	_register_get_runtime_screenshot(server_core)
 	_register_await_runtime_condition(server_core)
 	_register_assert_runtime_condition(server_core)
 
@@ -216,6 +289,23 @@ func _tool_set_debugger_breakpoint(params: Dictionary) -> Dictionary:
 		return {"error": "Debugger bridge is not available"}
 	return bridge.set_breakpoint(path, line, enabled, session_id)
 
+func _register_get_debug_threads(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_debug_threads",
+		"Return DAP-style debugger threads visible from the active Godot debug session.",
+		{"type": "object", "properties": {}},
+		Callable(self, "_tool_get_debug_threads"),
+		{"type": "object", "properties": {"threads": {"type": "array"}, "count": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_get_debug_threads(params: Dictionary) -> Dictionary:
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	var threads: Array = bridge.get_threads()
+	return {"threads": threads, "count": threads.size()}
+
 func _register_send_debugger_message(server_core: RefCounted) -> void:
 	server_core.register_tool(
 		"send_debugger_message",
@@ -302,6 +392,53 @@ func _tool_get_debugger_messages(params: Dictionary) -> Dictionary:
 		return {"error": "Debugger bridge is not available"}
 	return bridge.get_captured_messages(params.get("count", 100), params.get("offset", 0), params.get("order", "desc"))
 
+func _register_get_debug_state_events(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_debug_state_events",
+		"Read recorded debugger break/resume/stop state transitions from the bridge.",
+		{
+			"type": "object",
+			"properties": {
+				"count": {"type": "integer", "default": 100},
+				"offset": {"type": "integer", "default": 0},
+				"order": {"type": "string", "enum": ["asc", "desc"], "default": "desc"}
+			}
+		},
+		Callable(self, "_tool_get_debug_state_events"),
+		{"type": "object", "properties": {"events": {"type": "array"}, "count": {"type": "integer"}, "total_available": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_get_debug_state_events(params: Dictionary) -> Dictionary:
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	return bridge.get_state_events(params.get("count", 100), params.get("offset", 0), params.get("order", "desc"))
+
+func _register_get_debug_output(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_debug_output",
+		"Read categorized runtime debugger output captured by the editor bridge.",
+		{
+			"type": "object",
+			"properties": {
+				"count": {"type": "integer", "default": 100},
+				"offset": {"type": "integer", "default": 0},
+				"order": {"type": "string", "enum": ["asc", "desc"], "default": "desc"},
+				"category": {"type": "string", "enum": ["", "stdout", "stderr", "stdout_rich"], "default": ""}
+			}
+		},
+		Callable(self, "_tool_get_debug_output"),
+		{"type": "object", "properties": {"events": {"type": "array"}, "count": {"type": "integer"}, "total_available": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_get_debug_output(params: Dictionary) -> Dictionary:
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	return bridge.get_output_events(params.get("count", 100), params.get("offset", 0), params.get("order", "desc"), str(params.get("category", "")))
+
 func _register_add_debugger_capture_prefix(server_core: RefCounted) -> void:
 	server_core.register_tool(
 		"add_debugger_capture_prefix",
@@ -387,6 +524,743 @@ func _tool_get_debug_stack_variables(params: Dictionary) -> Dictionary:
 	var variables: Array = bridge.get_latest_stack_variables(frame)
 	return {"frame": frame, "variables": variables, "count": variables.size(), "refresh_result": refresh_result}
 
+func _register_get_debug_scopes(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_debug_scopes",
+		"Group latest captured stack variables into DAP-like scopes for a frame.",
+		{
+			"type": "object",
+			"properties": {
+				"frame": {"type": "integer", "default": 0},
+				"refresh": {"type": "boolean", "default": true},
+				"session_id": {"type": "integer", "description": "Optional debugger session id. Omit or use -1 for all active sessions."}
+			}
+		},
+		Callable(self, "_tool_get_debug_scopes"),
+		{"type": "object", "properties": {"frame": {"type": "integer"}, "scopes": {"type": "array"}, "count": {"type": "integer"}, "refresh_result": {"type": "object"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_get_debug_scopes(params: Dictionary) -> Dictionary:
+	var variables_result: Dictionary = _tool_get_debug_stack_variables(params)
+	if variables_result.has("error"):
+		return variables_result
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	var frame: int = int(variables_result.get("frame", 0))
+	var grouped: Dictionary = {}
+	for variable_entry in variables_result.get("variables", []):
+		var scope_name: String = str(variable_entry.get("scope", "unknown"))
+		if not grouped.has(scope_name):
+			grouped[scope_name] = []
+		grouped[scope_name].append(variable_entry)
+
+	var scopes: Array = []
+	for scope_name in ["local", "member", "global", "constant", "unknown"]:
+		if not grouped.has(scope_name):
+			continue
+		var dap_variables_reference: int = bridge.get_scope_variables_reference(frame, scope_name)
+		scopes.append({
+			"name": scope_name,
+			"frame": frame,
+			"variables_reference": "%d:%s" % [frame, scope_name],
+			"dap_variables_reference": dap_variables_reference,
+			"named_variables": grouped[scope_name].size(),
+			"indexed_variables": 0,
+			"presentation_hint": _debug_scope_presentation_hint(scope_name),
+			"expensive": false
+		})
+
+	return {
+		"frame": frame,
+		"scopes": scopes,
+		"count": scopes.size(),
+		"refresh_result": variables_result.get("refresh_result", {})
+	}
+
+func _register_get_debug_variables(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_debug_variables",
+		"Resolve a DAP-style variablesReference into child variables, with optional pagination for large arrays and dictionaries.",
+		{
+			"type": "object",
+			"properties": {
+				"variables_reference": {"type": "integer"},
+				"offset": {"type": "integer", "default": 0},
+				"count": {"type": "integer", "default": 100}
+			},
+			"required": ["variables_reference"]
+		},
+		Callable(self, "_tool_get_debug_variables"),
+		{"type": "object", "properties": {"variables_reference": {"type": "integer"}, "variables": {"type": "array"}, "count": {"type": "integer"}, "total_available": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_get_debug_variables(params: Dictionary) -> Dictionary:
+	var variables_reference: int = int(params.get("variables_reference", 0))
+	if variables_reference <= 0:
+		return {"error": "variables_reference must be > 0"}
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	var result: Dictionary = bridge.get_variables_by_reference(
+		variables_reference,
+		int(params.get("count", 100)),
+		int(params.get("offset", 0))
+	)
+	if result.get("total_available", 0) == 0:
+		return {"error": "Unknown debug variables reference: " + str(variables_reference)}
+	return result
+
+func _register_expand_debug_variable(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"expand_debug_variable",
+		"Expand a captured debug variable or evaluated expression value by scope and path, with pagination for arrays and dictionaries.",
+		{
+			"type": "object",
+			"properties": {
+				"frame": {"type": "integer", "default": 0},
+				"scope": {"type": "string", "description": "Scope name such as local, member, global, constant, or evaluation."},
+				"variable_path": {"type": "array", "items": {"type": "string"}, "description": "Path segments starting with the top-level variable name or expression text, then child keys or indices."},
+				"offset": {"type": "integer", "default": 0},
+				"count": {"type": "integer", "default": 100}
+			},
+			"required": ["scope", "variable_path"]
+		},
+		Callable(self, "_tool_expand_debug_variable"),
+		{"type": "object", "properties": {"frame": {"type": "integer"}, "scope": {"type": "string"}, "variable_path": {"type": "array"}, "entries": {"type": "array"}, "count": {"type": "integer"}, "total_available": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false}
+	)
+
+func _tool_expand_debug_variable(params: Dictionary) -> Dictionary:
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	var frame: int = int(params.get("frame", 0))
+	var scope: String = str(params.get("scope", "")).strip_edges().to_lower()
+	var variable_path: Array = params.get("variable_path", [])
+	if scope.is_empty():
+		return {"error": "Missing required parameter: scope"}
+	if variable_path.is_empty():
+		return {"error": "Missing required parameter: variable_path"}
+
+	var variables: Array = bridge.get_latest_stack_variables(frame)
+	var current_value: Variant = null
+	var current_type: String = ""
+	if scope == "evaluation":
+		var evaluation_entry: Variant = bridge.get_latest_evaluation(str(variable_path[0]))
+		if evaluation_entry is Dictionary:
+			current_value = evaluation_entry.get("value", null)
+			current_type = str(evaluation_entry.get("type", ""))
+	else:
+		for variable_entry in variables:
+			if str(variable_entry.get("scope", "")).to_lower() == scope and str(variable_entry.get("name", "")) == str(variable_path[0]):
+				current_value = variable_entry.get("value", null)
+				current_type = str(variable_entry.get("type", ""))
+				break
+	if current_type.is_empty():
+		return {"error": "Debug variable not found in scope: " + str(variable_path[0])}
+
+	for i in range(1, variable_path.size()):
+		var step: String = str(variable_path[i])
+		var resolved: Dictionary = _resolve_debug_path_step(current_value, step)
+		if not resolved.get("ok", false):
+			return {"error": "Value at path is not expandable: " + JSON.stringify(variable_path.slice(0, i))}
+		current_value = resolved.get("value", null)
+
+	var entries: Array = _expand_debug_value_entries(current_value, variable_path)
+	var offset: int = max(0, int(params.get("offset", 0)))
+	var count: int = max(0, int(params.get("count", 100)))
+	var start: int = mini(offset, entries.size())
+	var end: int = mini(start + count, entries.size())
+
+	return {
+		"frame": frame,
+		"scope": scope,
+		"variable_path": variable_path,
+		"entries": entries.slice(start, end),
+		"count": end - start,
+		"total_available": entries.size()
+	}
+
+func _resolve_debug_path_step(current_value: Variant, step: String) -> Dictionary:
+	if current_value is Array:
+		if step == "size":
+			return {"ok": true, "value": current_value.size()}
+		if not step.is_valid_int():
+			return {"ok": false}
+		var index: int = int(step)
+		if index < 0 or index >= current_value.size():
+			return {"ok": false}
+		return {"ok": true, "value": current_value[index]}
+	match typeof(current_value):
+		TYPE_PACKED_BYTE_ARRAY, TYPE_PACKED_INT32_ARRAY, TYPE_PACKED_INT64_ARRAY, TYPE_PACKED_FLOAT32_ARRAY, TYPE_PACKED_FLOAT64_ARRAY, TYPE_PACKED_STRING_ARRAY, TYPE_PACKED_VECTOR2_ARRAY, TYPE_PACKED_VECTOR3_ARRAY, TYPE_PACKED_COLOR_ARRAY, TYPE_PACKED_VECTOR4_ARRAY:
+			if step == "size":
+				return {"ok": true, "value": current_value.size()}
+			if not step.is_valid_int():
+				return {"ok": false}
+			var packed_index: int = int(step)
+			if packed_index < 0 or packed_index >= current_value.size():
+				return {"ok": false}
+			return {"ok": true, "value": current_value[packed_index]}
+	if current_value is Dictionary:
+		for key in current_value.keys():
+			if str(key) == step:
+				return {"ok": true, "value": current_value[key]}
+		return {"ok": false}
+	match typeof(current_value):
+		TYPE_VECTOR2, TYPE_VECTOR2I:
+			if step == "x" or step == "y":
+				return {"ok": true, "value": current_value[step]}
+		TYPE_VECTOR3, TYPE_VECTOR3I:
+			if step == "x" or step == "y" or step == "z":
+				return {"ok": true, "value": current_value[step]}
+		TYPE_VECTOR4, TYPE_VECTOR4I, TYPE_QUATERNION:
+			if step == "x" or step == "y" or step == "z" or step == "w":
+				return {"ok": true, "value": current_value[step]}
+		TYPE_COLOR:
+			if step == "r" or step == "g" or step == "b" or step == "a":
+				return {"ok": true, "value": current_value[step]}
+		TYPE_PLANE:
+			if step == "normal":
+				return {"ok": true, "value": current_value.normal}
+			if step == "d":
+				return {"ok": true, "value": current_value.d}
+		TYPE_RECT2, TYPE_RECT2I, TYPE_AABB:
+			if step == "position" or step == "size" or step == "end":
+				return {"ok": true, "value": current_value[step]}
+		TYPE_BASIS:
+			if step == "x" or step == "y" or step == "z":
+				return {"ok": true, "value": current_value[step]}
+		TYPE_TRANSFORM2D:
+			if step == "x" or step == "y" or step == "origin":
+				return {"ok": true, "value": current_value[step]}
+		TYPE_TRANSFORM3D:
+			if step == "basis" or step == "origin":
+				return {"ok": true, "value": current_value[step]}
+		TYPE_PROJECTION:
+			if step == "x" or step == "y" or step == "z" or step == "w":
+				return {"ok": true, "value": current_value[step]}
+		TYPE_OBJECT:
+			return _resolve_debug_object_path_step(current_value, step)
+	return {"ok": false}
+
+func _resolve_debug_object_path_step(current_value: Variant, step: String) -> Dictionary:
+	if typeof(current_value) != TYPE_OBJECT or current_value == null:
+		return {"ok": false}
+	var object_value: Object = current_value
+	if not is_instance_valid(object_value):
+		return {"ok": false}
+	if step == "@class_name":
+		return {"ok": true, "value": object_value.get_class()}
+	if step == "@instance_id":
+		return {"ok": true, "value": object_value.get_instance_id()}
+	if step == "@script_path":
+		var script: Script = object_value.get_script() as Script
+		return {"ok": true, "value": String(script.resource_path) if script else ""}
+	if step == "@node_path" and object_value is Node:
+		var node_value: Node = object_value as Node
+		var node_path: String = str(node_value.get_path())
+		if node_path.is_empty() and not String(node_value.name).is_empty():
+			node_path = "/" + String(node_value.name)
+		return {"ok": true, "value": node_path}
+	if step == "@resource_path" and object_value is Resource:
+		return {"ok": true, "value": String((object_value as Resource).resource_path)}
+	for property_info in object_value.get_property_list():
+		var property_name: String = str(property_info.get("name", ""))
+		if property_name != step:
+			continue
+		if property_name == "script" or property_name.begins_with("_") or property_name.contains("/"):
+			return {"ok": false}
+		var usage: int = int(property_info.get("usage", 0))
+		var include_property: bool = (usage & PROPERTY_USAGE_SCRIPT_VARIABLE) != 0 or (usage & PROPERTY_USAGE_STORAGE) != 0
+		if not include_property:
+			return {"ok": false}
+		return {"ok": true, "value": object_value.get(property_name)}
+	return {"ok": false}
+
+func _register_evaluate_debug_expression(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"evaluate_debug_expression",
+		"Evaluate an expression in the paused script debugger context for a given frame.",
+		{
+			"type": "object",
+			"properties": {
+				"expression": {"type": "string"},
+				"frame": {"type": "integer", "default": 0},
+				"session_id": {"type": "integer", "description": "Optional debugger session id. Omit or use -1 for all active sessions."}
+			},
+			"required": ["expression"]
+		},
+		Callable(self, "_tool_evaluate_debug_expression"),
+		{"type": "object", "properties": {"status": {"type": "string"}, "expression": {"type": "string"}, "frame": {"type": "integer"}, "type": {"type": "string"}, "value": {}, "has_children": {"type": "boolean"}, "refresh_result": {"type": "object"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_evaluate_debug_expression(params: Dictionary) -> Dictionary:
+	var expression: String = str(params.get("expression", "")).strip_edges()
+	if expression.is_empty():
+		return {"error": "Missing required parameter: expression"}
+	var frame: int = max(0, int(params.get("frame", 0)))
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	var refresh_result: Dictionary = bridge.request_evaluate(expression, frame, int(params.get("session_id", -1)))
+	if refresh_result.has("error"):
+		return refresh_result
+	var evaluation: Variant = bridge.get_latest_evaluation(expression)
+	if evaluation == null:
+		return {
+			"status": "pending",
+			"expression": expression,
+			"frame": frame,
+			"refresh_result": refresh_result
+		}
+	var value: Variant = evaluation.get("value", null) if evaluation is Dictionary else evaluation
+	return {
+		"status": "success",
+		"expression": expression,
+		"frame": frame,
+		"type": str(evaluation.get("type", "")),
+		"value": _serialize_runtime_value(value),
+		"variables_reference": bridge.get_evaluation_variables_reference(expression),
+		"named_variables": _debug_named_variable_count(value),
+		"indexed_variables": _debug_indexed_variable_count(value),
+		"has_children": _debug_value_has_children(value),
+		"refresh_result": refresh_result
+	}
+
+func _debug_scope_presentation_hint(scope_name: String) -> String:
+	match scope_name:
+		"local":
+			return "locals"
+		"member":
+			return "members"
+		"global":
+			return "globals"
+		"constant":
+			return "constants"
+		_:
+			return "unknown"
+
+func _debug_named_variable_count(value: Variant) -> int:
+	match typeof(value):
+		TYPE_DICTIONARY:
+			return value.size()
+		TYPE_VECTOR2, TYPE_VECTOR2I:
+			return 2
+		TYPE_VECTOR3, TYPE_VECTOR3I, TYPE_RECT2, TYPE_RECT2I, TYPE_AABB, TYPE_BASIS:
+			return 3
+		TYPE_PLANE, TYPE_TRANSFORM3D:
+			return 2
+		TYPE_TRANSFORM2D:
+			return 3
+		TYPE_VECTOR4, TYPE_VECTOR4I, TYPE_PROJECTION, TYPE_COLOR, TYPE_QUATERNION:
+			return 4
+		TYPE_OBJECT:
+			return _expand_debug_object_entries(value, []).size()
+		_:
+			return 0
+
+func _debug_indexed_variable_count(value: Variant) -> int:
+	match typeof(value):
+		TYPE_ARRAY, TYPE_PACKED_BYTE_ARRAY, TYPE_PACKED_INT32_ARRAY, TYPE_PACKED_INT64_ARRAY, TYPE_PACKED_FLOAT32_ARRAY, TYPE_PACKED_FLOAT64_ARRAY, TYPE_PACKED_STRING_ARRAY, TYPE_PACKED_VECTOR2_ARRAY, TYPE_PACKED_VECTOR3_ARRAY, TYPE_PACKED_COLOR_ARRAY, TYPE_PACKED_VECTOR4_ARRAY:
+			return value.size() + 1
+		_:
+			return 0
+
+func _expand_debug_value_entries(value: Variant, parent_path: Array) -> Array:
+	var entries: Array = []
+	if value is Array:
+		entries.append({
+			"name": "size",
+			"path": parent_path + ["size"],
+			"type": "int",
+			"value": value.size(),
+			"has_children": false
+		})
+		for index in range(value.size()):
+			var item: Variant = value[index]
+			entries.append({
+				"name": str(index),
+				"path": parent_path + [str(index)],
+				"type": type_string(typeof(item)),
+				"value": _serialize_runtime_value(item),
+				"has_children": _debug_value_has_children(item)
+			})
+	elif value is Dictionary:
+		for key in value.keys():
+			var item: Variant = value[key]
+			entries.append({
+				"name": str(key),
+				"path": parent_path + [str(key)],
+				"type": type_string(typeof(item)),
+				"value": _serialize_runtime_value(item),
+				"has_children": _debug_value_has_children(item)
+			})
+	else:
+		match typeof(value):
+			TYPE_PACKED_BYTE_ARRAY, TYPE_PACKED_INT32_ARRAY, TYPE_PACKED_INT64_ARRAY, TYPE_PACKED_FLOAT32_ARRAY, TYPE_PACKED_FLOAT64_ARRAY, TYPE_PACKED_STRING_ARRAY, TYPE_PACKED_VECTOR2_ARRAY, TYPE_PACKED_VECTOR3_ARRAY, TYPE_PACKED_COLOR_ARRAY, TYPE_PACKED_VECTOR4_ARRAY:
+				entries.append({
+					"name": "size",
+					"path": parent_path + ["size"],
+					"type": "int",
+					"value": value.size(),
+					"has_children": false
+				})
+				for index in range(value.size()):
+					var packed_item: Variant = value[index]
+					entries.append({
+						"name": str(index),
+						"path": parent_path + [str(index)],
+						"type": type_string(typeof(packed_item)),
+						"value": _serialize_runtime_value(packed_item),
+						"has_children": _debug_value_has_children(packed_item)
+					})
+				return entries
+		var vector_entries: Array = _expand_debug_struct_fields(value, parent_path)
+		if not vector_entries.is_empty():
+			return vector_entries
+		if typeof(value) == TYPE_OBJECT:
+			return _expand_debug_object_entries(value, parent_path)
+	return entries
+
+func _expand_debug_struct_fields(value: Variant, parent_path: Array) -> Array:
+	var entries: Array = []
+	match typeof(value):
+		TYPE_VECTOR2:
+			entries.append_array([
+				{"name": "x", "path": parent_path + ["x"], "type": "float", "value": value.x, "has_children": false},
+				{"name": "y", "path": parent_path + ["y"], "type": "float", "value": value.y, "has_children": false}
+			])
+		TYPE_VECTOR2I:
+			entries.append_array([
+				{"name": "x", "path": parent_path + ["x"], "type": "int", "value": value.x, "has_children": false},
+				{"name": "y", "path": parent_path + ["y"], "type": "int", "value": value.y, "has_children": false}
+			])
+		TYPE_VECTOR3:
+			entries.append_array([
+				{"name": "x", "path": parent_path + ["x"], "type": "float", "value": value.x, "has_children": false},
+				{"name": "y", "path": parent_path + ["y"], "type": "float", "value": value.y, "has_children": false},
+				{"name": "z", "path": parent_path + ["z"], "type": "float", "value": value.z, "has_children": false}
+			])
+		TYPE_VECTOR3I:
+			entries.append_array([
+				{"name": "x", "path": parent_path + ["x"], "type": "int", "value": value.x, "has_children": false},
+				{"name": "y", "path": parent_path + ["y"], "type": "int", "value": value.y, "has_children": false},
+				{"name": "z", "path": parent_path + ["z"], "type": "int", "value": value.z, "has_children": false}
+			])
+		TYPE_VECTOR4:
+			entries.append_array([
+				{"name": "x", "path": parent_path + ["x"], "type": "float", "value": value.x, "has_children": false},
+				{"name": "y", "path": parent_path + ["y"], "type": "float", "value": value.y, "has_children": false},
+				{"name": "z", "path": parent_path + ["z"], "type": "float", "value": value.z, "has_children": false},
+				{"name": "w", "path": parent_path + ["w"], "type": "float", "value": value.w, "has_children": false}
+			])
+		TYPE_VECTOR4I:
+			entries.append_array([
+				{"name": "x", "path": parent_path + ["x"], "type": "int", "value": value.x, "has_children": false},
+				{"name": "y", "path": parent_path + ["y"], "type": "int", "value": value.y, "has_children": false},
+				{"name": "z", "path": parent_path + ["z"], "type": "int", "value": value.z, "has_children": false},
+				{"name": "w", "path": parent_path + ["w"], "type": "int", "value": value.w, "has_children": false}
+			])
+		TYPE_PROJECTION:
+			entries.append_array([
+				{"name": "x", "path": parent_path + ["x"], "type": "Vector4", "value": _serialize_runtime_value(value.x), "has_children": true},
+				{"name": "y", "path": parent_path + ["y"], "type": "Vector4", "value": _serialize_runtime_value(value.y), "has_children": true},
+				{"name": "z", "path": parent_path + ["z"], "type": "Vector4", "value": _serialize_runtime_value(value.z), "has_children": true},
+				{"name": "w", "path": parent_path + ["w"], "type": "Vector4", "value": _serialize_runtime_value(value.w), "has_children": true}
+			])
+		TYPE_PLANE:
+			entries.append_array([
+				{"name": "normal", "path": parent_path + ["normal"], "type": "Vector3", "value": _serialize_runtime_value(value.normal), "has_children": true},
+				{"name": "d", "path": parent_path + ["d"], "type": "float", "value": value.d, "has_children": false}
+			])
+		TYPE_RECT2:
+			entries.append_array([
+				{"name": "position", "path": parent_path + ["position"], "type": "Vector2", "value": _serialize_runtime_value(value.position), "has_children": true},
+				{"name": "size", "path": parent_path + ["size"], "type": "Vector2", "value": _serialize_runtime_value(value.size), "has_children": true},
+				{"name": "end", "path": parent_path + ["end"], "type": "Vector2", "value": _serialize_runtime_value(value.end), "has_children": true}
+			])
+		TYPE_RECT2I:
+			entries.append_array([
+				{"name": "position", "path": parent_path + ["position"], "type": "Vector2i", "value": _serialize_runtime_value(value.position), "has_children": true},
+				{"name": "size", "path": parent_path + ["size"], "type": "Vector2i", "value": _serialize_runtime_value(value.size), "has_children": true},
+				{"name": "end", "path": parent_path + ["end"], "type": "Vector2i", "value": _serialize_runtime_value(value.end), "has_children": true}
+			])
+		TYPE_AABB:
+			entries.append_array([
+				{"name": "position", "path": parent_path + ["position"], "type": "Vector3", "value": _serialize_runtime_value(value.position), "has_children": true},
+				{"name": "size", "path": parent_path + ["size"], "type": "Vector3", "value": _serialize_runtime_value(value.size), "has_children": true},
+				{"name": "end", "path": parent_path + ["end"], "type": "Vector3", "value": _serialize_runtime_value(value.end), "has_children": true}
+			])
+		TYPE_BASIS:
+			entries.append_array([
+				{"name": "x", "path": parent_path + ["x"], "type": "Vector3", "value": _serialize_runtime_value(value.x), "has_children": true},
+				{"name": "y", "path": parent_path + ["y"], "type": "Vector3", "value": _serialize_runtime_value(value.y), "has_children": true},
+				{"name": "z", "path": parent_path + ["z"], "type": "Vector3", "value": _serialize_runtime_value(value.z), "has_children": true}
+			])
+		TYPE_COLOR:
+			entries.append_array([
+				{"name": "r", "path": parent_path + ["r"], "type": "float", "value": value.r, "has_children": false},
+				{"name": "g", "path": parent_path + ["g"], "type": "float", "value": value.g, "has_children": false},
+				{"name": "b", "path": parent_path + ["b"], "type": "float", "value": value.b, "has_children": false},
+				{"name": "a", "path": parent_path + ["a"], "type": "float", "value": value.a, "has_children": false}
+			])
+		TYPE_QUATERNION:
+			entries.append_array([
+				{"name": "x", "path": parent_path + ["x"], "type": "float", "value": value.x, "has_children": false},
+				{"name": "y", "path": parent_path + ["y"], "type": "float", "value": value.y, "has_children": false},
+				{"name": "z", "path": parent_path + ["z"], "type": "float", "value": value.z, "has_children": false},
+				{"name": "w", "path": parent_path + ["w"], "type": "float", "value": value.w, "has_children": false}
+			])
+		TYPE_TRANSFORM2D:
+			entries.append_array([
+				{"name": "x", "path": parent_path + ["x"], "type": "Vector2", "value": _serialize_runtime_value(value.x), "has_children": true},
+				{"name": "y", "path": parent_path + ["y"], "type": "Vector2", "value": _serialize_runtime_value(value.y), "has_children": true},
+				{"name": "origin", "path": parent_path + ["origin"], "type": "Vector2", "value": _serialize_runtime_value(value.origin), "has_children": true}
+			])
+		TYPE_TRANSFORM3D:
+			entries.append_array([
+				{"name": "basis", "path": parent_path + ["basis"], "type": "Basis", "value": _serialize_runtime_value(value.basis), "has_children": true},
+				{"name": "origin", "path": parent_path + ["origin"], "type": "Vector3", "value": _serialize_runtime_value(value.origin), "has_children": true}
+			])
+	return entries
+
+func _expand_debug_object_entries(value: Variant, parent_path: Array) -> Array:
+	if typeof(value) != TYPE_OBJECT or value == null:
+		return []
+	var object_value: Object = value
+	if not is_instance_valid(object_value):
+		return []
+	var entries: Array = []
+	var seen: Dictionary = {}
+	entries.append({
+		"name": "@class_name",
+		"path": parent_path + ["@class_name"],
+		"type": "String",
+		"value": object_value.get_class(),
+		"has_children": false
+	})
+	entries.append({
+		"name": "@instance_id",
+		"path": parent_path + ["@instance_id"],
+		"type": "int",
+		"value": object_value.get_instance_id(),
+		"has_children": false
+	})
+	var script: Script = object_value.get_script() as Script
+	entries.append({
+		"name": "@script_path",
+		"path": parent_path + ["@script_path"],
+		"type": "String",
+		"value": String(script.resource_path) if script else "",
+		"has_children": false
+	})
+	if object_value is Node:
+		var node_value: Node = object_value as Node
+		var node_path: String = str(node_value.get_path())
+		if node_path.is_empty() and not String(node_value.name).is_empty():
+			node_path = "/" + String(node_value.name)
+		entries.append({
+			"name": "@node_path",
+			"path": parent_path + ["@node_path"],
+			"type": "NodePath",
+			"value": node_path,
+			"has_children": false
+		})
+	elif object_value is Resource:
+		entries.append({
+			"name": "@resource_path",
+			"path": parent_path + ["@resource_path"],
+			"type": "String",
+			"value": String((object_value as Resource).resource_path),
+			"has_children": false
+		})
+	for property_info in object_value.get_property_list():
+		var property_name: String = str(property_info.get("name", ""))
+		if property_name.is_empty() or seen.has(property_name):
+			continue
+		if property_name == "script" or property_name.begins_with("_") or property_name.contains("/"):
+			continue
+		var usage: int = int(property_info.get("usage", 0))
+		var include_property: bool = (usage & PROPERTY_USAGE_SCRIPT_VARIABLE) != 0 or (usage & PROPERTY_USAGE_STORAGE) != 0
+		if not include_property:
+			continue
+		seen[property_name] = true
+		var property_value: Variant = object_value.get(property_name)
+		entries.append({
+			"name": property_name,
+			"path": parent_path + [property_name],
+			"type": type_string(typeof(property_value)),
+			"value": _serialize_runtime_value(property_value),
+			"has_children": _debug_value_has_children(property_value)
+		})
+	return entries
+
+func _debug_value_has_children(value: Variant) -> bool:
+	match typeof(value):
+		TYPE_ARRAY, TYPE_DICTIONARY, TYPE_VECTOR2, TYPE_VECTOR2I, TYPE_VECTOR3, TYPE_VECTOR3I, TYPE_VECTOR4, TYPE_VECTOR4I, TYPE_PROJECTION, TYPE_PLANE, TYPE_RECT2, TYPE_RECT2I, TYPE_AABB, TYPE_BASIS, TYPE_COLOR, TYPE_QUATERNION, TYPE_TRANSFORM2D, TYPE_TRANSFORM3D:
+			return true
+		TYPE_OBJECT:
+			return not _expand_debug_object_entries(value, []).is_empty()
+		_:
+			return false
+
+func _serialize_runtime_value(value: Variant) -> Variant:
+	if value == null:
+		return null
+	match typeof(value):
+		TYPE_BOOL, TYPE_INT, TYPE_FLOAT, TYPE_STRING:
+			return value
+		TYPE_STRING_NAME:
+			return str(value)
+		TYPE_NODE_PATH:
+			return str(value)
+		TYPE_RID:
+			return {
+				"id": value.get_id(),
+				"valid": value.is_valid()
+			}
+		TYPE_CALLABLE:
+			return _serialize_runtime_callable(value)
+		TYPE_SIGNAL:
+			return _serialize_runtime_signal(value)
+		TYPE_VECTOR2:
+			return {"x": value.x, "y": value.y}
+		TYPE_VECTOR2I:
+			return {"x": value.x, "y": value.y}
+		TYPE_VECTOR3:
+			return {"x": value.x, "y": value.y, "z": value.z}
+		TYPE_VECTOR3I:
+			return {"x": value.x, "y": value.y, "z": value.z}
+		TYPE_VECTOR4:
+			return {"x": value.x, "y": value.y, "z": value.z, "w": value.w}
+		TYPE_VECTOR4I:
+			return {"x": value.x, "y": value.y, "z": value.z, "w": value.w}
+		TYPE_PROJECTION:
+			return {
+				"x": _serialize_runtime_value(value.x),
+				"y": _serialize_runtime_value(value.y),
+				"z": _serialize_runtime_value(value.z),
+				"w": _serialize_runtime_value(value.w)
+			}
+		TYPE_PLANE:
+			return {
+				"normal": _serialize_runtime_value(value.normal),
+				"d": value.d
+			}
+		TYPE_RECT2:
+			return {
+				"position": _serialize_runtime_value(value.position),
+				"size": _serialize_runtime_value(value.size),
+				"end": _serialize_runtime_value(value.end)
+			}
+		TYPE_RECT2I:
+			return {
+				"position": _serialize_runtime_value(value.position),
+				"size": _serialize_runtime_value(value.size),
+				"end": _serialize_runtime_value(value.end)
+			}
+		TYPE_AABB:
+			return {
+				"position": _serialize_runtime_value(value.position),
+				"size": _serialize_runtime_value(value.size),
+				"end": _serialize_runtime_value(value.end)
+			}
+		TYPE_BASIS:
+			return {
+				"x": _serialize_runtime_value(value.x),
+				"y": _serialize_runtime_value(value.y),
+				"z": _serialize_runtime_value(value.z)
+			}
+		TYPE_COLOR:
+			return {"r": value.r, "g": value.g, "b": value.b, "a": value.a}
+		TYPE_QUATERNION:
+			return {"x": value.x, "y": value.y, "z": value.z, "w": value.w}
+		TYPE_TRANSFORM2D:
+			return {
+				"x": _serialize_runtime_value(value.x),
+				"y": _serialize_runtime_value(value.y),
+				"origin": _serialize_runtime_value(value.origin)
+			}
+		TYPE_TRANSFORM3D:
+			return {
+				"basis": _serialize_runtime_value(value.basis),
+				"origin": _serialize_runtime_value(value.origin)
+			}
+		TYPE_OBJECT:
+			return _serialize_runtime_object(value)
+		TYPE_ARRAY:
+			var array_result: Array = []
+			for item in value:
+				array_result.append(_serialize_runtime_value(item))
+			return array_result
+		TYPE_DICTIONARY:
+			var dict_result: Dictionary = {}
+			for key in value:
+				dict_result[str(key)] = _serialize_runtime_value(value[key])
+			return dict_result
+		_:
+			return str(value)
+
+func _serialize_runtime_object(value: Variant) -> Dictionary:
+	if typeof(value) != TYPE_OBJECT or value == null:
+		return {}
+	var object_value: Object = value
+	if not is_instance_valid(object_value):
+		return {"class_name": "<freed>"}
+	var properties: Dictionary = {}
+	for entry in _expand_debug_object_entries(object_value, []):
+		properties[str(entry.get("name", ""))] = entry.get("value", null)
+	var serialized: Dictionary = {
+		"class_name": object_value.get_class(),
+		"instance_id": object_value.get_instance_id(),
+		"script_path": "",
+		"properties": properties
+	}
+	var script: Script = object_value.get_script() as Script
+	if script:
+		serialized["script_path"] = String(script.resource_path)
+	if object_value is Node:
+		var node_value: Node = object_value as Node
+		var node_path: String = str(node_value.get_path())
+		if node_path.is_empty() and not String(node_value.name).is_empty():
+			node_path = "/" + String(node_value.name)
+		serialized["node_path"] = node_path
+	elif object_value is Resource:
+		serialized["resource_path"] = String((object_value as Resource).resource_path)
+	return serialized
+
+func _serialize_runtime_callable(value: Variant) -> Dictionary:
+	if typeof(value) != TYPE_CALLABLE:
+		return {}
+	var callable_value: Callable = value
+	var target: Object = callable_value.get_object()
+	return {
+		"method": callable_value.get_method(),
+		"object_id": callable_value.get_object_id(),
+		"object_class": target.get_class() if is_instance_valid(target) else "",
+		"is_custom": callable_value.is_custom(),
+		"is_standard": callable_value.is_standard(),
+		"is_null": callable_value.is_null(),
+		"is_valid": callable_value.is_valid(),
+		"bound_argument_count": callable_value.get_bound_arguments_count()
+	}
+
+func _serialize_runtime_signal(value: Variant) -> Dictionary:
+	if typeof(value) != TYPE_SIGNAL:
+		return {}
+	var signal_value: Signal = value
+	var target: Object = signal_value.get_object()
+	return {
+		"name": signal_value.get_name(),
+		"object_id": target.get_instance_id() if is_instance_valid(target) else 0,
+		"object_class": target.get_class() if is_instance_valid(target) else "",
+		"is_null": signal_value.is_null()
+	}
+
 func _register_install_runtime_probe(server_core: RefCounted) -> void:
 	server_core.register_tool(
 		"install_runtime_probe",
@@ -416,7 +1290,7 @@ func _tool_install_runtime_probe(params: Dictionary) -> Dictionary:
 		return {"error": "node_name cannot be empty"}
 	var existing: Node = scene_root.get_node_or_null(NodePath(node_name))
 	if existing:
-		return {"status": "already_installed", "node_path": str(existing.get_path()), "persistent": existing.owner != null}
+		return {"status": "already_installed", "node_path": _to_runtime_friendly_path(existing, scene_root), "persistent": existing.owner != null}
 	var script: Script = load("res://addons/godot_mcp/runtime/mcp_runtime_probe.gd")
 	if not script:
 		return {"error": "Failed to load runtime probe script"}
@@ -428,7 +1302,7 @@ func _tool_install_runtime_probe(params: Dictionary) -> Dictionary:
 	if persistent:
 		probe.owner = scene_root
 	editor_interface.mark_scene_as_unsaved()
-	return {"status": "success", "node_path": str(probe.get_path()), "persistent": persistent}
+	return {"status": "success", "node_path": _to_runtime_friendly_path(probe, scene_root), "persistent": persistent}
 
 func _register_remove_runtime_probe(server_core: RefCounted) -> void:
 	server_core.register_tool(
@@ -457,7 +1331,7 @@ func _tool_remove_runtime_probe(params: Dictionary) -> Dictionary:
 	var existing: Node = scene_root.get_node_or_null(NodePath(node_name))
 	if not existing:
 		return {"status": "not_installed", "removed_node": ""}
-	var removed_path: String = str(existing.get_path())
+	var removed_path: String = _to_runtime_friendly_path(existing, scene_root)
 	scene_root.remove_child(existing)
 	existing.queue_free()
 	editor_interface.mark_scene_as_unsaved()
@@ -517,6 +1391,208 @@ func _tool_send_debug_command(params: Dictionary) -> Dictionary:
 		result["note"] = "Godot may route stack responses to the built-in ScriptEditorDebugger UI instead of EditorDebuggerPlugin captures."
 	return result
 
+func _register_debug_step_into(server_core: RefCounted) -> void:
+	_register_debug_execution_control_tool(
+		server_core,
+		"debug_step_into",
+		"Step into the next statement in the active Godot script debugger session.",
+		"step",
+		"breaked"
+	)
+
+func _register_debug_step_over(server_core: RefCounted) -> void:
+	_register_debug_execution_control_tool(
+		server_core,
+		"debug_step_over",
+		"Step over the next statement in the active Godot script debugger session.",
+		"next",
+		"breaked"
+	)
+
+func _register_debug_step_out(server_core: RefCounted) -> void:
+	_register_debug_execution_control_tool(
+		server_core,
+		"debug_step_out",
+		"Step out of the current frame in the active Godot script debugger session.",
+		"out",
+		"breaked"
+	)
+
+func _register_debug_continue(server_core: RefCounted) -> void:
+	_register_debug_execution_control_tool(
+		server_core,
+		"debug_continue",
+		"Resume execution in the active Godot script debugger session.",
+		"continue",
+		"running"
+	)
+
+func _register_debug_execution_control_tool(server_core: RefCounted, tool_name: String, description: String, command: String, target_state: String) -> void:
+	server_core.register_tool(
+		tool_name,
+		description,
+		{
+			"type": "object",
+			"properties": {
+				"session_id": {"type": "integer", "description": "Optional debugger session id. Omit or use -1 for all active sessions."}
+			}
+		},
+		func(params: Dictionary) -> Dictionary:
+			return _tool_debug_execution_control(params, command, target_state),
+		{
+			"type": "object",
+			"properties": {
+				"status": {"type": "string"},
+				"sessions_updated": {"type": "integer"},
+				"command": {"type": "string"},
+				"target_state": {"type": "string"}
+			}
+		},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_debug_execution_control(params: Dictionary, command: String, target_state: String) -> Dictionary:
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	var result: Dictionary = bridge.send_debugger_message(command, [], params.get("session_id", -1))
+	result["command"] = command
+	result["target_state"] = target_state
+	return result
+
+func _register_debug_step_into_and_wait(server_core: RefCounted) -> void:
+	_register_debug_execution_wait_tool(server_core, "debug_step_into_and_wait", "Send a step-into command and wait for the debugger to report a breaked state.", "step", "breaked")
+
+func _register_debug_step_over_and_wait(server_core: RefCounted) -> void:
+	_register_debug_execution_wait_tool(server_core, "debug_step_over_and_wait", "Send a step-over command and wait for the debugger to report a breaked state.", "next", "breaked")
+
+func _register_debug_step_out_and_wait(server_core: RefCounted) -> void:
+	_register_debug_execution_wait_tool(server_core, "debug_step_out_and_wait", "Send a step-out command and wait for the debugger to report a breaked state.", "out", "breaked")
+
+func _register_debug_continue_and_wait(server_core: RefCounted) -> void:
+	_register_debug_execution_wait_tool(server_core, "debug_continue_and_wait", "Send a continue command and wait for the debugger to report a running state.", "continue", "running")
+
+func _register_debug_execution_wait_tool(server_core: RefCounted, tool_name: String, description: String, command: String, target_state: String) -> void:
+	server_core.register_tool(
+		tool_name,
+		description,
+		{
+			"type": "object",
+			"properties": {
+				"session_id": {"type": "integer", "description": "Optional debugger session id. Omit or use -1 for all active sessions."},
+				"timeout_ms": {"type": "integer", "default": 3000},
+				"poll_interval_ms": {"type": "integer", "default": 100}
+			}
+		},
+		func(params: Dictionary) -> Dictionary:
+			return _tool_debug_execution_and_wait(params, command, target_state),
+		{"type": "object", "properties": {"status": {"type": "string"}, "command": {"type": "string"}, "target_state": {"type": "string"}, "matched_state": {"type": "object"}, "sessions": {"type": "array"}, "state_events": {"type": "array"}, "attempts": {"type": "integer"}, "elapsed_ms": {"type": "integer"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_debug_execution_and_wait(params: Dictionary, command: String, target_state: String) -> Dictionary:
+	var command_result: Dictionary = _tool_debug_execution_control(params, command, target_state)
+	if command_result.has("error"):
+		return command_result
+	var wait_params: Dictionary = {
+		"target_state": target_state,
+		"session_id": params.get("session_id", -1),
+		"timeout_ms": params.get("timeout_ms", 3000),
+		"poll_interval_ms": params.get("poll_interval_ms", 100)
+	}
+	var wait_result: Dictionary = _tool_await_debugger_state(wait_params)
+	wait_result["command"] = command
+	wait_result["target_state"] = target_state
+	wait_result["command_result"] = command_result
+	return wait_result
+
+func _register_await_debugger_state(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"await_debugger_state",
+		"Check whether debugger sessions have reached the target execution state using the latest bridge snapshots. Call repeatedly from the client after continue/step/next/out/break actions.",
+		{
+			"type": "object",
+			"properties": {
+				"target_state": {"type": "string", "enum": ["breaked", "running", "stopped"], "default": "breaked"},
+				"session_id": {"type": "integer", "description": "Optional debugger session id. Omit or use -1 for any session."},
+				"timeout_ms": {"type": "integer", "default": 3000},
+				"poll_interval_ms": {"type": "integer", "default": 100}
+			}
+		},
+		Callable(self, "_tool_await_debugger_state"),
+		{"type": "object", "properties": {"status": {"type": "string"}, "target_state": {"type": "string"}, "matched_state": {"type": "object"}, "sessions": {"type": "array"}, "state_events": {"type": "array"}, "attempts": {"type": "integer"}, "elapsed_ms": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false}
+	)
+
+func _tool_await_debugger_state(params: Dictionary) -> Dictionary:
+	var bridge: RefCounted = _get_debugger_bridge()
+	if not bridge:
+		return {"error": "Debugger bridge is not available"}
+	var target_state: String = str(params.get("target_state", "breaked"))
+	var timeout_ms: int = max(1, int(params.get("timeout_ms", 3000)))
+	var session_id: int = int(params.get("session_id", -1))
+	var last_sessions: Array = bridge.get_sessions_info()
+	var state_events: Array = bridge.get_state_events(20, 0, "desc").get("events", [])
+	var matched_state: Dictionary = _find_matching_debug_state(target_state, last_sessions, state_events, session_id)
+	if not matched_state.is_empty():
+		return {
+			"status": "success",
+			"target_state": target_state,
+			"matched_state": matched_state,
+			"sessions": last_sessions,
+			"state_events": state_events,
+			"attempts": 1,
+			"elapsed_ms": 0
+		}
+	return {
+		"status": "pending",
+		"target_state": target_state,
+		"matched_state": {},
+		"sessions": last_sessions,
+		"state_events": state_events,
+		"attempts": 1,
+		"elapsed_ms": timeout_ms
+	}
+
+func _find_matching_debug_state(target_state: String, sessions: Array, state_events: Array, session_id: int) -> Dictionary:
+	match target_state:
+		"breaked":
+			for session in sessions:
+				if session_id >= 0 and int(session.get("session_id", -1)) != session_id:
+					continue
+				if session.get("breaked", false):
+					var result: Dictionary = session.duplicate(true)
+					result["state"] = "breaked"
+					for event in state_events:
+						if event.get("state", "") == "breaked":
+							result["reason"] = event.get("reason", "")
+							result["has_stackdump"] = event.get("has_stackdump", false)
+							break
+					return result
+		"running":
+			for session in sessions:
+				if session_id >= 0 and int(session.get("session_id", -1)) != session_id:
+					continue
+				if session.get("active", false) and not session.get("breaked", false):
+					var result: Dictionary = session.duplicate(true)
+					result["state"] = "running"
+					for event in state_events:
+						if event.get("state", "") == "running":
+							result["reason"] = event.get("reason", "")
+							break
+					return result
+		"stopped":
+			if session_id >= 0:
+				for session in sessions:
+					if int(session.get("session_id", -1)) == session_id:
+						return {}
+			if sessions.is_empty():
+				for event in state_events:
+					if event.get("state", "") == "stopped":
+						return event.duplicate(true)
+				return {"state": "stopped"}
+	return {}
+
 func _register_get_runtime_info(server_core: RefCounted) -> void:
 	server_core.register_tool(
 		"get_runtime_info",
@@ -533,12 +1609,96 @@ func _tool_get_runtime_info(params: Dictionary) -> Dictionary:
 	if result.get("status", "") == "pending":
 		var bridge: RefCounted = _get_debugger_bridge()
 		if bridge:
+			var latest_runtime_info: Variant = bridge.get_latest_message_payload("mcp:runtime_info")
+			if latest_runtime_info is Dictionary:
+				var stale_runtime: Dictionary = latest_runtime_info.duplicate(true)
+				stale_runtime["status"] = "stale"
+				stale_runtime["refresh_result"] = result.get("refresh_result", {})
+				return stale_runtime
 			var probe_ready: Variant = bridge.get_latest_message_payload("mcp:probe_ready")
 			if probe_ready is Dictionary:
 				var fallback: Dictionary = probe_ready.duplicate(true)
 				fallback["status"] = "stale"
 				fallback["refresh_result"] = result.get("refresh_result", {})
 				return fallback
+	return result
+
+func _register_get_runtime_performance_snapshot(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_runtime_performance_snapshot",
+		"Capture a runtime performance snapshot from the running game, including frame timing, object counts, and memory usage.",
+		{"type": "object", "properties": {"session_id": {"type": "integer"}, "timeout_ms": {"type": "integer", "default": 1500}}},
+		Callable(self, "_tool_get_runtime_performance_snapshot"),
+		{"type": "object", "properties": {"fps": {"type": "number"}, "frame_time_sec": {"type": "number"}, "physics_frame_time_sec": {"type": "number"}, "object_count": {"type": "integer"}, "resource_count": {"type": "integer"}, "rendered_objects_in_frame": {"type": "integer"}, "memory_static_bytes": {"type": "integer"}, "memory_static_mb": {"type": "number"}, "current_scene": {"type": "string"}, "node_count": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_get_runtime_performance_snapshot(params: Dictionary) -> Dictionary:
+	var result: Dictionary = _request_runtime_probe("get_performance_snapshot", [], ["mcp:performance_snapshot"], params)
+	if result.get("status", "") == "pending":
+		var bridge: RefCounted = _get_debugger_bridge()
+		if bridge:
+			var latest_snapshot: Variant = bridge.get_latest_message_payload("mcp:performance_snapshot")
+			if latest_snapshot is Dictionary:
+				var stale_snapshot: Dictionary = latest_snapshot.duplicate(true)
+				stale_snapshot["status"] = "stale"
+				stale_snapshot["refresh_result"] = result.get("refresh_result", {})
+				return stale_snapshot
+	return result
+
+func _register_get_runtime_memory_trend(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_runtime_memory_trend",
+		"Capture a short runtime memory and object-count trend from the running game over multiple samples.",
+		{
+			"type": "object",
+			"properties": {
+				"sample_count": {"type": "integer", "default": 5},
+				"sample_interval_ms": {"type": "integer", "default": 100},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 3000}
+			}
+		},
+		Callable(self, "_tool_get_runtime_memory_trend"),
+		{
+			"type": "object",
+			"properties": {
+				"sample_count": {"type": "integer"},
+				"sample_interval_ms": {"type": "integer"},
+				"memory_static_delta_bytes": {"type": "integer"},
+				"object_count_delta": {"type": "integer"},
+				"resource_count_delta": {"type": "integer"},
+				"current_scene": {"type": "string"},
+				"samples": {"type": "array"}
+			}
+		},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_get_runtime_memory_trend(params: Dictionary) -> Dictionary:
+	var sample_count: int = max(int(params.get("sample_count", 5)), 1)
+	var sample_interval_ms: int = max(int(params.get("sample_interval_ms", 100)), 0)
+	var result: Dictionary = _request_runtime_probe(
+		"get_memory_trend",
+		[sample_count, sample_interval_ms],
+		["mcp:memory_trend"],
+		params,
+		{
+			"sample_count": sample_count,
+			"sample_interval_ms": sample_interval_ms
+		}
+	)
+	if result.get("status", "") == "pending":
+		var bridge: RefCounted = _get_debugger_bridge()
+		if bridge:
+			var latest_trend: Variant = bridge.get_latest_message_payload("mcp:memory_trend")
+			if latest_trend is Dictionary \
+					and int(latest_trend.get("sample_count", -1)) == sample_count \
+					and int(latest_trend.get("sample_interval_ms", -1)) == sample_interval_ms:
+				var stale_trend: Dictionary = latest_trend.duplicate(true)
+				stale_trend["status"] = "stale"
+				stale_trend["refresh_result"] = result.get("refresh_result", {})
+				return stale_trend
 	return result
 
 func _register_get_runtime_scene_tree(server_core: RefCounted) -> void:
@@ -579,6 +1739,62 @@ func _tool_inspect_runtime_node(params: Dictionary) -> Dictionary:
 	if node_path.is_empty():
 		return {"error": "Missing required parameter: node_path"}
 	return _request_runtime_probe("inspect_node", [node_path], ["mcp:node"], params, {"path": node_path})
+
+func _register_create_runtime_node(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"create_runtime_node",
+		"Create a new runtime node under an existing parent node in the running game.",
+		{
+			"type": "object",
+			"properties": {
+				"parent_path": {"type": "string", "description": "Runtime node path for the parent, e.g. /root/MainScene"},
+				"node_type": {"type": "string", "description": "Godot node class name to instantiate, e.g. Node2D or Sprite2D."},
+				"node_name": {"type": "string", "description": "Name for the new runtime node."},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["parent_path", "node_type", "node_name"]
+		},
+		Callable(self, "_tool_create_runtime_node"),
+		{"type": "object", "properties": {"parent_path": {"type": "string"}, "node_path": {"type": "string"}, "node_type": {"type": "string"}, "node_name": {"type": "string"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_create_runtime_node(params: Dictionary) -> Dictionary:
+	var parent_path: String = params.get("parent_path", "")
+	var node_type: String = params.get("node_type", "")
+	var node_name: String = params.get("node_name", "")
+	if parent_path.is_empty():
+		return {"error": "Missing required parameter: parent_path"}
+	if node_type.is_empty():
+		return {"error": "Missing required parameter: node_type"}
+	if node_name.is_empty():
+		return {"error": "Missing required parameter: node_name"}
+	return _request_runtime_probe("create_node", [parent_path, node_type, node_name], ["mcp:runtime_node_created"], params, {"node_path": parent_path.path_join(node_name)})
+
+func _register_delete_runtime_node(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"delete_runtime_node",
+		"Delete a runtime node from the running game. The runtime scene root and MCPRuntimeProbe node are protected.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string", "description": "Runtime node path to delete, e.g. /root/MainScene/Enemy"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path"]
+		},
+		Callable(self, "_tool_delete_runtime_node"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "node_type": {"type": "string"}}},
+		{"readOnlyHint": false, "destructiveHint": true, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_delete_runtime_node(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	return _request_runtime_probe("delete_node", [node_path], ["mcp:runtime_node_deleted"], params, {"node_path": node_path})
 
 func _register_update_runtime_node_property(server_core: RefCounted) -> void:
 	server_core.register_tool(
@@ -662,6 +1878,690 @@ func _tool_evaluate_runtime_expression(params: Dictionary) -> Dictionary:
 		return {"error": "Missing required parameter: expression"}
 	var payload: Array = [expression, params.get("node_path", "")]
 	return _request_runtime_probe("evaluate_expression", payload, ["mcp:expression_result"], params, {"expression": expression})
+
+func _register_simulate_runtime_input_event(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"simulate_runtime_input_event",
+		"Inject a structured InputEvent into the running game through Input.parse_input_event().",
+		{
+			"type": "object",
+			"properties": {
+				"event": {
+					"type": "object",
+					"description": "Structured input event payload. Supported types: action, key, mouse_button, mouse_motion."
+				},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["event"]
+		},
+		Callable(self, "_tool_simulate_runtime_input_event"),
+		{"type": "object", "properties": {"type": {"type": "string"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_simulate_runtime_input_event(params: Dictionary) -> Dictionary:
+	var event_payload: Variant = params.get("event", null)
+	if not (event_payload is Dictionary):
+		return {"error": "Missing required parameter: event"}
+	return _request_runtime_probe("simulate_input_event", [event_payload], ["mcp:input_event_simulated"], params)
+
+func _register_simulate_runtime_input_action(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"simulate_runtime_input_action",
+		"Inject an InputEventAction into the running game through Input.parse_input_event(). runtime_pressed is only meaningful when the action exists in InputMap.",
+		{
+			"type": "object",
+			"properties": {
+				"action_name": {"type": "string"},
+				"pressed": {"type": "boolean", "default": true},
+				"strength": {"type": "number", "default": 1.0},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["action_name"]
+		},
+		Callable(self, "_tool_simulate_runtime_input_action"),
+		{"type": "object", "properties": {"action_name": {"type": "string"}, "action_exists": {"type": "boolean"}, "pressed": {"type": "boolean"}, "strength": {"type": "number"}, "runtime_pressed": {"type": "boolean"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_simulate_runtime_input_action(params: Dictionary) -> Dictionary:
+	var action_name: String = params.get("action_name", "")
+	if action_name.is_empty():
+		return {"error": "Missing required parameter: action_name"}
+	var pressed: bool = bool(params.get("pressed", true))
+	var strength: float = float(params.get("strength", 1.0 if pressed else 0.0))
+	return _request_runtime_probe("simulate_input_action", [action_name, pressed, strength], ["mcp:input_action_simulated"], params, {"action_name": action_name})
+
+func _register_list_runtime_input_actions(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"list_runtime_input_actions",
+		"List InputMap actions available in the running game, including serialized input events.",
+		{
+			"type": "object",
+			"properties": {
+				"action_name": {"type": "string", "description": "Optional exact action name filter."},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			}
+		},
+		Callable(self, "_tool_list_runtime_input_actions"),
+		{"type": "object", "properties": {"actions": {"type": "array"}, "count": {"type": "integer"}, "filter": {"type": "string"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_list_runtime_input_actions(params: Dictionary) -> Dictionary:
+	var action_name: String = params.get("action_name", "")
+	return _request_runtime_probe("list_input_actions", [action_name], ["mcp:input_actions"], params, {"filter": action_name})
+
+func _register_upsert_runtime_input_action(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"upsert_runtime_input_action",
+		"Create or update an InputMap action in the running game. Supports replacing existing events.",
+		{
+			"type": "object",
+			"properties": {
+				"action_name": {"type": "string"},
+				"deadzone": {"type": "number", "default": 0.5},
+				"erase_existing": {"type": "boolean", "default": false},
+				"events": {"type": "array", "description": "Optional structured input event payloads to add to the action."},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["action_name"]
+		},
+		Callable(self, "_tool_upsert_runtime_input_action"),
+		{"type": "object", "properties": {"action_name": {"type": "string"}, "existed_before": {"type": "boolean"}, "deadzone": {"type": "number"}, "event_count": {"type": "integer"}, "events": {"type": "array"}, "added_events": {"type": "array"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_upsert_runtime_input_action(params: Dictionary) -> Dictionary:
+	var action_name: String = params.get("action_name", "")
+	if action_name.is_empty():
+		return {"error": "Missing required parameter: action_name"}
+	var deadzone: float = float(params.get("deadzone", 0.5))
+	var erase_existing: bool = bool(params.get("erase_existing", false))
+	var events: Array = params.get("events", [])
+	return _request_runtime_probe("upsert_input_action", [action_name, deadzone, erase_existing, events], ["mcp:input_action_updated"], params, {"action_name": action_name})
+
+func _register_remove_runtime_input_action(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"remove_runtime_input_action",
+		"Remove an InputMap action from the running game.",
+		{
+			"type": "object",
+			"properties": {
+				"action_name": {"type": "string"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["action_name"]
+		},
+		Callable(self, "_tool_remove_runtime_input_action"),
+		{"type": "object", "properties": {"action_name": {"type": "string"}, "removed": {"type": "boolean"}, "event_count": {"type": "integer"}}},
+		{"readOnlyHint": false, "destructiveHint": true, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_remove_runtime_input_action(params: Dictionary) -> Dictionary:
+	var action_name: String = params.get("action_name", "")
+	if action_name.is_empty():
+		return {"error": "Missing required parameter: action_name"}
+	return _request_runtime_probe("remove_input_action", [action_name], ["mcp:input_action_removed"], params, {"action_name": action_name})
+
+func _register_list_runtime_animations(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"list_runtime_animations",
+		"List animations available on a runtime AnimationPlayer node.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path"]
+		},
+		Callable(self, "_tool_list_runtime_animations"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "animations": {"type": "array"}, "count": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_list_runtime_animations(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	return _request_runtime_probe("list_animations", [node_path], ["mcp:animation_list"], params, {"node_path": node_path})
+
+func _register_play_runtime_animation(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"play_runtime_animation",
+		"Play an animation on a runtime AnimationPlayer node.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"animation_name": {"type": "string"},
+				"custom_blend": {"type": "number", "default": -1.0},
+				"custom_speed": {"type": "number", "default": 1.0},
+				"from_end": {"type": "boolean", "default": false},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path", "animation_name"]
+		},
+		Callable(self, "_tool_play_runtime_animation"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "current_animation": {"type": "string"}, "is_playing": {"type": "boolean"}, "current_position": {"type": "number"}, "current_length": {"type": "number"}, "speed_scale": {"type": "number"}, "playing_speed": {"type": "number"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_play_runtime_animation(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var animation_name: String = params.get("animation_name", "")
+	if node_path.is_empty() or animation_name.is_empty():
+		return {"error": "node_path and animation_name are required"}
+	return _request_runtime_probe("play_animation", [node_path, animation_name, float(params.get("custom_blend", -1.0)), float(params.get("custom_speed", 1.0)), bool(params.get("from_end", false))], ["mcp:animation_started"], params, {"node_path": node_path, "current_animation": animation_name})
+
+func _register_stop_runtime_animation(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"stop_runtime_animation",
+		"Stop playback on a runtime AnimationPlayer node.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"keep_state": {"type": "boolean", "default": false},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path"]
+		},
+		Callable(self, "_tool_stop_runtime_animation"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "current_animation": {"type": "string"}, "is_playing": {"type": "boolean"}, "current_position": {"type": "number"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_stop_runtime_animation(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	return _request_runtime_probe("stop_animation", [node_path, bool(params.get("keep_state", false))], ["mcp:animation_stopped"], params, {"node_path": node_path})
+
+func _register_get_runtime_animation_state(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_runtime_animation_state",
+		"Return the current playback state of a runtime AnimationPlayer node.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path"]
+		},
+		Callable(self, "_tool_get_runtime_animation_state"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "current_animation": {"type": "string"}, "is_playing": {"type": "boolean"}, "current_position": {"type": "number"}, "current_length": {"type": "number"}, "speed_scale": {"type": "number"}, "playing_speed": {"type": "number"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_get_runtime_animation_state(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	return _request_runtime_probe("get_animation_state", [node_path], ["mcp:animation_state"], params, {"node_path": node_path})
+
+func _register_get_runtime_animation_tree_state(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_runtime_animation_tree_state",
+		"Return the current state of a runtime AnimationTree node, including playback metadata when available.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path"]
+		},
+		Callable(self, "_tool_get_runtime_animation_tree_state"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "active": {"type": "boolean"}, "anim_player": {"type": "string"}, "tree_root_type": {"type": "string"}, "has_playback": {"type": "boolean"}, "current_node": {"type": "string"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_get_runtime_animation_tree_state(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	return _request_runtime_probe("get_animation_tree_state", [node_path], ["mcp:animation_tree_state"], params, {"node_path": node_path})
+
+func _register_set_runtime_animation_tree_active(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"set_runtime_animation_tree_active",
+		"Enable or disable a runtime AnimationTree node.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"active": {"type": "boolean"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path", "active"]
+		},
+		Callable(self, "_tool_set_runtime_animation_tree_active"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "active": {"type": "boolean"}, "tree_root_type": {"type": "string"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_set_runtime_animation_tree_active(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	if not params.has("active"):
+		return {"error": "Missing required parameter: active"}
+	return _request_runtime_probe("set_animation_tree_active", [node_path, bool(params.get("active"))], ["mcp:animation_tree_active_updated"], params, {"node_path": node_path})
+
+func _register_travel_runtime_animation_tree(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"travel_runtime_animation_tree",
+		"Travel a runtime AnimationTree state machine playback to a target node.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"state_name": {"type": "string"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path", "state_name"]
+		},
+		Callable(self, "_tool_travel_runtime_animation_tree"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "current_node": {"type": "string"}, "travel_path": {"type": "array"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_travel_runtime_animation_tree(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var state_name: String = params.get("state_name", "")
+	if node_path.is_empty() or state_name.is_empty():
+		return {"error": "node_path and state_name are required"}
+	return _request_runtime_probe("travel_animation_tree", [node_path, state_name], ["mcp:animation_tree_travelled"], params, {"node_path": node_path, "current_node": state_name})
+
+func _register_get_runtime_material_state(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_runtime_material_state",
+		"Resolve a runtime node material binding and return material metadata.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"material_target": {"type": "string", "enum": ["auto", "material", "material_override", "surface_override"], "default": "auto"},
+				"surface_index": {"type": "integer", "default": 0},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path"]
+		},
+		Callable(self, "_tool_get_runtime_material_state"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "material_class": {"type": "string"}, "material_target": {"type": "string"}, "is_shader_material": {"type": "boolean"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_get_runtime_material_state(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	return _request_runtime_probe("get_material_state", [node_path, str(params.get("material_target", "auto")), int(params.get("surface_index", 0))], ["mcp:material_state"], params, {"node_path": node_path})
+
+func _register_get_runtime_theme_item(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_runtime_theme_item",
+		"Resolve one runtime Control theme item and report its current value and override status.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"item_type": {"type": "string", "enum": ["color", "constant", "font", "font_size", "stylebox", "icon"]},
+				"item_name": {"type": "string"},
+				"theme_type": {"type": "string"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path", "item_type", "item_name"]
+		},
+		Callable(self, "_tool_get_runtime_theme_item"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "item_type": {"type": "string"}, "item_name": {"type": "string"}, "has_override": {"type": "boolean"}, "has_item": {"type": "boolean"}, "value": {}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_get_runtime_theme_item(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var item_type: String = params.get("item_type", "")
+	var item_name: String = params.get("item_name", "")
+	if node_path.is_empty() or item_type.is_empty() or item_name.is_empty():
+		return {"error": "node_path, item_type, and item_name are required"}
+	return _request_runtime_probe("get_theme_item", [node_path, item_type, item_name, str(params.get("theme_type", ""))], ["mcp:theme_item"], params, {"node_path": node_path, "item_type": item_type, "item_name": item_name})
+
+func _register_set_runtime_theme_override(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"set_runtime_theme_override",
+		"Apply one runtime Control theme override for a color, constant, font, font_size, stylebox, or icon item.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"item_type": {"type": "string", "enum": ["color", "constant", "font", "font_size", "stylebox", "icon"]},
+				"item_name": {"type": "string"},
+				"value": {},
+				"theme_type": {"type": "string"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path", "item_type", "item_name", "value"]
+		},
+		Callable(self, "_tool_set_runtime_theme_override"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "item_type": {"type": "string"}, "item_name": {"type": "string"}, "has_override": {"type": "boolean"}, "value": {}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_set_runtime_theme_override(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var item_type: String = params.get("item_type", "")
+	var item_name: String = params.get("item_name", "")
+	if node_path.is_empty() or item_type.is_empty() or item_name.is_empty() or not params.has("value"):
+		return {"error": "node_path, item_type, item_name, and value are required"}
+	return _request_runtime_probe("set_theme_override", [node_path, item_type, item_name, params.get("value"), str(params.get("theme_type", ""))], ["mcp:theme_override_updated"], params, {"node_path": node_path, "item_type": item_type, "item_name": item_name})
+
+func _register_clear_runtime_theme_override(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"clear_runtime_theme_override",
+		"Remove one runtime Control theme override and return the resolved post-clear value.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"item_type": {"type": "string", "enum": ["color", "constant", "font", "font_size", "stylebox", "icon"]},
+				"item_name": {"type": "string"},
+				"theme_type": {"type": "string"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path", "item_type", "item_name"]
+		},
+		Callable(self, "_tool_clear_runtime_theme_override"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "item_type": {"type": "string"}, "item_name": {"type": "string"}, "has_override": {"type": "boolean"}, "value": {}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_clear_runtime_theme_override(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var item_type: String = params.get("item_type", "")
+	var item_name: String = params.get("item_name", "")
+	if node_path.is_empty() or item_type.is_empty() or item_name.is_empty():
+		return {"error": "node_path, item_type, and item_name are required"}
+	return _request_runtime_probe("clear_theme_override", [node_path, item_type, item_name, str(params.get("theme_type", ""))], ["mcp:theme_override_cleared"], params, {"node_path": node_path, "item_type": item_type, "item_name": item_name})
+
+func _register_get_runtime_shader_parameters(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_runtime_shader_parameters",
+		"List shader uniforms and current values from a runtime ShaderMaterial binding.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"material_target": {"type": "string", "enum": ["auto", "material", "material_override", "surface_override"], "default": "auto"},
+				"surface_index": {"type": "integer", "default": 0},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path"]
+		},
+		Callable(self, "_tool_get_runtime_shader_parameters"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "parameters": {"type": "array"}, "count": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_get_runtime_shader_parameters(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	return _request_runtime_probe("get_shader_parameters", [node_path, str(params.get("material_target", "auto")), int(params.get("surface_index", 0))], ["mcp:shader_parameters"], params, {"node_path": node_path})
+
+func _register_set_runtime_shader_parameter(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"set_runtime_shader_parameter",
+		"Update one shader uniform on a runtime ShaderMaterial binding.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"parameter_name": {"type": "string"},
+				"value": {},
+				"material_target": {"type": "string", "enum": ["auto", "material", "material_override", "surface_override"], "default": "auto"},
+				"surface_index": {"type": "integer", "default": 0},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path", "parameter_name", "value"]
+		},
+		Callable(self, "_tool_set_runtime_shader_parameter"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "parameter_name": {"type": "string"}, "old_value": {}, "new_value": {}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_set_runtime_shader_parameter(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	var parameter_name: String = params.get("parameter_name", "")
+	if node_path.is_empty() or parameter_name.is_empty() or not params.has("value"):
+		return {"error": "node_path, parameter_name, and value are required"}
+	return _request_runtime_probe("set_shader_parameter", [node_path, parameter_name, params.get("value"), str(params.get("material_target", "auto")), int(params.get("surface_index", 0))], ["mcp:shader_parameter_updated"], params, {"node_path": node_path, "parameter_name": parameter_name})
+
+func _register_list_runtime_tilemap_layers(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"list_runtime_tilemap_layers",
+		"List the layers and used-cell counts of a runtime TileMap node.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path"]
+		},
+		Callable(self, "_tool_list_runtime_tilemap_layers"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "layers": {"type": "array"}, "count": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_list_runtime_tilemap_layers(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	return _request_runtime_probe("list_tilemap_layers", [node_path], ["mcp:tilemap_layers"], params, {"node_path": node_path})
+
+func _register_get_runtime_tilemap_cell(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_runtime_tilemap_cell",
+		"Return the runtime cell data at one TileMap layer coordinate.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"layer": {"type": "integer"},
+				"coords": {"type": "object", "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}}, "required": ["x", "y"]},
+				"use_proxies": {"type": "boolean", "default": false},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path", "layer", "coords"]
+		},
+		Callable(self, "_tool_get_runtime_tilemap_cell"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "layer": {"type": "integer"}, "coords": {"type": "object"}, "source_id": {"type": "integer"}, "atlas_coords": {"type": "object"}, "alternative_tile": {"type": "integer"}, "is_empty": {"type": "boolean"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_get_runtime_tilemap_cell(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	if not params.has("coords"):
+		return {"error": "Missing required parameter: coords"}
+	return _request_runtime_probe("get_tilemap_cell", [node_path, int(params.get("layer", 0)), params.get("coords", {}), bool(params.get("use_proxies", false))], ["mcp:tilemap_cell"], params, {"node_path": node_path, "layer": int(params.get("layer", 0))})
+
+func _register_set_runtime_tilemap_cell(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"set_runtime_tilemap_cell",
+		"Write or erase a single runtime TileMap cell at one layer coordinate.",
+		{
+			"type": "object",
+			"properties": {
+				"node_path": {"type": "string"},
+				"layer": {"type": "integer"},
+				"coords": {"type": "object", "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}}, "required": ["x", "y"]},
+				"source_id": {"type": "integer"},
+				"atlas_coords": {"type": "object", "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}}},
+				"alternative_tile": {"type": "integer", "default": 0},
+				"erase": {"type": "boolean", "default": false},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["node_path", "layer", "coords"]
+		},
+		Callable(self, "_tool_set_runtime_tilemap_cell"),
+		{"type": "object", "properties": {"node_path": {"type": "string"}, "layer": {"type": "integer"}, "coords": {"type": "object"}, "source_id": {"type": "integer"}, "atlas_coords": {"type": "object"}, "alternative_tile": {"type": "integer"}, "is_empty": {"type": "boolean"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_set_runtime_tilemap_cell(params: Dictionary) -> Dictionary:
+	var node_path: String = params.get("node_path", "")
+	if node_path.is_empty():
+		return {"error": "Missing required parameter: node_path"}
+	if not params.has("coords"):
+		return {"error": "Missing required parameter: coords"}
+	var updates: Dictionary = {"erase": bool(params.get("erase", false))}
+	if params.has("source_id"):
+		updates["source_id"] = int(params.get("source_id"))
+	if params.has("atlas_coords"):
+		updates["atlas_coords"] = params.get("atlas_coords")
+	if params.has("alternative_tile"):
+		updates["alternative_tile"] = int(params.get("alternative_tile"))
+	return _request_runtime_probe("set_tilemap_cell", [node_path, int(params.get("layer", 0)), params.get("coords", {}), updates], ["mcp:tilemap_cell_updated"], params, {"node_path": node_path, "layer": int(params.get("layer", 0))})
+
+func _register_list_runtime_audio_buses(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"list_runtime_audio_buses",
+		"List AudioServer buses available in the running game.",
+		{
+			"type": "object",
+			"properties": {
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			}
+		},
+		Callable(self, "_tool_list_runtime_audio_buses"),
+		{"type": "object", "properties": {"buses": {"type": "array"}, "count": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_list_runtime_audio_buses(params: Dictionary) -> Dictionary:
+	return _request_runtime_probe("list_audio_buses", [], ["mcp:audio_buses"], params)
+
+func _register_get_runtime_audio_bus(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_runtime_audio_bus",
+		"Return the current state of one AudioServer bus in the running game.",
+		{
+			"type": "object",
+			"properties": {
+				"bus_name": {"type": "string"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["bus_name"]
+		},
+		Callable(self, "_tool_get_runtime_audio_bus"),
+		{"type": "object", "properties": {"index": {"type": "integer"}, "name": {"type": "string"}, "volume_db": {"type": "number"}, "mute": {"type": "boolean"}, "solo": {"type": "boolean"}, "bypass_effects": {"type": "boolean"}, "send": {"type": "string"}, "effect_count": {"type": "integer"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": true}
+	)
+
+func _tool_get_runtime_audio_bus(params: Dictionary) -> Dictionary:
+	var bus_name: String = params.get("bus_name", "")
+	if bus_name.is_empty():
+		return {"error": "Missing required parameter: bus_name"}
+	return _request_runtime_probe("get_audio_bus", [bus_name], ["mcp:audio_bus"], params, {"name": bus_name})
+
+func _register_update_runtime_audio_bus(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"update_runtime_audio_bus",
+		"Update mute and/or volume_db on an AudioServer bus in the running game.",
+		{
+			"type": "object",
+			"properties": {
+				"bus_name": {"type": "string"},
+				"volume_db": {"type": "number"},
+				"mute": {"type": "boolean"},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			},
+			"required": ["bus_name"]
+		},
+		Callable(self, "_tool_update_runtime_audio_bus"),
+		{"type": "object", "properties": {"index": {"type": "integer"}, "name": {"type": "string"}, "volume_db": {"type": "number"}, "mute": {"type": "boolean"}, "solo": {"type": "boolean"}, "bypass_effects": {"type": "boolean"}, "send": {"type": "string"}, "effect_count": {"type": "integer"}}},
+		{"readOnlyHint": false, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_update_runtime_audio_bus(params: Dictionary) -> Dictionary:
+	var bus_name: String = params.get("bus_name", "")
+	if bus_name.is_empty():
+		return {"error": "Missing required parameter: bus_name"}
+	var updates: Dictionary = {}
+	if params.has("volume_db"):
+		updates["volume_db"] = float(params.get("volume_db"))
+	if params.has("mute"):
+		updates["mute"] = bool(params.get("mute"))
+	return _request_runtime_probe("update_audio_bus", [bus_name, updates], ["mcp:audio_bus_updated"], params, {"name": bus_name})
+
+func _register_get_runtime_screenshot(server_core: RefCounted) -> void:
+	server_core.register_tool(
+		"get_runtime_screenshot",
+		"Capture the current runtime viewport, or a specific runtime Viewport/SubViewport node, from the running game and save it to a file.",
+		{
+			"type": "object",
+			"properties": {
+				"save_path": {"type": "string", "description": "Output path for the screenshot. Must use res:// or user://."},
+				"format": {"type": "string", "enum": ["png", "jpg"], "default": "png"},
+				"viewport_path": {"type": "string", "description": "Optional runtime node path to a Viewport or SubViewport to capture instead of the active root viewport."},
+				"session_id": {"type": "integer"},
+				"timeout_ms": {"type": "integer", "default": 1500}
+			}
+		},
+		Callable(self, "_tool_get_runtime_screenshot"),
+		{"type": "object", "properties": {"save_path": {"type": "string"}, "format": {"type": "string"}, "viewport_path": {"type": "string"}, "width": {"type": "integer"}, "height": {"type": "integer"}, "size": {"type": "string"}, "current_scene": {"type": "string"}}},
+		{"readOnlyHint": true, "destructiveHint": false, "idempotentHint": false, "openWorldHint": true}
+	)
+
+func _tool_get_runtime_screenshot(params: Dictionary) -> Dictionary:
+	var save_path: String = params.get("save_path", "user://mcp_runtime_capture.png")
+	var path_validation: Dictionary = PathValidator.validate_file_path(save_path, [".png", ".jpg", ".jpeg"])
+	if not path_validation.get("valid", false):
+		return {"error": "Invalid save path: " + str(path_validation.get("error", "unknown error"))}
+	save_path = path_validation["sanitized"]
+
+	var format: String = String(params.get("format", "png")).to_lower()
+	if not ["png", "jpg"].has(format):
+		return {"error": "Unsupported format: " + format}
+	if format == "png" and not save_path.to_lower().ends_with(".png"):
+		return {"error": "save_path must end with .png when format is png"}
+	if format == "jpg" and not (save_path.to_lower().ends_with(".jpg") or save_path.to_lower().ends_with(".jpeg")):
+		return {"error": "save_path must end with .jpg or .jpeg when format is jpg"}
+
+	var viewport_path: String = str(params.get("viewport_path", "")).strip_edges()
+	var match_fields: Dictionary = {"save_path": save_path}
+	if not viewport_path.is_empty():
+		match_fields["viewport_path"] = viewport_path
+	return _request_runtime_probe("get_runtime_screenshot", [save_path, format, viewport_path], ["mcp:runtime_screenshot"], params, match_fields)
 
 func _register_await_runtime_condition(server_core: RefCounted) -> void:
 	server_core.register_tool(
@@ -757,25 +2657,86 @@ func _request_runtime_probe(command: String, payload: Array, response_messages: 
 	var bridge: RefCounted = _get_debugger_bridge()
 	if not bridge:
 		return {"error": "Debugger bridge is not available"}
-	var refresh_result: Dictionary = bridge.send_debugger_message(
-		"mcp:" + command,
-		payload,
-		int(params.get("session_id", -1))
-	)
-	if refresh_result.has("error"):
-		return refresh_result
-	if refresh_result.get("status", "") == "no_active_sessions":
-		return {"status": "no_active_sessions", "refresh_result": refresh_result}
+	var session_id: int = int(params.get("session_id", -1))
+	var timeout_ms: int = maxi(int(params.get("timeout_ms", 1500)), 1)
+	var request_key: String = _make_runtime_probe_request_key(command, payload, session_id, response_messages, match_fields)
+	var now_ms: int = Time.get_ticks_msec()
+	var pending_entry: Dictionary = _pending_runtime_probe_requests.get(request_key, {})
+
+	if pending_entry.is_empty() or now_ms > int(pending_entry.get("expires_at_ms", 0)):
+		if not pending_entry.is_empty():
+			_pending_runtime_probe_requests.erase(request_key)
+		var baseline_sequence: int = bridge.get_message_sequence() if bridge.has_method("get_message_sequence") else 0
+		var refresh_result: Dictionary = bridge.send_debugger_message("mcp:" + command, payload, session_id)
+		if refresh_result.has("error"):
+			return refresh_result
+		if refresh_result.get("status", "") == "no_active_sessions":
+			return {"status": "no_active_sessions", "refresh_result": refresh_result}
+		pending_entry = {
+			"baseline_sequence": baseline_sequence,
+			"refresh_result": refresh_result,
+			"expires_at_ms": now_ms + timeout_ms
+		}
+		_pending_runtime_probe_requests[request_key] = pending_entry
+
+	var response: Dictionary = _extract_pending_runtime_probe_response(bridge, pending_entry, response_messages, match_fields)
+	if not response.is_empty():
+		_pending_runtime_probe_requests.erase(request_key)
+		response["refresh_result"] = pending_entry.get("refresh_result", {})
+		return response
+
+	return {
+		"status": "pending",
+		"refresh_result": pending_entry.get("refresh_result", {}),
+		"response_messages": response_messages
+	}
+
+func _make_runtime_probe_request_key(command: String, payload: Array, session_id: int, response_messages: Array, match_fields: Dictionary) -> String:
+	return JSON.stringify({
+		"command": command,
+		"payload": payload,
+		"session_id": session_id,
+		"response_messages": response_messages,
+		"match_fields": match_fields
+	}, "", false)
+
+func _extract_pending_runtime_probe_response(bridge: RefCounted, pending_entry: Dictionary, response_messages: Array, match_fields: Dictionary) -> Dictionary:
+	# Force the debugger bridge to refresh captured message visibility before querying
+	# for the latest runtime payload. Without this, headless editor sessions can leave
+	# freshly received custom EngineDebugger captures invisible until another bridge read.
+	bridge.get_captured_messages(1, 0, "desc")
+
+	var response_entry: Dictionary = {}
+	if bridge.has_method("get_captured_message_after_sequence"):
+		response_entry = bridge.get_captured_message_after_sequence(
+			int(pending_entry.get("baseline_sequence", 0)),
+			response_messages,
+			["mcp:error"],
+			match_fields
+		)
+
+	if not response_entry.is_empty():
+		var message_name: String = str(response_entry.get("message", ""))
+		var captured_data: Array = response_entry.get("data", [])
+		var runtime_payload: Variant = captured_data[0] if not captured_data.is_empty() else null
+		if message_name == "mcp:error":
+			return {"error": str(runtime_payload.get("message", runtime_payload)) if runtime_payload is Dictionary else str(runtime_payload)}
+		if runtime_payload is Dictionary:
+			var response: Dictionary = runtime_payload.duplicate(true)
+			response["status"] = "success"
+			return response
+		if runtime_payload != null:
+			return {"status": "success", "value": runtime_payload}
+
 	for message_name in response_messages:
 		var runtime_payload: Variant = bridge.get_latest_message_payload(message_name, match_fields)
 		if runtime_payload is Dictionary:
 			var response: Dictionary = runtime_payload.duplicate(true)
 			response["status"] = "success"
-			response["refresh_result"] = refresh_result
 			return response
 		if runtime_payload != null:
-			return {"status": "success", "value": runtime_payload, "refresh_result": refresh_result}
-	return {"status": "pending", "refresh_result": refresh_result, "response_messages": response_messages}
+			return {"status": "success", "value": runtime_payload}
+	return {}
 
 func _is_truthy_runtime_value(value: Variant) -> bool:
 	match typeof(value):
