@@ -20,7 +20,7 @@ func initialize(editor_interface: EditorInterface, base_control: Control) -> voi
 	_editor_interface = editor_interface
 	_base_control = base_control
 	if _log_callback.is_valid():
-		_log_callback.call("INFO", "鍒濆鍖栧畬鎴?)
+		_log_callback.call("INFO", "Resource tools initialized")
 
 static func _build_runtime_state_snapshot() -> Dictionary:
 	var result: Dictionary = {
@@ -2178,4 +2178,4 @@ func register_resources(server_core: RefCounted) -> void:
 	)
 
 	if _log_callback.is_valid():
-		_log_callback.call("INFO", "宸叉敞鍐?26 涓祫婧?)
+		_log_callback.call("INFO", "Registered MCP resources")
