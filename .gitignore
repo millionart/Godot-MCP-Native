@@ -36,3 +36,4 @@ __pycache__/
 *.swp
 *~
 .~lock.*
+docs/goals
